@@ -1,0 +1,105 @@
+{
+  "name": "craft-frontend",
+  "version": "1.0.0",
+  "description": "CRAFT ABAC Permission System - Next.js Frontend",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "lint:fix": "next lint --fix",
+    "type-check": "tsc --noEmit",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "analyze": "cross-env ANALYZE=true next build",
+    "storybook": "storybook dev -p 6006",
+    "build-storybook": "storybook build"
+  },
+  "dependencies": {
+    "next": "15.4.6",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "@mui/material": "^7.3.1",
+    "@mui/icons-material": "^7.3.1",
+    "@emotion/react": "^11.13.5",
+    "@emotion/styled": "^11.13.5",
+    "@mui/x-data-grid": "^7.21.0",
+    "@mui/x-date-pickers": "^7.21.0",
+    "react-hook-form": "^7.53.2",
+    "@hookform/resolvers": "^3.10.0",
+    "yup": "^1.4.0",
+    "axios": "^1.7.7",
+    "@tanstack/react-query": "^5.59.16",
+    "zustand": "^5.0.2",
+    "date-fns": "^4.1.0",
+    "lodash": "^4.17.21",
+    "react-hot-toast": "^2.4.1",
+    "react-router-dom": "^6.28.0",
+    "clsx": "^2.1.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.1.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "@types/lodash": "^4.17.13",
+    "@types/jest": "^29.5.12",
+    "typescript": "^5.5.4",
+    "eslint": "^9.8.0",
+    "eslint-config-next": "15.4.6",
+    "@typescript-eslint/eslint-plugin": "^8.0.1",
+    "@typescript-eslint/parser": "^8.0.1",
+    "prettier": "^3.3.3",
+    "jest": "^29.7.0",
+    "jest-environment-jsdom": "^29.7.0",
+    "@testing-library/react": "^16.0.1",
+    "@testing-library/jest-dom": "^6.6.3",
+    "@testing-library/user-event": "^14.5.2",
+    "@next/bundle-analyzer": "^15.4.6",
+    "cross-env": "^7.0.3",
+    "@storybook/addon-essentials": "^8.4.7",
+    "@storybook/addon-interactions": "^8.4.7",
+    "@storybook/addon-links": "^8.4.7",
+    "@storybook/blocks": "^8.4.7",
+    "@storybook/nextjs": "^8.4.7",
+    "@storybook/react": "^8.4.7",
+    "@storybook/test": "^8.4.7",
+    "storybook": "^8.4.7"
+  },
+  "keywords": [
+    "abac",
+    "permission-system",
+    "nextjs",
+    "react",
+    "typescript",
+    "material-ui",
+    "frontend"
+  ],
+  "author": "Zero Pixels Technologies Private Limited",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  },
+  "browserslist": {
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
+  },
+  "jest": {
+    "testEnvironment": "jsdom",
+    "setupFilesAfterEnv": ["<rootDir>/jest.setup.js"],
+    "testPathIgnorePatterns": ["<rootDir>/.next/", "<rootDir>/node_modules/"],
+    "moduleNameMapping": {
+      "^@/(.*)$": "<rootDir>/src/$1"
+    }
+  }
+}
