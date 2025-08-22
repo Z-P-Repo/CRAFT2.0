@@ -13,7 +13,7 @@ jobs:
 
       - name: Deploy to on prem server
         run: |
-          sshpass -p "${{ secrets.SSH_PASS }}" ssh -o StrictHostKeyChecking=no -tt -i ~/.ssh/id_rsa "${{secrets.SSH_USER_NAME}}"@"${{secrets.SSH_HOST_IP}}" << 'EOF'
+          sshpass -p "${{ secrets.SSH_PASS }}" ssh -o StrictHostKeyChecking=no -tt -i ~/.ssh/id_rsa "${{secrets.SSH_USER_NAME}}"@"${{secrets.SSH_HOST_IP}}" << EOF
             cd /home/zeropixels/Documents/dev/CRAFT2.0
             git pull origin setup-deployment-pipeline
             cd craft-backend
