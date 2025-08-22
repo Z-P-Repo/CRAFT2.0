@@ -1,0 +1,51 @@
+{
+  "name": "craft-2.0-abac-system",
+  "version": "1.0.0",
+  "description": "CRAFT 2.0 - Comprehensive ABAC Permission System",
+  "private": true,
+  "scripts": {
+    "commit-push": "./commit-push.sh",
+    "commit": "./commit-push.sh",
+    "push": "./commit-push.sh",
+    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "dev:backend": "cd craft-backend && npm run dev",
+    "dev:frontend": "cd craft-frontend && npm run dev",
+    "build": "npm run build:backend && npm run build:frontend",
+    "build:backend": "cd craft-backend && npm run build",
+    "build:frontend": "cd craft-frontend && npm run build",
+    "install-all": "npm install && cd craft-backend && npm install && cd ../craft-frontend && npm install",
+    "test": "npm run test:backend && npm run test:frontend",
+    "test:backend": "cd craft-backend && npm test",
+    "test:frontend": "cd craft-frontend && npm test",
+    "lint": "npm run lint:backend && npm run lint:frontend",
+    "lint:backend": "cd craft-backend && npm run lint",
+    "lint:frontend": "cd craft-frontend && npm run lint",
+    "clean": "rm -rf node_modules craft-backend/node_modules craft-frontend/node_modules",
+    "start": "concurrently \"npm run start:backend\" \"npm run start:frontend\"",
+    "start:backend": "cd craft-backend && npm start",
+    "start:frontend": "cd craft-frontend && npm start"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Vimal-ZP/CRAFT2.0.git"
+  },
+  "keywords": [
+    "abac",
+    "permission-system",
+    "access-control",
+    "nextjs",
+    "nodejs",
+    "mongodb",
+    "typescript",
+    "jwt-authentication",
+    "material-ui"
+  ],
+  "author": "Vimal Kumar",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
