@@ -27,10 +27,7 @@ import {
   Select,
   MenuItem,
   Fab,
-  List,
-  ListItem,
-  ListItemText,
-  ListItemIcon,
+  Avatar,
   Switch,
   FormControlLabel,
 } from '@mui/material';
@@ -45,6 +42,8 @@ import {
   DataObject as ObjectIcon,
   Person as PersonIcon,
   Business as BusinessIcon,
+  Code as CodeIcon,
+  Schedule as ScheduleIcon,
 } from '@mui/icons-material';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 
@@ -53,34 +52,34 @@ interface Attribute {
   name: string;
   displayName: string;
   type: 'String' | 'Number' | 'Boolean' | 'Date' | 'Array';
-  category: 'Subject' | 'Object' | 'Environment' | 'Action';
+  category: 'Subject' | 'Resource' | 'Environment' | 'Action';
   defaultValue?: string;
   required: boolean;
   description: string;
   status: 'Active' | 'Inactive';
   createdAt: string;
-  usageCount: number;
+  lastModified: string;
 }
 
 export default function AttributesPage() {
   const [attributes] = useState<Attribute[]>([
     {
       id: '1',
-      name: 'user.department',
-      displayName: 'User Department',
+      name: 'department',
+      displayName: 'Department',
       type: 'String',
       category: 'Subject',
-      defaultValue: 'general',
+      defaultValue: 'IT',
       required: true,
-      description: 'Department where the user belongs',
+      description: 'User department within organization',
       status: 'Active',
       createdAt: '2024-01-15',
-      usageCount: 156,
+      lastModified: '2024-01-21',
     },
     {
       id: '2',
-      name: 'user.clearance_level',
-      displayName: 'Security Clearance',
+      name: 'clearanceLevel',
+      displayName: 'Clearance Level',
       type: 'Number',
       category: 'Subject',
       defaultValue: '1',
@@ -88,45 +87,45 @@ export default function AttributesPage() {
       description: 'Security clearance level (1-5)',
       status: 'Active',
       createdAt: '2024-01-16',
-      usageCount: 203,
+      lastModified: '2024-01-20',
     },
     {
       id: '3',
-      name: 'resource.classification',
-      displayName: 'Resource Classification',
+      name: 'classification',
+      displayName: 'Classification',
       type: 'String',
-      category: 'Object',
+      category: 'Resource',
       defaultValue: 'public',
       required: false,
-      description: 'Classification level of the resource',
+      description: 'Data classification level',
       status: 'Active',
       createdAt: '2024-01-17',
-      usageCount: 87,
+      lastModified: '2024-01-19',
     },
     {
       id: '4',
-      name: 'environment.ip_address',
-      displayName: 'IP Address',
-      type: 'String',
+      name: 'currentTime',
+      displayName: 'Current Time',
+      type: 'Date',
       category: 'Environment',
       required: false,
-      description: 'Client IP address making the request',
+      description: 'Timestamp of access request',
       status: 'Active',
       createdAt: '2024-01-18',
-      usageCount: 342,
+      lastModified: '2024-01-18',
     },
     {
       id: '5',
-      name: 'action.risk_score',
-      displayName: 'Action Risk Score',
-      type: 'Number',
+      name: 'riskLevel',
+      displayName: 'Risk Level',
+      type: 'String',
       category: 'Action',
-      defaultValue: '0',
+      defaultValue: 'low',
       required: false,
-      description: 'Risk assessment score for the action',
+      description: 'Risk level of the action',
       status: 'Active',
       createdAt: '2024-01-19',
-      usageCount: 124,
+      lastModified: '2024-01-21',
     },
   ]);
 
@@ -161,9 +160,9 @@ export default function AttributesPage() {
   const getCategoryIcon = (category: string) => {
     switch (category) {
       case 'Subject': return <PersonIcon />;
-      case 'Object': return <ObjectIcon />;
+      case 'Resource': return <ObjectIcon />;
       case 'Environment': return <BusinessIcon />;
-      case 'Action': return <SettingsIcon />;
+      case 'Action': return <CodeIcon />;
       default: return <LabelIcon />;
     }
   };
@@ -171,7 +170,7 @@ export default function AttributesPage() {
   const getCategoryColor = (category: string) => {
     switch (category) {
       case 'Subject': return 'primary';
-      case 'Object': return 'secondary';
+      case 'Resource': return 'secondary';
       case 'Environment': return 'info';
       case 'Action': return 'warning';
       default: return 'default';
@@ -181,14 +180,9 @@ export default function AttributesPage() {
   const stats = [
     { label: 'Total Attributes', value: attributes.length, color: 'primary' },
     { label: 'Active', value: attributes.filter(a => a.status === 'Active').length, color: 'success' },
-    { label: 'Required', value: attributes.filter(a => a.required).length, color: 'warning' },
+    { label: 'Required', value: attributes.filter(a => a.required).length, color: 'error' },
     { label: 'This Month', value: '3', color: 'info' },
   ];
-
-  const categoryStats = attributes.reduce((acc, attr) => {
-    acc[attr.category] = (acc[attr.category] || 0) + 1;
-    return acc;
-  }, {} as Record<string, number>);
 
   return (
     <DashboardLayout>
@@ -223,50 +217,21 @@ export default function AttributesPage() {
         ))}
       </Grid>
 
-      {/* Category Breakdown and Actions */}
-      <Grid container spacing={3} sx={{ mb: 4 }}>
-        <Grid item xs={12} md={8}>
-          {/* Actions Bar */}
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-            <Box sx={{ display: 'flex', gap: 2 }}>
-              <Button variant="outlined" startIcon={<FilterIcon />}>
-                Filter
-              </Button>
-            </Box>
-            <Button
-              variant="contained"
-              startIcon={<AddIcon />}
-              onClick={() => handleClickOpen()}
-            >
-              Create Attribute
-            </Button>
-          </Box>
-        </Grid>
-        <Grid item xs={12} md={4}>
-          <Card>
-            <CardContent>
-              <Typography variant="h6" gutterBottom>
-                Attributes by Category
-              </Typography>
-              <List dense>
-                {Object.entries(categoryStats).map(([category, count]) => (
-                  <ListItem key={category} sx={{ px: 0 }}>
-                    <ListItemIcon sx={{ minWidth: 36 }}>
-                      <Box sx={{ color: `${getCategoryColor(category)}.main` }}>
-                        {getCategoryIcon(category)}
-                      </Box>
-                    </ListItemIcon>
-                    <ListItemText
-                      primary={category}
-                      secondary={`${count} attributes`}
-                    />
-                  </ListItem>
-                ))}
-              </List>
-            </CardContent>
-          </Card>
-        </Grid>
-      </Grid>
+      {/* Actions Bar */}
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+        <Box sx={{ display: 'flex', gap: 2 }}>
+          <Button variant="outlined" startIcon={<FilterIcon />}>
+            Filter
+          </Button>
+        </Box>
+        <Button
+          variant="contained"
+          startIcon={<AddIcon />}
+          onClick={() => handleClickOpen()}
+        >
+          Add Attribute
+        </Button>
+      </Box>
 
       {/* Attributes Table */}
       <Card>
@@ -275,12 +240,11 @@ export default function AttributesPage() {
             <TableHead>
               <TableRow>
                 <TableCell>Attribute</TableCell>
-                <TableCell>Type</TableCell>
                 <TableCell>Category</TableCell>
-                <TableCell>Default Value</TableCell>
+                <TableCell>Type</TableCell>
                 <TableCell>Required</TableCell>
                 <TableCell>Status</TableCell>
-                <TableCell>Usage</TableCell>
+                <TableCell>Last Modified</TableCell>
                 <TableCell align="center">Actions</TableCell>
               </TableRow>
             </TableHead>
@@ -288,47 +252,41 @@ export default function AttributesPage() {
               {attributes.map((attribute) => (
                 <TableRow key={attribute.id} hover>
                   <TableCell>
-                    <Box>
-                      <Typography variant="subtitle2" fontWeight="medium" fontFamily="monospace">
-                        {attribute.name}
-                      </Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        {attribute.displayName}
-                      </Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        {attribute.description}
-                      </Typography>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                      <Avatar sx={{ bgcolor: `${getCategoryColor(attribute.category)}.main` }}>
+                        {getCategoryIcon(attribute.category)}
+                      </Avatar>
+                      <Box>
+                        <Typography variant="subtitle2" fontWeight="medium">
+                          {attribute.displayName}
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary" fontFamily="monospace">
+                          {attribute.name}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          {attribute.description}
+                        </Typography>
+                      </Box>
                     </Box>
+                  </TableCell>
+                  <TableCell>
+                    <Chip
+                      label={attribute.category}
+                      size="small"
+                      color={getCategoryColor(attribute.category) as any}
+                      variant="outlined"
+                    />
                   </TableCell>
                   <TableCell>
                     <Chip
                       label={attribute.type}
                       size="small"
                       color={getTypeColor(attribute.type) as any}
-                      variant="outlined"
                     />
                   </TableCell>
                   <TableCell>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <Box sx={{ color: `${getCategoryColor(attribute.category)}.main` }}>
-                        {getCategoryIcon(attribute.category)}
-                      </Box>
-                      <Chip
-                        label={attribute.category}
-                        size="small"
-                        color={getCategoryColor(attribute.category) as any}
-                        variant="outlined"
-                      />
-                    </Box>
-                  </TableCell>
-                  <TableCell>
-                    <Typography variant="body2" fontFamily="monospace" color="text.secondary">
-                      {attribute.defaultValue || '-'}
-                    </Typography>
-                  </TableCell>
-                  <TableCell>
                     <Chip
-                      label={attribute.required ? 'Yes' : 'No'}
+                      label={attribute.required ? 'Required' : 'Optional'}
                       size="small"
                       color={attribute.required ? 'error' : 'default'}
                     />
@@ -341,8 +299,8 @@ export default function AttributesPage() {
                     />
                   </TableCell>
                   <TableCell>
-                    <Typography variant="body2">
-                      {attribute.usageCount.toLocaleString()}
+                    <Typography variant="body2" color="text.secondary">
+                      {attribute.lastModified}
                     </Typography>
                   </TableCell>
                   <TableCell align="center">
@@ -382,18 +340,18 @@ export default function AttributesPage() {
       {/* Attribute Dialog */}
       <Dialog open={open} onClose={handleClose} maxWidth="md" fullWidth>
         <DialogTitle>
-          {selectedAttribute ? 'Edit Attribute' : 'Create New Attribute'}
+          {selectedAttribute ? 'Edit Attribute' : 'Add New Attribute'}
         </DialogTitle>
         <DialogContent>
           <Grid container spacing={3} sx={{ mt: 1 }}>
             <Grid item xs={12} md={6}>
               <TextField
                 fullWidth
-                label="Attribute Name"
+                label="Name"
                 defaultValue={selectedAttribute?.name || ''}
                 variant="outlined"
-                placeholder="e.g., user.department"
-                helperText="Use dot notation for nested attributes"
+                placeholder="e.g., department"
+                helperText="Technical attribute name"
               />
             </Grid>
             <Grid item xs={12} md={6}>
@@ -402,18 +360,23 @@ export default function AttributesPage() {
                 label="Display Name"
                 defaultValue={selectedAttribute?.displayName || ''}
                 variant="outlined"
-                placeholder="e.g., User Department"
+                placeholder="e.g., Department"
+                helperText="Human-readable name"
               />
             </Grid>
-            <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label="Description"
-                multiline
-                rows={2}
-                defaultValue={selectedAttribute?.description || ''}
-                variant="outlined"
-              />
+            <Grid item xs={12} md={6}>
+              <FormControl fullWidth>
+                <InputLabel>Category</InputLabel>
+                <Select
+                  value={selectedAttribute?.category || 'Subject'}
+                  label="Category"
+                >
+                  <MenuItem value="Subject">Subject</MenuItem>
+                  <MenuItem value="Resource">Resource</MenuItem>
+                  <MenuItem value="Environment">Environment</MenuItem>
+                  <MenuItem value="Action">Action</MenuItem>
+                </Select>
+              </FormControl>
             </Grid>
             <Grid item xs={12} md={6}>
               <FormControl fullWidth>
@@ -430,19 +393,16 @@ export default function AttributesPage() {
                 </Select>
               </FormControl>
             </Grid>
-            <Grid item xs={12} md={6}>
-              <FormControl fullWidth>
-                <InputLabel>Category</InputLabel>
-                <Select
-                  value={selectedAttribute?.category || 'Subject'}
-                  label="Category"
-                >
-                  <MenuItem value="Subject">Subject</MenuItem>
-                  <MenuItem value="Object">Object</MenuItem>
-                  <MenuItem value="Environment">Environment</MenuItem>
-                  <MenuItem value="Action">Action</MenuItem>
-                </Select>
-              </FormControl>
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                label="Description"
+                multiline
+                rows={3}
+                defaultValue={selectedAttribute?.description || ''}
+                variant="outlined"
+                placeholder="Describe the purpose of this attribute..."
+              />
             </Grid>
             <Grid item xs={12} md={6}>
               <TextField

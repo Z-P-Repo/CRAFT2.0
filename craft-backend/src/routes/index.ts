@@ -1,11 +1,12 @@
 import { Router } from 'express';
 import { Request, Response } from 'express';
 import authRoutes from './auth';
-// import subjectRoutes from './subjects';
-// import objectRoutes from './objects';
-// import actionRoutes from './actions';
-// import attributeRoutes from './attributes';
-// import policyRoutes from './policies';
+import userRoutes from './userRoutes';
+import subjectRoutes from './subjectRoutes';
+import resourceRoutes from './resourceRoutes';
+import actionRoutes from './actionRoutes';
+import attributeRoutes from './attributeRoutes';
+import policyRoutes from './policyRoutes';
 import { databaseConnection } from '@/config/database';
 import { config } from '@/config/environment';
 
@@ -34,8 +35,9 @@ router.get('/info', (req: Request, res: Response) => {
     documentation: `${req.protocol}://${req.get('host')}${config.apiPrefix}/docs`,
     endpoints: {
       auth: `${config.apiPrefix}/auth`,
+      users: `${config.apiPrefix}/users`,
       subjects: `${config.apiPrefix}/subjects`,
-      objects: `${config.apiPrefix}/objects`,
+      resources: `${config.apiPrefix}/resources`,
       actions: `${config.apiPrefix}/actions`,
       attributes: `${config.apiPrefix}/attributes`,
       policies: `${config.apiPrefix}/policies`,
@@ -45,10 +47,11 @@ router.get('/info', (req: Request, res: Response) => {
 
 // Mount route modules
 router.use('/auth', authRoutes);
-// router.use('/subjects', subjectRoutes);
-// router.use('/objects', objectRoutes);
-// router.use('/actions', actionRoutes);
-// router.use('/attributes', attributeRoutes);
-// router.use('/policies', policyRoutes);
+router.use('/users', userRoutes);
+router.use('/subjects', subjectRoutes);
+router.use('/resources', resourceRoutes);
+router.use('/actions', actionRoutes);
+router.use('/attributes', attributeRoutes);
+router.use('/policies', policyRoutes);
 
 export default router;
