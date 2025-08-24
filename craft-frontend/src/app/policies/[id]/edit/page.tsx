@@ -27,6 +27,7 @@ import {
   Link,
   Container,
   IconButton,
+  Autocomplete,
 } from '@mui/material';
 import {
   Security as SecurityIcon,
@@ -40,6 +41,8 @@ import {
   NavigateNext as NavigateNextIcon,
   Check as CheckIcon,
   Save as SaveIcon,
+  Delete as DeleteIcon,
+  Settings as AttributeIcon,
 } from '@mui/icons-material';
 import { useRouter, useParams } from 'next/navigation';
 import DashboardLayout from '@/components/layout/DashboardLayout';
@@ -222,6 +225,7 @@ export default function EditPolicyPage() {
   const [selectedSubject, setSelectedSubject] = useState<string>('');
   const [selectedActions, setSelectedActions] = useState<string[]>([]);
   const [selectedResources, setSelectedResources] = useState<string[]>([]);
+  const [selectedAttributes, setSelectedAttributes] = useState<Attribute[]>([]);
   const [selectedSubjectAttributes, setSelectedSubjectAttributes] = useState<{ [key: string]: any }>({});
 
   // Dropdown data
@@ -258,7 +262,7 @@ export default function EditPolicyPage() {
             
             // Extract subject attributes from first rule
             const subjectAttrs: { [key: string]: any } = {};
-            firstRule.subject.attributes.forEach(attr => {
+            firstRule.subject.attributes.forEach((attr: any) => {
               subjectAttrs[attr.name] = attr.value;
             });
             setSelectedSubjectAttributes(subjectAttrs);
@@ -279,6 +283,17 @@ export default function EditPolicyPage() {
 
     fetchPolicy();
   }, [policyId]);
+
+  // Initialize selectedAttributes when attributes and selectedSubjectAttributes are loaded
+  useEffect(() => {
+    if (attributes.length > 0 && Object.keys(selectedSubjectAttributes).length > 0) {
+      const selectedAttrIds = Object.keys(selectedSubjectAttributes);
+      const selectedAttrObjects = attributes.filter(attr => 
+        selectedAttrIds.includes(attr.id) || selectedAttrIds.includes(attr.name)
+      );
+      setSelectedAttributes(selectedAttrObjects);
+    }
+  }, [attributes, selectedSubjectAttributes]);
 
   // Fetch dropdown data
   const fetchDropdownData = useCallback(async () => {
@@ -366,6 +381,32 @@ export default function EditPolicyPage() {
       ...prev,
       [attributeId]: value
     }));
+  };
+
+  // Handle attribute dropdown selection
+  const handleAttributeSelection = (event: any, newValue: Attribute[]) => {
+    setSelectedAttributes(newValue);
+    // Reset values for removed attributes
+    const removedAttributes = selectedAttributes.filter(
+      oldAttr => !newValue.find(newAttr => newAttr.id === oldAttr.id)
+    );
+    removedAttributes.forEach(attr => {
+      setSelectedSubjectAttributes(prev => {
+        const updated = { ...prev };
+        delete updated[attr.id];
+        return updated;
+      });
+    });
+  };
+
+  // Remove attribute from selection
+  const handleRemoveAttribute = (attributeId: string) => {
+    setSelectedAttributes(prev => prev.filter(attr => attr.id !== attributeId));
+    setSelectedSubjectAttributes(prev => {
+      const updated = { ...prev };
+      delete updated[attributeId];
+      return updated;
+    });
   };
 
   // Form submission
@@ -518,16 +559,7 @@ export default function EditPolicyPage() {
               </Typography>
             </Box>
 
-            <Box sx={{ mb: 4 }}>
-              <Typography variant="h6" fontWeight="600" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <PersonIcon color="primary" />
-                Subject Selection
-              </Typography>
-              <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-                Choose the subject (user, group, or role) this policy applies to
-              </Typography>
-              
-              <Paper elevation={0} sx={{ p: 3, border: '1px solid', borderColor: 'grey.200', borderRadius: 2 }}>
+            <Paper elevation={0} sx={{ p: 3, border: '1px solid', borderColor: 'grey.200', borderRadius: 2 }}>
                 <Grid container spacing={3}>
                   <Grid size={{ xs: 12, md: 5 }}>
                     <FormControl fullWidth required>
@@ -583,11 +615,17 @@ export default function EditPolicyPage() {
                             <Typography variant="caption" color="text.secondary" sx={{ ml: 1 }}>
                               (Optional)
                             </Typography>
+                            <Chip 
+                              label={`${attributes?.filter(attr => attr.category === 'subject' && attr.active).length || 0} Available`}
+                              size="small"
+                              variant="outlined"
+                              sx={{ ml: 2, fontSize: '0.7rem', height: 20 }}
+                            />
                           </Box>
                         </Box>
 
                         <Box sx={{ 
-                          maxHeight: 280, 
+                          maxHeight: 400, 
                           overflow: 'auto', 
                           border: '1px solid', 
                           borderColor: 'grey.300', 
@@ -595,27 +633,82 @@ export default function EditPolicyPage() {
                           bgcolor: 'grey.50',
                           p: 2
                         }}>
+                          {/* Search and Filter */}
+                          <Box sx={{ mb: 2 }}>
+                            <TextField
+                              fullWidth
+                              size="small"
+                              placeholder="Search attributes..."
+                              variant="outlined"
+                              sx={{ bgcolor: 'white', mb: 1 }}
+                              InputProps={{
+                                startAdornment: (
+                                  <Box sx={{ mr: 1, display: 'flex', alignItems: 'center' }}>
+                                    <AddIcon sx={{ color: 'text.secondary', fontSize: 16 }} />
+                                  </Box>
+                                )
+                              }}
+                            />
+                          </Box>
                           <Grid container spacing={2}>
                             {attributes
                               ?.filter(attr => attr.category === 'subject' && attr.active)
+                              .sort((a, b) => {
+                                // Sort by required first, then alphabetically
+                                if (a.isRequired && !b.isRequired) return -1;
+                                if (!a.isRequired && b.isRequired) return 1;
+                                return a.displayName.localeCompare(b.displayName);
+                              })
                               .map((attribute) => {
-                                const isArrayOrObject = attribute.dataType === 'object' || 
+                                const isArrayOrObject = (attribute.dataType as string) === 'object' || 
                                   (attribute.dataType === 'string' && attribute.constraints.enumValues && 
                                    Array.isArray(attribute.constraints.enumValues) && attribute.isMultiValue);
                                 
                                 return (
-                                  <Grid key={attribute.id} size={{ xs: 12, sm: 6 }}>
-                                    <Box>
-                                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 1 }}>
-                                        <Typography variant="body2" fontWeight="600" color="text.primary">
+                                  <Grid key={attribute.id} size={{ xs: 12, sm: 6, md: 4 }}>
+                                    <Box 
+                                      sx={{ 
+                                        p: 2, 
+                                        border: '1px solid', 
+                                        borderColor: 'grey.200',
+                                        borderRadius: 1.5,
+                                        bgcolor: 'white',
+                                        transition: 'all 0.2s ease',
+                                        '&:hover': {
+                                          borderColor: 'primary.main',
+                                          boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+                                        },
+                                        ...(selectedSubjectAttributes[attribute.id] && {
+                                          borderColor: 'primary.main',
+                                          bgcolor: 'primary.50'
+                                        })
+                                      }}
+                                    >
+                                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.5 }}>
+                                        <Box sx={{ 
+                                          width: 6, 
+                                          height: 6, 
+                                          borderRadius: '50%', 
+                                          bgcolor: attribute.isRequired ? 'error.main' : 'success.main' 
+                                        }} />
+                                        <Typography variant="body2" fontWeight="600" color="text.primary" sx={{ flex: 1 }}>
                                           {attribute.displayName}
                                         </Typography>
                                         {attribute.isRequired && (
-                                          <Typography variant="caption" color="error">
-                                            *
-                                          </Typography>
+                                          <Chip 
+                                            label="Required" 
+                                            size="small" 
+                                            color="error"
+                                            sx={{ height: 18, fontSize: '0.65rem', fontWeight: 600 }}
+                                          />
                                         )}
                                       </Box>
+                                      
+                                      {attribute.description && (
+                                        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1, fontStyle: 'italic' }}>
+                                          {attribute.description}
+                                        </Typography>
+                                      )}
                                   
                                   {attribute.dataType === 'string' && attribute.constraints.enumValues ? (
                                     <FormControl fullWidth size="small">
@@ -628,7 +721,7 @@ export default function EditPolicyPage() {
                                           handleSubjectAttributeSelection(attribute.id, e.target.value);
                                         }}
                                         displayEmpty
-                                        multiple={isArrayOrObject}
+                                        multiple={isArrayOrObject || false}
                                         renderValue={(selected) => {
                                           if (isArrayOrObject && Array.isArray(selected)) {
                                             return selected.length === 0 ? 
@@ -750,7 +843,6 @@ export default function EditPolicyPage() {
                   </Grid>
                 </Grid>
               </Paper>
-            </Box>
           </Card>
         );
 

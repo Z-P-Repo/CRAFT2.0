@@ -30,6 +30,7 @@ import {
   Link,
   Container,
   IconButton,
+  Autocomplete,
 } from '@mui/material';
 import {
   Security as SecurityIcon,
@@ -43,6 +44,8 @@ import {
   ExpandMore as ExpandMoreIcon,
   NavigateNext as NavigateNextIcon,
   Check as CheckIcon,
+  Delete as DeleteIcon,
+  Settings as AttributeIcon,
 } from '@mui/icons-material';
 import { useRouter } from 'next/navigation';
 import DashboardLayout from '@/components/layout/DashboardLayout';
@@ -161,6 +164,7 @@ export default function CreatePolicyPage() {
   const [selectedSubject, setSelectedSubject] = useState<string>('');
   const [selectedActions, setSelectedActions] = useState<string[]>([]);
   const [selectedResources, setSelectedResources] = useState<string[]>([]);
+  const [selectedAttributes, setSelectedAttributes] = useState<Attribute[]>([]);
   const [selectedSubjectAttributes, setSelectedSubjectAttributes] = useState<{ [key: string]: any }>({});
 
   // Dropdown data
@@ -257,6 +261,32 @@ export default function CreatePolicyPage() {
       ...prev,
       [attributeId]: value
     }));
+  };
+
+  // Handle attribute dropdown selection
+  const handleAttributeSelection = (event: any, newValue: Attribute[]) => {
+    setSelectedAttributes(newValue);
+    // Reset values for removed attributes
+    const removedAttributes = selectedAttributes.filter(
+      oldAttr => !newValue.find(newAttr => newAttr.id === oldAttr.id)
+    );
+    removedAttributes.forEach(attr => {
+      setSelectedSubjectAttributes(prev => {
+        const updated = { ...prev };
+        delete updated[attr.id];
+        return updated;
+      });
+    });
+  };
+
+  // Remove attribute from selection
+  const handleRemoveAttribute = (attributeId: string) => {
+    setSelectedAttributes(prev => prev.filter(attr => attr.id !== attributeId));
+    setSelectedSubjectAttributes(prev => {
+      const updated = { ...prev };
+      delete updated[attributeId];
+      return updated;
+    });
   };
 
   // Create new attribute
@@ -498,16 +528,7 @@ export default function CreatePolicyPage() {
               </Typography>
             </Box>
 
-            <Box sx={{ mb: 4 }}>
-              <Typography variant="h6" fontWeight="600" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <PersonIcon color="primary" />
-                Subject Selection
-              </Typography>
-              <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-                Choose the subject (user, group, or role) this policy applies to
-              </Typography>
-              
-              <Paper elevation={0} sx={{ p: 3, border: '1px solid', borderColor: 'grey.200', borderRadius: 2 }}>
+            <Paper elevation={0} sx={{ p: 3, border: '1px solid', borderColor: 'grey.200', borderRadius: 2 }}>
                 <Grid container spacing={3}>
                   <Grid size={{ xs: 12, md: 5 }}>
                     <FormControl fullWidth required>
@@ -575,186 +596,288 @@ export default function CreatePolicyPage() {
                           </Button>
                         </Box>
 
-                        <Box sx={{ 
-                          maxHeight: 280, 
-                          overflow: 'auto', 
-                          border: '1px solid', 
-                          borderColor: 'grey.300', 
-                          borderRadius: 1,
-                          bgcolor: 'grey.50',
-                          p: 2
-                        }}>
-                          <Grid container spacing={2}>
-                            {attributes
-                              ?.filter(attr => attr.category === 'subject' && attr.active)
-                              .map((attribute) => {
-                                const isArrayOrObject = attribute.dataType === 'object' || 
+                        {/* Attribute Selection Dropdown */}
+                        <Box sx={{ mb: 3 }}>
+                          <Autocomplete
+                            multiple
+                            options={attributes?.filter(attr => attr.category === 'subject' && attr.active) || []}
+                            value={selectedAttributes}
+                            onChange={handleAttributeSelection}
+                            getOptionLabel={(option) => option.displayName}
+                            isOptionEqualToValue={(option, value) => option.id === value.id}
+                            renderInput={(params) => (
+                              <TextField
+                                {...params}
+                                label="Select Attributes"
+                                placeholder="Choose attributes to configure conditions"
+                                variant="outlined"
+                                size="small"
+                              />
+                            )}
+                            renderTags={(value, getTagProps) =>
+                              value.map((option, index) => (
+                                <Chip
+                                  key={option.id}
+                                  variant="filled"
+                                  color="primary"
+                                  size="small"
+                                  label={option.displayName}
+                                  {...getTagProps({ index })}
+                                  sx={{ fontSize: '0.75rem' }}
+                                />
+                              ))
+                            }
+                            renderOption={(props, option) => (
+                              <Box component="li" {...props} sx={{ '&:hover': { bgcolor: 'grey.50' } }}>
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, py: 0.5, width: '100%' }}>
+                                  <Box sx={{ 
+                                    width: 6, 
+                                    height: 6, 
+                                    borderRadius: '50%', 
+                                    bgcolor: option.isRequired ? 'error.main' : 'success.main',
+                                    flexShrink: 0
+                                  }} />
+                                  <Box sx={{ flex: 1, minWidth: 0 }}>
+                                    <Typography variant="body2" fontWeight="500" noWrap>
+                                      {option.displayName}
+                                      {option.isRequired && (
+                                        <Chip 
+                                          label="Required" 
+                                          size="small" 
+                                          color="error"
+                                          sx={{ ml: 1, height: 16, fontSize: '0.6rem' }}
+                                        />
+                                      )}
+                                    </Typography>
+                                    {option.description && (
+                                      <Typography variant="caption" color="text.secondary" noWrap>
+                                        {option.description}
+                                      </Typography>
+                                    )}
+                                  </Box>
+                                </Box>
+                              </Box>
+                            )}
+                            sx={{
+                              '& .MuiOutlinedInput-root': {
+                                bgcolor: 'white'
+                              }
+                            }}
+                          />
+                        </Box>
+
+                        {/* Selected Attributes Configuration */}
+                        {selectedAttributes.length > 0 && (
+                          <Box>
+                            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                              Configure conditions for selected attributes ({selectedAttributes.length}):
+                            </Typography>
+                            <Grid container spacing={2}>
+                              {selectedAttributes.map((attribute) => {
+                                const isArrayOrObject = (attribute.dataType as string) === 'object' || 
                                   (attribute.dataType === 'string' && attribute.constraints.enumValues && 
                                    Array.isArray(attribute.constraints.enumValues) && attribute.isMultiValue);
                                 
                                 return (
-                                  <Grid key={attribute.id} size={{ xs: 12, sm: 6 }}>
-                                    <Box>
-                                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 1 }}>
-                                        <Typography variant="body2" fontWeight="600" color="text.primary">
-                                          {attribute.displayName}
-                                        </Typography>
-                                        {attribute.isRequired && (
-                                          <Typography variant="caption" color="error">
-                                            *
-                                          </Typography>
-                                        )}
-                                      </Box>
-                                  
-                                  {attribute.dataType === 'string' && attribute.constraints.enumValues ? (
-                                    <FormControl fullWidth size="small">
-                                      <Select
-                                        value={isArrayOrObject
-                                          ? (selectedSubjectAttributes[attribute.id] || []) 
-                                          : (selectedSubjectAttributes[attribute.id] || '')
+                                  <Grid key={attribute.id} size={{ xs: 12, md: 6 }}>
+                                    <Card 
+                                      variant="outlined"
+                                      sx={{ 
+                                        p: 2,
+                                        bgcolor: 'white',
+                                        border: '1px solid',
+                                        borderColor: 'grey.200',
+                                        '&:hover': {
+                                          borderColor: 'primary.main',
+                                          boxShadow: 1
                                         }
-                                        onChange={(e) => {
-                                          const value = e.target.value;
-                                          if (isArrayOrObject && Array.isArray(value)) {
-                                            if (value.includes('__add_new_value__')) {
-                                              const filteredValue = value.filter(v => v !== '__add_new_value__');
-                                              handleSubjectAttributeSelection(attribute.id, filteredValue);
-                                              setShowCreateValue(attribute.id);
-                                            } else {
-                                              handleSubjectAttributeSelection(attribute.id, value);
-                                            }
-                                          } else if (!isArrayOrObject && value === '__add_new_value__') {
-                                            setShowCreateValue(attribute.id);
-                                          } else {
-                                            handleSubjectAttributeSelection(attribute.id, value);
-                                          }
-                                        }}
-                                        displayEmpty
-                                        multiple={isArrayOrObject}
-                                        renderValue={(selected) => {
-                                          if (isArrayOrObject && Array.isArray(selected)) {
-                                            return selected.length === 0 ? 
-                                              <em style={{ color: '#999' }}>Select values</em> : 
-                                              selected.join(', ');
-                                          }
-                                          return selected || <em style={{ color: '#999' }}>Select value</em>;
-                                        }}
-                                        sx={{ bgcolor: 'white' }}
-                                      >
-                                        {!attribute.isRequired && !isArrayOrObject && (
-                                          <MenuItem value="">
-                                            <em>Not specified</em>
-                                          </MenuItem>
-                                        )}
-                                        {attribute.constraints.enumValues.map((value: any) => (
-                                          <MenuItem key={value} value={value}>
-                                            {isArrayOrObject ? (
-                                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                                <Chip 
-                                                  label={value} 
-                                                  size="small" 
-                                                  variant={selectedSubjectAttributes[attribute.id]?.includes?.(value) ? "filled" : "outlined"}
-                                                  color="primary"
-                                                  sx={{ height: 20, fontSize: '0.65rem' }}
-                                                />
-                                              </Box>
-                                            ) : (
-                                              value
-                                            )}
-                                          </MenuItem>
-                                        ))}
-                                        <MenuItem 
-                                          value="__add_new_value__"
-                                          sx={{
-                                            bgcolor: 'primary.50',
-                                            borderTop: '1px solid',
-                                            borderColor: 'grey.200',
+                                      }}
+                                    >
+                                      <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', mb: 1.5 }}>
+                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                          <Box sx={{ 
+                                            width: 6, 
+                                            height: 6, 
+                                            borderRadius: '50%', 
+                                            bgcolor: attribute.isRequired ? 'error.main' : 'success.main' 
+                                          }} />
+                                          <Typography variant="body2" fontWeight="600" color="text.primary">
+                                            {attribute.displayName}
+                                          </Typography>
+                                          {attribute.isRequired && (
+                                            <Chip 
+                                              label="Required" 
+                                              size="small" 
+                                              color="error"
+                                              sx={{ height: 18, fontSize: '0.65rem', fontWeight: 600 }}
+                                            />
+                                          )}
+                                        </Box>
+                                        <IconButton
+                                          size="small"
+                                          onClick={() => handleRemoveAttribute(attribute.id)}
+                                          sx={{ 
+                                            color: 'text.secondary',
                                             '&:hover': {
-                                              bgcolor: 'primary.100'
+                                              color: 'error.main',
+                                              bgcolor: 'error.50'
                                             }
                                           }}
                                         >
-                                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, color: 'primary.main' }}>
-                                            <AddIcon fontSize="small" />
-                                            <Typography variant="caption" color="primary.main" fontWeight="600">
-                                              Add new value
-                                            </Typography>
-                                          </Box>
-                                        </MenuItem>
-                                      </Select>
-                                    </FormControl>
-                                  ) : attribute.dataType === 'boolean' ? (
-                                    <FormControl fullWidth>
-                                      <FormControlLabel
-                                        control={
-                                          <Switch 
-                                            checked={selectedSubjectAttributes[attribute.id] || false}
-                                            onChange={(e) => handleSubjectAttributeSelection(attribute.id, e.target.checked)}
-                                            size="small"
+                                          <DeleteIcon fontSize="small" />
+                                        </IconButton>
+                                      </Box>
+                                      
+                                      {attribute.description && (
+                                        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1.5, fontStyle: 'italic' }}>
+                                          {attribute.description}
+                                        </Typography>
+                                      )}
+                                  
+                                      {attribute.dataType === 'string' && attribute.constraints.enumValues ? (
+                                        <FormControl fullWidth size="small">
+                                          <Select
+                                            value={isArrayOrObject
+                                              ? (selectedSubjectAttributes[attribute.id] || []) 
+                                              : (selectedSubjectAttributes[attribute.id] || '')
+                                            }
+                                            onChange={(e) => {
+                                              const value = e.target.value;
+                                              if (isArrayOrObject && Array.isArray(value)) {
+                                                if (value.includes('__add_new_value__')) {
+                                                  const filteredValue = value.filter(v => v !== '__add_new_value__');
+                                                  handleSubjectAttributeSelection(attribute.id, filteredValue);
+                                                  setShowCreateValue(attribute.id);
+                                                } else {
+                                                  handleSubjectAttributeSelection(attribute.id, value);
+                                                }
+                                              } else if (!isArrayOrObject && value === '__add_new_value__') {
+                                                setShowCreateValue(attribute.id);
+                                              } else {
+                                                handleSubjectAttributeSelection(attribute.id, value);
+                                              }
+                                            }}
+                                            displayEmpty
+                                            multiple={isArrayOrObject || false}
+                                            renderValue={(selected) => {
+                                              if (isArrayOrObject && Array.isArray(selected)) {
+                                                return selected.length === 0 ? 
+                                                  <em style={{ color: '#999' }}>Select values</em> : 
+                                                  selected.join(', ');
+                                              }
+                                              return selected || <em style={{ color: '#999' }}>Select value</em>;
+                                            }}
+                                            sx={{ bgcolor: 'grey.50' }}
+                                          >
+                                            {!attribute.isRequired && !isArrayOrObject && (
+                                              <MenuItem value="">
+                                                <em>Not specified</em>
+                                              </MenuItem>
+                                            )}
+                                            {attribute.constraints.enumValues.map((value: any) => (
+                                              <MenuItem key={value} value={value}>
+                                                {isArrayOrObject ? (
+                                                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                                    <Chip 
+                                                      label={value} 
+                                                      size="small" 
+                                                      variant={selectedSubjectAttributes[attribute.id]?.includes?.(value) ? "filled" : "outlined"}
+                                                      color="primary"
+                                                      sx={{ height: 20, fontSize: '0.65rem' }}
+                                                    />
+                                                  </Box>
+                                                ) : (
+                                                  value
+                                                )}
+                                              </MenuItem>
+                                            ))}
+                                            <MenuItem 
+                                              value="__add_new_value__"
+                                              sx={{
+                                                bgcolor: 'primary.50',
+                                                borderTop: '1px solid',
+                                                borderColor: 'grey.200',
+                                                '&:hover': {
+                                                  bgcolor: 'primary.100'
+                                                }
+                                              }}
+                                            >
+                                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, color: 'primary.main' }}>
+                                                <AddIcon fontSize="small" />
+                                                <Typography variant="caption" color="primary.main" fontWeight="600">
+                                                  Add new value
+                                                </Typography>
+                                              </Box>
+                                            </MenuItem>
+                                          </Select>
+                                        </FormControl>
+                                      ) : attribute.dataType === 'boolean' ? (
+                                        <FormControl fullWidth>
+                                          <FormControlLabel
+                                            control={
+                                              <Switch 
+                                                checked={selectedSubjectAttributes[attribute.id] || false}
+                                                onChange={(e) => handleSubjectAttributeSelection(attribute.id, e.target.checked)}
+                                                size="small"
+                                              />
+                                            }
+                                            label=""
+                                            sx={{ m: 0 }}
                                           />
-                                        }
-                                        label=""
-                                        sx={{ m: 0 }}
-                                      />
-                                    </FormControl>
-                                  ) : attribute.dataType === 'number' ? (
-                                    <TextField
-                                      fullWidth
-                                      type="number"
-                                      value={selectedSubjectAttributes[attribute.id] || ''}
-                                      onChange={(e) => handleSubjectAttributeSelection(attribute.id, Number(e.target.value))}
-                                      size="small"
-                                      placeholder="Enter number"
-                                      inputProps={{
-                                        min: attribute.constraints.minValue,
-                                        max: attribute.constraints.maxValue
-                                      }}
-                                      sx={{ bgcolor: 'white' }}
-                                    />
-                                  ) : (
-                                    <TextField
-                                      fullWidth
-                                      value={selectedSubjectAttributes[attribute.id] || ''}
-                                      onChange={(e) => handleSubjectAttributeSelection(attribute.id, e.target.value)}
-                                      size="small"
-                                      multiline={attribute.isMultiValue}
-                                      rows={attribute.isMultiValue ? 2 : 1}
-                                      placeholder={`Enter ${attribute.displayName.toLowerCase()}`}
-                                      sx={{ bgcolor: 'white' }}
-                                    />
-                                  )}
-                                </Box>
-                              </Grid>
-                            );
-                          })}
-                        
-                            {(attributes?.filter(attr => attr.category === 'subject' && attr.active).length || 0) === 0 && (
-                              <Grid size={{ xs: 12 }}>
-                                <Box sx={{ 
-                                  textAlign: 'center', 
-                                  py: 3,
-                                  border: '1px dashed',
-                                  borderColor: 'grey.300',
-                                  borderRadius: 1,
-                                  bgcolor: 'white'
-                                }}>
-                                  <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                                    No subject attributes available
-                                  </Typography>
-                                  <Button 
-                                    size="small" 
-                                    variant="outlined"
-                                    startIcon={<AddIcon />}
-                                    onClick={() => setShowCreateAttribute(true)}
-                                    sx={{ fontSize: '0.75rem' }}
-                                  >
-                                    Create First Attribute
-                                  </Button>
-                                </Box>
-                              </Grid>
-                            )}
-                          </Grid>
-                        </Box>
+                                        </FormControl>
+                                      ) : attribute.dataType === 'number' ? (
+                                        <TextField
+                                          fullWidth
+                                          type="number"
+                                          value={selectedSubjectAttributes[attribute.id] || ''}
+                                          onChange={(e) => handleSubjectAttributeSelection(attribute.id, Number(e.target.value))}
+                                          size="small"
+                                          placeholder="Enter number"
+                                          inputProps={{
+                                            min: attribute.constraints.minValue,
+                                            max: attribute.constraints.maxValue
+                                          }}
+                                          sx={{ bgcolor: 'grey.50' }}
+                                        />
+                                      ) : (
+                                        <TextField
+                                          fullWidth
+                                          value={selectedSubjectAttributes[attribute.id] || ''}
+                                          onChange={(e) => handleSubjectAttributeSelection(attribute.id, e.target.value)}
+                                          size="small"
+                                          multiline={attribute.isMultiValue}
+                                          rows={attribute.isMultiValue ? 2 : 1}
+                                          placeholder={`Enter ${attribute.displayName.toLowerCase()}`}
+                                          sx={{ bgcolor: 'grey.50' }}
+                                        />
+                                      )}
+                                    </Card>
+                                  </Grid>
+                                );
+                              })}
+                            </Grid>
+                          </Box>
+                        )}
+
+                        {/* Empty State */}
+                        {selectedAttributes.length === 0 && (
+                          <Box sx={{
+                            p: 3,
+                            border: '2px dashed',
+                            borderColor: 'grey.300',
+                            borderRadius: 2,
+                            textAlign: 'center',
+                            bgcolor: 'grey.50'
+                          }}>
+                            <AttributeIcon sx={{ fontSize: 32, color: 'grey.400', mb: 1 }} />
+                            <Typography variant="body2" color="text.secondary" fontWeight="500" sx={{ mb: 0.5 }}>
+                              No attributes selected
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary">
+                              Use the dropdown above to select attributes for this policy
+                            </Typography>
+                          </Box>
+                        )}
                       </Box>
                     ) : (
                       <Box sx={{
@@ -777,7 +900,6 @@ export default function CreatePolicyPage() {
                   </Grid>
                 </Grid>
               </Paper>
-            </Box>
           </Card>
         );
 

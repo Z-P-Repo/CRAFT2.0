@@ -12,7 +12,7 @@ A modern, responsive React-based dashboard for managing the CRAFT (Attribute-Bas
 
 - **📱 Responsive Dashboard Layout** with collapsible sidebar navigation
 - **🔐 JWT Authentication** with automatic token refresh and secure routing
-- **📋 Policy Management** - Create, edit, and manage ABAC policies with Allow/Deny effects
+- **📋 Policy Management** - Create, edit, and manage ABAC policies with 4-step wizard and dedicated view/edit pages
 - **👥 Subject Management** - Handle users, groups, and roles with detailed profiles
 - **📁 Object Management** - Manage system resources, files, databases, and APIs
 - **⚡ Action Management** - Define and categorize system actions with risk levels
@@ -51,7 +51,7 @@ Update the `.env.local` file with your settings:
 ```env
 # API Configuration
 NEXT_PUBLIC_API_URL=http://localhost:3001/api/v1
-NEXT_PUBLIC_APP_URL=http://localhost:3000
+NEXT_PUBLIC_APP_URL=http://localhost:3002
 
 # Environment
 NODE_ENV=development
@@ -100,15 +100,26 @@ src/
 ├── app/                 # Next.js App Router pages
 │   ├── login/          # Login page
 │   ├── dashboard/      # Dashboard page
-│   ├── layout.tsx      # Root layout
+│   ├── policies/       # Policy management pages
+│   │   ├── create/     # Policy creation wizard
+│   │   ├── [id]/       # Policy view/edit pages
+│   │   └── page.tsx    # Main policies listing
+│   ├── subjects/       # Subject management
+│   ├── actions/        # Actions management
+│   ├── objects/        # Objects/Resources management
+│   ├── attributes/     # Attributes management
+│   ├── layout.tsx      # Root layout with dashboard
 │   └── page.tsx        # Home page
 ├── components/         # Reusable UI components
+│   └── layout/         # Layout components
+│       └── DashboardLayout.tsx # Main dashboard layout
 ├── contexts/           # React contexts
 │   └── AuthContext.tsx # Authentication context
 ├── hooks/              # Custom React hooks
 ├── lib/                # Libraries and utilities
-│   └── api.ts          # API client
+│   └── api.ts          # API client with interceptors
 ├── types/              # TypeScript type definitions
+│   └── index.ts        # Complete type definitions
 ├── utils/              # Utility functions
 └── styles/             # Global styles and themes
 ```
@@ -133,7 +144,10 @@ src/
 - **Subjects** (`/subjects`): User and role management
 - **Objects** (`/objects`): Resource management
 - **Actions** (`/actions`): Action definitions
-- **Policies** (`/policies`): Access policy management
+- **Policies** (`/policies`): Access policy management with comprehensive pagination and filtering
+  - **Policy Creation** (`/policies/create`): 4-step wizard for policy creation
+  - **Policy View** (`/policies/[id]`): Dedicated policy viewing page
+  - **Policy Edit** (`/policies/[id]/edit`): Dedicated policy editing page
 - **Attributes** (`/attributes`): System attributes
 - **Tester** (`/tester`): Policy evaluation testing
 
@@ -230,7 +244,7 @@ vercel
 docker build -t craft-frontend .
 
 # Run container
-docker run -p 3000:3000 craft-frontend
+docker run -p 3002:3002 craft-frontend
 ```
 
 ### Build Optimization

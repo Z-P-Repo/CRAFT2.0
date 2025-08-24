@@ -100,11 +100,19 @@ CRAFT2.0/
 - Mobile-friendly responsive design
 
 ### 🏗️ ABAC Components
-- **Policies**: Define access control rules
-- **Subjects**: Manage users, groups, roles
-- **Resources**: Protected objects and assets
-- **Actions**: Operations that can be performed
-- **Attributes**: Contextual information for decisions
+- **Policies**: Define access control rules with step-by-step wizard
+- **Subjects**: Manage users, groups, roles with comprehensive attributes
+- **Resources**: Protected objects and assets with attribute support
+- **Actions**: Operations that can be performed with categorization
+- **Attributes**: Contextual information for policy decisions with full CRUD
+
+### 📋 Policy Management
+- **Step-by-step Creation**: 4-step wizard for policy creation
+- **Dedicated View/Edit Pages**: Full-page policy management instead of modals
+- **Advanced Filtering**: Search, filter by status/effect, and sorting
+- **Bulk Operations**: Select and delete multiple policies
+- **Human-readable Rules**: Natural language policy display
+- **Comprehensive Pagination**: Full pagination support across all entities
 
 ### 🧪 Policy Testing
 - Interactive policy evaluation tool
@@ -155,7 +163,7 @@ PORT=3001
 NODE_ENV=development
 
 # CORS Configuration
-FRONTEND_URL=http://localhost:3000
+FRONTEND_URL=http://localhost:3002
 ```
 
 #### Frontend (.env.local)
@@ -207,7 +215,7 @@ NEXT_PUBLIC_APP_VERSION=1.0.0
    cd craft-frontend
    npm run dev
    ```
-   Frontend will run on http://localhost:3000
+   Frontend will run on http://localhost:3002
 
 ### Production Build
 
@@ -311,8 +319,8 @@ git push origin main
    # Kill process on port 3001 (backend)
    lsof -ti:3001 | xargs kill -9
    
-   # Kill process on port 3000 (frontend)
-   lsof -ti:3000 | xargs kill -9
+   # Kill process on port 3002 (frontend)
+   lsof -ti:3002 | xargs kill -9
    ```
 
 2. **MongoDB connection issues**:
@@ -332,6 +340,18 @@ git push origin main
    # Check TypeScript compilation
    npx tsc --noEmit
    ```
+
+5. **Policies not loading in frontend**:
+   - Hard refresh the page (Ctrl+F5 or Cmd+Shift+R)
+   - Clear browser cache or open in incognito mode
+   - Check browser console for JavaScript errors
+   - Verify backend is running on port 3001
+   - Ensure frontend API client is pointing to correct backend URL
+
+6. **API Response caching issues**:
+   - Backend returns 304 (Not Modified) responses when browser caches data
+   - Use browser developer tools → Network tab to check actual API calls
+   - Add cache-busting parameters if needed
 
 ## 🤝 Contributing
 

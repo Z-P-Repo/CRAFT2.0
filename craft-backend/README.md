@@ -62,7 +62,7 @@ PORT=3001
 NODE_ENV=development
 
 # CORS
-FRONTEND_URL=http://localhost:3000
+FRONTEND_URL=http://localhost:3002
 ```
 
 ## 🚀 Development
@@ -97,21 +97,33 @@ npm run format
 
 ```
 src/
-├── config/           # Configuration files
-│   ├── database.ts   # Database connection
-│   └── environment.ts # Environment variables
 ├── controllers/      # Route controllers
-├── services/         # Business logic
-├── repositories/     # Data access layer
-├── models/          # Database models
-├── middleware/      # Express middleware
+│   ├── ActionController.ts    # Actions CRUD operations
+│   ├── AttributeController.ts # Attributes management
+│   ├── PolicyController.ts    # Policy management
+│   ├── ResourceController.ts  # Resources CRUD
+│   └── SubjectController.ts   # Subjects management
+├── models/          # MongoDB models
+│   ├── Action.ts    # Action data model
+│   ├── Attribute.ts # Attribute data model
+│   ├── Policy.ts    # Policy data model
+│   ├── Resource.ts  # Resource data model
+│   └── Subject.ts   # Subject data model
 ├── routes/          # API routes
-├── utils/           # Utility functions
-├── types/           # TypeScript type definitions
-├── exceptions/      # Custom error classes
-├── validators/      # Request validators
+│   ├── actionRoutes.ts    # Action endpoints
+│   ├── attributeRoutes.ts # Attribute endpoints
+│   ├── policyRoutes.ts    # Policy endpoints
+│   ├── resourceRoutes.ts  # Resource endpoints
+│   └── subjectRoutes.ts   # Subject endpoints
+├── middleware/      # Express middleware
+│   ├── auth.ts      # Authentication middleware
+│   └── security.ts  # Security middleware
 ├── scripts/         # Database scripts
-└── __tests__/       # Test files
+│   ├── seed.ts      # Seed sample data
+│   └── seeds/       # Seed data files
+├── config/          # Configuration files
+├── utils/           # Utility functions
+└── types/           # TypeScript type definitions
 ```
 
 ## 🔒 Security Features
@@ -131,6 +143,42 @@ src/
 - `POST /api/v1/auth/refresh-token` - Refresh JWT token
 - `GET /api/v1/auth/profile` - Get user profile
 - `POST /api/v1/auth/logout` - User logout
+
+### Policies
+- `GET /api/v1/policies` - List policies with pagination, filtering, and sorting
+- `POST /api/v1/policies` - Create new policy
+- `GET /api/v1/policies/:id` - Get specific policy
+- `PUT /api/v1/policies/:id` - Update policy
+- `DELETE /api/v1/policies/:id` - Delete policy
+- `DELETE /api/v1/policies/bulk` - Bulk delete policies
+
+### Subjects
+- `GET /api/v1/subjects` - List subjects with pagination
+- `POST /api/v1/subjects` - Create new subject
+- `GET /api/v1/subjects/:id` - Get specific subject
+- `PUT /api/v1/subjects/:id` - Update subject
+- `DELETE /api/v1/subjects/:id` - Delete subject
+
+### Actions
+- `GET /api/v1/actions` - List actions with pagination
+- `POST /api/v1/actions` - Create new action
+- `GET /api/v1/actions/:id` - Get specific action
+- `PUT /api/v1/actions/:id` - Update action
+- `DELETE /api/v1/actions/:id` - Delete action
+
+### Resources
+- `GET /api/v1/resources` - List resources with pagination
+- `POST /api/v1/resources` - Create new resource
+- `GET /api/v1/resources/:id` - Get specific resource
+- `PUT /api/v1/resources/:id` - Update resource
+- `DELETE /api/v1/resources/:id` - Delete resource
+
+### Attributes
+- `GET /api/v1/attributes` - List attributes with pagination and filtering
+- `POST /api/v1/attributes` - Create new attribute
+- `GET /api/v1/attributes/:id` - Get specific attribute
+- `PUT /api/v1/attributes/:id` - Update attribute
+- `DELETE /api/v1/attributes/:id` - Delete attribute
 
 ### Health & Info
 - `GET /health` - Health check

@@ -123,7 +123,9 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       <List sx={{ flex: 1, pt: 1 }}>
         {menuItems.map((item) => {
           const Icon = item.icon;
-          const isActive = pathname === item.path;
+          // Check for exact match or sub-paths (drill-down pages)
+          const isActive = pathname === item.path || 
+            (item.path !== '/dashboard' && pathname.startsWith(item.path + '/'));
           
           return (
             <ListItem key={item.text} disablePadding sx={{ display: 'block' }}>
