@@ -73,7 +73,7 @@ export default function DashboardPage() {
         {stats.map((stat, index) => {
           const Icon = stat.icon;
           return (
-            <Grid item xs={12} sm={6} md={3} key={index}>
+            <Grid size={{ xs: 12, sm: 6, md: 3 }} key={index}>
               <Card sx={{ height: '100%' }}>
                 <CardContent>
                   <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
@@ -95,7 +95,7 @@ export default function DashboardPage() {
       {/* Main Content Grid */}
       <Grid container spacing={3}>
         {/* User Information */}
-        <Grid item xs={12} md={6}>
+        <Grid size={{ xs: 12, md: 6 }}>
           <Card sx={{ height: '100%' }}>
             <CardContent>
               <Typography variant="h6" gutterBottom>
@@ -139,7 +139,7 @@ export default function DashboardPage() {
         </Grid>
 
         {/* Quick Actions */}
-        <Grid item xs={12} md={6}>
+        <Grid size={{ xs: 12, md: 6 }}>
           <Card sx={{ height: '100%' }}>
             <CardContent>
               <Typography variant="h6" gutterBottom>
@@ -179,7 +179,7 @@ export default function DashboardPage() {
         </Grid>
 
         {/* Recent Activity */}
-        <Grid item xs={12}>
+        <Grid size={{ xs: 12 }}>
           <Card>
             <CardContent>
               <Typography variant="h6" gutterBottom>

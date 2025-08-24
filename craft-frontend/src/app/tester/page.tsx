@@ -166,7 +166,7 @@ export default function PolicyTesterPage() {
       {/* Stats Cards */}
       <Grid container spacing={3} sx={{ mb: 4 }}>
         {stats.map((stat, index) => (
-          <Grid item xs={12} sm={6} md={3} key={index}>
+          <Grid size={{ xs: 12, sm: 6, md: 3 }} key={index}>
             <Card>
               <CardContent>
                 <Typography variant="h4" component="div" color={`${stat.color}.main`}>
@@ -193,7 +193,7 @@ export default function PolicyTesterPage() {
       {tabValue === 0 && (
         <Grid container spacing={3}>
           {/* Input Form */}
-          <Grid item xs={12} md={6}>
+          <Grid size={{ xs: 12, md: 6 }}>
             <Card>
               <CardContent>
                 <Typography variant="h6" gutterBottom>
@@ -262,7 +262,7 @@ export default function PolicyTesterPage() {
           </Grid>
 
           {/* Results */}
-          <Grid item xs={12} md={6}>
+          <Grid size={{ xs: 12, md: 6 }}>
             <Card sx={{ height: '100%' }}>
               <CardContent>
                 <Typography variant="h6" gutterBottom>
@@ -313,7 +313,7 @@ export default function PolicyTesterPage() {
                     </Alert>
 
                     <Grid container spacing={2} sx={{ mb: 3 }}>
-                      <Grid item xs={6}>
+                      <Grid size={{ xs: 6 }}>
                         <Paper variant="outlined" sx={{ p: 2, textAlign: 'center' }}>
                           <Typography variant="caption" color="text.secondary">
                             Execution Time
@@ -323,7 +323,7 @@ export default function PolicyTesterPage() {
                           </Typography>
                         </Paper>
                       </Grid>
-                      <Grid item xs={6}>
+                      <Grid size={{ xs: 6 }}>
                         <Paper variant="outlined" sx={{ p: 2, textAlign: 'center' }}>
                           <Typography variant="caption" color="text.secondary">
                             Policies Evaluated

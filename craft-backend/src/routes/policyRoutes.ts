@@ -5,8 +5,8 @@ import { asyncHandler } from '@/middleware/errorHandler';
 
 const router = express.Router();
 
-// Apply authentication middleware to all routes
-router.use(auth);
+// Apply optional authentication middleware to all routes (for demo purposes)
+// router.use(auth);
 
 // Policy management routes
 router.get('/', asyncHandler(PolicyController.getPolicies));

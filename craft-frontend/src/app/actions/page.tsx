@@ -1,10 +1,9 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Typography,
   Box,
-  Grid,
   Card,
   CardContent,
   Button,
@@ -27,457 +26,1082 @@ import {
   Select,
   MenuItem,
   Fab,
+  Avatar,
+  Switch,
+  FormControlLabel,
+  TablePagination,
+  Popover,
   List,
   ListItem,
   ListItemText,
-  ListItemIcon,
+  Checkbox,
+  Toolbar,
+  Tooltip,
+  InputAdornment,
 } from '@mui/material';
 import {
-  PlayArrow as PlayArrowIcon,
+  PlayArrow as ActionIcon,
   Add as AddIcon,
   Edit as EditIcon,
   Delete as DeleteIcon,
   Visibility as ViewIcon,
   FilterList as FilterIcon,
-  Code as CodeIcon,
-  Storage as DatabaseIcon,
-  CloudUpload as UploadIcon,
-  CloudDownload as DownloadIcon,
-  Security as SecurityIcon,
+  Description as FileIcon,
+  FolderOpen,
+  Settings as SystemIcon,
+  MoreHoriz as MoreIcon,
+  SelectAll as SelectAllIcon,
+  CheckBox as CheckBoxIcon,
+  CheckBoxOutlineBlank as CheckBoxOutlineBlankIcon,
+  DeleteSweep as BulkDeleteIcon,
+  Close as CloseIcon,
+  Search as SearchIcon,
+  Sort as SortIcon,
+  Clear as ClearIcon,
+  ArrowUpward as ArrowUpIcon,
+  ArrowDownward as ArrowDownIcon,
 } from '@mui/icons-material';
 import DashboardLayout from '@/components/layout/DashboardLayout';
+import { apiClient } from '@/lib/api';
+import { ApiResponse } from '@/types';
 
-interface Action {
+interface ActionObject {
+  _id: string;
   id: string;
   name: string;
-  description: string;
-  category: 'Read' | 'Write' | 'Execute' | 'Delete' | 'Admin';
+  displayName: string;
+  description?: string;
+  category: 'read' | 'write' | 'execute' | 'delete' | 'admin';
   httpMethod?: string;
   endpoint?: string;
-  riskLevel: 'Low' | 'Medium' | 'High' | 'Critical';
-  status: 'Active' | 'Inactive' | 'Deprecated';
+  riskLevel: 'low' | 'medium' | 'high' | 'critical';
+  active: boolean;
+  metadata: {
+    owner: string;
+    createdBy: string;
+    lastModifiedBy: string;
+    tags: string[];
+    isSystem: boolean;
+    isCustom: boolean;
+    version: string;
+  };
   createdAt: string;
-  usageCount: number;
+  updatedAt: string;
 }
 
 export default function ActionsPage() {
-  const [actions] = useState<Action[]>([
-    {
-      id: '1',
-      name: 'read_user_profile',
-      description: 'Read user profile information',
-      category: 'Read',
-      httpMethod: 'GET',
-      endpoint: '/api/users/{id}',
-      riskLevel: 'Low',
-      status: 'Active',
-      createdAt: '2024-01-15',
-      usageCount: 1247,
-    },
-    {
-      id: '2',
-      name: 'update_user_profile',
-      description: 'Update user profile information',
-      category: 'Write',
-      httpMethod: 'PUT',
-      endpoint: '/api/users/{id}',
-      riskLevel: 'Medium',
-      status: 'Active',
-      createdAt: '2024-01-16',
-      usageCount: 423,
-    },
-    {
-      id: '3',
-      name: 'delete_user_account',
-      description: 'Permanently delete a user account',
-      category: 'Delete',
-      httpMethod: 'DELETE',
-      endpoint: '/api/users/{id}',
-      riskLevel: 'Critical',
-      status: 'Active',
-      createdAt: '2024-01-17',
-      usageCount: 12,
-    },
-    {
-      id: '4',
-      name: 'execute_system_backup',
-      description: 'Execute full system backup',
-      category: 'Execute',
-      riskLevel: 'High',
-      status: 'Active',
-      createdAt: '2024-01-18',
-      usageCount: 89,
-    },
-    {
-      id: '5',
-      name: 'manage_permissions',
-      description: 'Manage user permissions and roles',
-      category: 'Admin',
-      httpMethod: 'POST',
-      endpoint: '/api/admin/permissions',
-      riskLevel: 'Critical',
-      status: 'Active',
-      createdAt: '2024-01-19',
-      usageCount: 56,
-    },
-  ]);
+  const [actions, setActions] = useState<ActionObject[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [total, setTotal] = useState(0);
 
   const [open, setOpen] = useState(false);
-  const [selectedAction, setSelectedAction] = useState<Action | null>(null);
+  const [selectedAction, setSelectedAction] = useState<ActionObject | null>(null);
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [selectedActions, setSelectedActions] = useState<string[]>([]);
+  const [displayName, setDisplayName] = useState('');
+  const [displayNameError, setDisplayNameError] = useState('');
+  const [description, setDescription] = useState('');
+  
+  // Search, Filter, Sort states
+  const [searchTerm, setSearchTerm] = useState('');
+  const [sortBy, setSortBy] = useState('displayName');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+  const [viewOpen, setViewOpen] = useState(false);
+  const [viewAction, setViewAction] = useState<ActionObject | null>(null);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleteAction, setDeleteAction] = useState<ActionObject | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
+  
+  // Form state - simplified to match Object modal
 
-  const handleClickOpen = (action?: Action) => {
-    setSelectedAction(action || null);
-    setOpen(true);
+  // Fetch actions from API
+  const fetchActions = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const params: Record<string, any> = {
+        page: page + 1,
+        limit: rowsPerPage,
+        sortBy,
+        sortOrder,
+      };
+      
+      if (searchTerm?.trim()) {
+        params.search = searchTerm.trim();
+      }
+      
+      console.log('Fetching actions with params:', params);
+      const response: ApiResponse<ActionObject[]> = await apiClient.get('/actions', params);
+      console.log('Actions response:', response);
+      
+      if (!response.success) {
+        throw new Error(response.error || 'Failed to fetch actions');
+      }
+      
+      setActions(response.data || []);
+      setTotal(response.pagination?.total || 0);
+      
+    } catch (err: any) {
+      console.error('Error details:', {
+        message: err.message,
+        status: err.response?.status,
+        statusText: err.response?.statusText,
+        data: err.response?.data,
+        url: err.config?.url,
+        method: err.config?.method
+      });
+      
+      const errorMessage = err.response?.data?.error ||
+        err.response?.data?.message ||
+        err.message ||
+        'Failed to load actions';
+      
+      setError(errorMessage);
+      
+      // Fallback to empty array on error
+      setActions([]);
+      setTotal(0);
+    } finally {
+      setLoading(false);
+    }
+  }, [page, rowsPerPage, sortBy, sortOrder, searchTerm]);
+
+  useEffect(() => {
+    if (searchTerm !== '') {
+      const timeoutId = setTimeout(() => {
+        setPage(0);
+        fetchActions();
+      }, 500);
+      return () => clearTimeout(timeoutId);
+    } else {
+      fetchActions();
+      return () => {}; // Empty cleanup function for consistency
+    }
+  }, [fetchActions]);
+
+  const handleSearchChange = useCallback((value: string) => {
+    setSearchTerm(value);
+    setPage(0); // Reset to first page
+  }, []);
+
+  const handleSort = (property: string) => {
+    const isAsc = sortBy === property && sortOrder === 'asc';
+    setSortOrder(isAsc ? 'desc' : 'asc');
+    setSortBy(property);
   };
 
-  const handleClose = () => {
+  const handleChangePage = (event: unknown, newPage: number) => {
+    setPage(newPage);
+  };
+
+  const handleChangeRowsPerPage = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setRowsPerPage(parseInt(event.target.value, 10));
+    setPage(0);
+  };
+
+  const clearFilters = useCallback(() => {
+    setSearchTerm('');
+    setPage(0);
+  }, []);
+
+  // Dialog handlers
+  const handleClickOpen = useCallback((action?: ActionObject) => {
+    if (action) {
+      setSelectedAction(action);
+      setDisplayName(action.displayName);
+      setDescription(action.description || '');
+    } else {
+      setSelectedAction(null);
+      setDisplayName('');
+      setDescription('');
+    }
+    setDisplayNameError('');
+    setOpen(true);
+  }, []);
+
+  const handleClose = useCallback(() => {
     setOpen(false);
     setSelectedAction(null);
-  };
+    setDisplayNameError('');
+  }, []);
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'Active': return 'success';
-      case 'Inactive': return 'error';
-      case 'Deprecated': return 'warning';
-      default: return 'default';
+  const handleViewOpen = useCallback((action: ActionObject) => {
+    setViewAction(action);
+    setViewOpen(true);
+  }, []);
+
+  const handleViewClose = useCallback(() => {
+    setViewOpen(false);
+    setViewAction(null);
+  }, []);
+
+  const handleDeleteOpen = useCallback((action: ActionObject) => {
+    setDeleteAction(action);
+    setDeleteOpen(true);
+  }, []);
+
+  const handleDeleteClose = useCallback(() => {
+    setDeleteOpen(false);
+    setDeleteAction(null);
+  }, []);
+
+  const handleDelete = async () => {
+    if (!deleteAction) return;
+    
+    try {
+      setIsDeleting(true);
+      
+      console.log('Deleting action:', deleteAction._id);
+      const response = await apiClient.delete(`/actions/${deleteAction._id}`);
+      console.log('Delete response:', response);
+      
+      if (!response.success) {
+        throw new Error(response.error || 'Failed to delete action');
+      }
+      
+      handleDeleteClose();
+      fetchActions();
+      
+    } catch (err: any) {
+      console.error('Error deleting action:', err);
+      setError(err.message || 'Failed to delete action');
+    } finally {
+      setIsDeleting(false);
     }
   };
 
-  const getRiskColor = (risk: string) => {
-    switch (risk) {
-      case 'Low': return 'success';
-      case 'Medium': return 'warning';
-      case 'High': return 'error';
-      case 'Critical': return 'error';
-      default: return 'default';
+  const handleSubmit = async () => {
+    if (!displayName.trim() || displayNameError) {
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const actionData = {
+        name: displayName.toLowerCase().replace(/\s+/g, ''),
+        displayName: displayName.trim(),
+        description: description?.trim() || '',
+        category: 'read',
+        riskLevel: 'low',
+        active: true,
+      };
+
+      if (selectedAction) {
+        // Update existing action
+        const response = await apiClient.put(`/actions/${selectedAction._id}`, actionData);
+        
+        if (response.success) {
+          // Refresh the data by calling fetchActions
+          await fetchActions();
+        }
+      } else {
+        // Create new action
+        const response = await apiClient.post('/actions', actionData);
+        
+        if (response.success) {
+          // Refresh the data by calling fetchActions
+          await fetchActions();
+        }
+      }
+      
+      handleClose();
+    } catch (error: any) {
+      console.error('Failed to save action:', error);
+      setError('Failed to save action. Please try again.');
+    } finally {
+      setIsSubmitting(false);
     }
   };
+
+  // Multi-select handlers
+  const handleSelectAll = (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (event.target.checked) {
+      const newSelected = actions.map(action => action._id);
+      setSelectedActions(newSelected);
+    } else {
+      setSelectedActions([]);
+    }
+  };
+
+  const handleSelectAction = (actionId: string) => {
+    const selectedIndex = selectedActions.indexOf(actionId);
+    let newSelected: string[] = [];
+
+    if (selectedIndex === -1) {
+      newSelected = newSelected.concat(selectedActions, actionId);
+    } else if (selectedIndex === 0) {
+      newSelected = newSelected.concat(selectedActions.slice(1));
+    } else if (selectedIndex === selectedActions.length - 1) {
+      newSelected = newSelected.concat(selectedActions.slice(0, -1));
+    } else if (selectedIndex > 0) {
+      newSelected = newSelected.concat(
+        selectedActions.slice(0, selectedIndex),
+        selectedActions.slice(selectedIndex + 1),
+      );
+    }
+
+    setSelectedActions(newSelected);
+  };
+
+  const handleBulkDeleteOpen = useCallback(() => {
+    setBulkDeleteOpen(true);
+  }, []);
+
+  const handleBulkDeleteClose = useCallback(() => {
+    setBulkDeleteOpen(false);
+  }, []);
+
+  const handleBulkDelete = async () => {
+    try {
+      setIsDeleting(true);
+      
+      console.log('Bulk deleting actions:', selectedActions);
+      const response = await apiClient.delete('/actions/bulk/delete', {
+        actionIds: selectedActions
+      });
+      console.log('Bulk delete response:', response);
+      
+      if (!response.success) {
+        throw new Error(response.error || 'Failed to delete actions');
+      }
+      
+      setSelectedActions([]);
+      handleBulkDeleteClose();
+      fetchActions();
+      
+    } catch (err: any) {
+      console.error('Error bulk deleting actions:', err);
+      setError(err.message || 'Failed to delete actions');
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const hasActiveFilters = searchTerm.length > 0;
 
   const getCategoryIcon = (category: string) => {
     switch (category) {
-      case 'Read': return <ViewIcon />;
-      case 'Write': return <EditIcon />;
-      case 'Execute': return <PlayArrowIcon />;
-      case 'Delete': return <DeleteIcon />;
-      case 'Admin': return <SecurityIcon />;
-      default: return <CodeIcon />;
+      case 'read': return <ViewIcon />;
+      case 'write': return <EditIcon />;
+      case 'execute': return <ActionIcon />;
+      case 'delete': return <DeleteIcon />;
+      case 'admin': return <SystemIcon />;
+      default: return <ActionIcon />;
     }
   };
 
-  const getCategoryColor = (category: string) => {
+  const getCategoryColor = (category: string): 'default' | 'primary' | 'secondary' | 'error' | 'info' | 'success' | 'warning' => {
     switch (category) {
-      case 'Read': return 'info';
-      case 'Write': return 'primary';
-      case 'Execute': return 'secondary';
-      case 'Delete': return 'error';
-      case 'Admin': return 'warning';
+      case 'read': return 'info';
+      case 'write': return 'primary';
+      case 'execute': return 'secondary';
+      case 'delete': return 'error';
+      case 'admin': return 'warning';
       default: return 'default';
     }
   };
 
-  const stats = [
-    { label: 'Total Actions', value: actions.length, color: 'primary' },
-    { label: 'Active', value: actions.filter(a => a.status === 'Active').length, color: 'success' },
-    { label: 'High Risk', value: actions.filter(a => a.riskLevel === 'High' || a.riskLevel === 'Critical').length, color: 'error' },
-    { label: 'This Week', value: '7', color: 'info' },
-  ];
-
-  const categoryStats = actions.reduce((acc, action) => {
-    acc[action.category] = (acc[action.category] || 0) + 1;
-    return acc;
-  }, {} as Record<string, number>);
+  const getRiskColor = (riskLevel: string): 'default' | 'primary' | 'secondary' | 'error' | 'info' | 'success' | 'warning' => {
+    switch (riskLevel) {
+      case 'low': return 'success';
+      case 'medium': return 'warning';
+      case 'high': return 'error';
+      case 'critical': return 'error';
+      default: return 'default';
+    }
+  };
 
   return (
     <DashboardLayout>
       {/* Header */}
-      <Paper elevation={1} sx={{ p: 3, mb: 4 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-          <PlayArrowIcon sx={{ mr: 2, color: 'primary.main' }} />
-          <Typography variant="h4" component="h1">
-            Actions
-          </Typography>
+      <Paper elevation={0} sx={{ p: 3, mb: 3, border: '1px solid', borderColor: 'grey.200' }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+            <ActionIcon sx={{ mr: 2, color: 'text.secondary' }} />
+            <Typography variant="h5" component="h1" fontWeight="600">
+              Actions
+            </Typography>
+          </Box>
+          <Box sx={{ textAlign: 'right' }}>
+            <Typography variant="h6" color="primary.main" fontWeight="600">
+              {loading ? '...' : total}
+            </Typography>
+            <Typography variant="caption" color="text.secondary">
+              Total Actions
+            </Typography>
+          </Box>
         </Box>
-        <Typography variant="body1" color="text.secondary">
-          Manage available actions and operations in your system.
+        <Typography variant="body2" color="text.secondary">
+          Manage system actions and operations in your permission system.
+          {hasActiveFilters && (
+            <Typography component="span" variant="body2" color="primary.main" sx={{ ml: 1 }}>
+              (Filtered)
+            </Typography>
+          )}
         </Typography>
       </Paper>
 
-      {/* Stats Cards */}
-      <Grid container spacing={3} sx={{ mb: 4 }}>
-        {stats.map((stat, index) => (
-          <Grid item xs={12} sm={6} md={3} key={index}>
-            <Card>
-              <CardContent>
-                <Typography variant="h4" component="div" color={`${stat.color}.main`}>
-                  {stat.value}
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  {stat.label}
-                </Typography>
-              </CardContent>
-            </Card>
-          </Grid>
-        ))}
-      </Grid>
+      {/* Filter Bar */}
+      {selectedActions.length === 0 && (
+        <Paper elevation={0} sx={{ 
+          p: 2, 
+          mb: 3, 
+          border: '1px solid',
+          borderColor: 'grey.200',
+        }}>
+          <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap' }}>
+            {/* Search */}
+            <TextField
+              placeholder="Search actions..."
+              value={searchTerm}
+              onChange={(e) => handleSearchChange(e.target.value)}
+              size="small"
+              sx={{ minWidth: '250px', flex: 1 }}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <SearchIcon color="action" fontSize="small" />
+                  </InputAdornment>
+                ),
+              }}
+            />
 
-      {/* Category Breakdown */}
-      <Grid container spacing={3} sx={{ mb: 4 }}>
-        <Grid item xs={12} md={8}>
-          {/* Actions Bar */}
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-            <Box sx={{ display: 'flex', gap: 2 }}>
-              <Button variant="outlined" startIcon={<FilterIcon />}>
-                Filter
+            {/* Clear & Add buttons */}
+            <Box sx={{ display: 'flex', gap: 1, ml: 'auto' }}>
+              {hasActiveFilters && (
+                <Button
+                  size="small"
+                  onClick={clearFilters}
+                  startIcon={<ClearIcon />}
+                  sx={{ textTransform: 'none' }}
+                >
+                  Clear
+                </Button>
+              )}
+              <Button
+                variant="contained"
+                size="small"
+                startIcon={<AddIcon />}
+                onClick={() => handleClickOpen()}
+                sx={{ textTransform: 'none' }}
+              >
+                Create Action
               </Button>
             </Box>
-            <Button
-              variant="contained"
-              startIcon={<AddIcon />}
-              onClick={() => handleClickOpen()}
-            >
-              Create Action
-            </Button>
           </Box>
-        </Grid>
-        <Grid item xs={12} md={4}>
-          <Card>
-            <CardContent>
-              <Typography variant="h6" gutterBottom>
-                Actions by Category
-              </Typography>
-              <List dense>
-                {Object.entries(categoryStats).map(([category, count]) => (
-                  <ListItem key={category} sx={{ px: 0 }}>
-                    <ListItemIcon sx={{ minWidth: 36 }}>
-                      <Box sx={{ color: `${getCategoryColor(category)}.main` }}>
-                        {getCategoryIcon(category)}
-                      </Box>
-                    </ListItemIcon>
-                    <ListItemText
-                      primary={category}
-                      secondary={`${count} actions`}
-                    />
-                  </ListItem>
-                ))}
-              </List>
-            </CardContent>
-          </Card>
-        </Grid>
-      </Grid>
+
+          {/* Active Filter Chips */}
+          {hasActiveFilters && searchTerm && (
+            <Box sx={{ mt: 2, display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+              <Chip
+                label={`Search: "${searchTerm}"`}
+                onDelete={clearFilters}
+                size="small"
+                color="primary"
+              />
+            </Box>
+          )}
+        </Paper>
+      )}
+
+      {/* Selected Actions Toolbar */}
+      {selectedActions.length > 0 && (
+        <Paper elevation={0} sx={{ p: 2, mb: 3, bgcolor: 'primary.50', border: '1px solid', borderColor: 'primary.200' }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <Typography variant="body1" fontWeight="500" color="primary.main">
+              {selectedActions.length} action{selectedActions.length === 1 ? '' : 's'} selected
+            </Typography>
+            <Box sx={{ display: 'flex', gap: 1 }}>
+              <Button
+                size="small"
+                onClick={() => setSelectedActions([])}
+                sx={{ color: 'text.secondary' }}
+              >
+                Clear selection
+              </Button>
+              <Button
+                variant="contained"
+                color="error"
+                size="small"
+                startIcon={<BulkDeleteIcon />}
+                onClick={handleBulkDeleteOpen}
+              >
+                Delete Selected
+              </Button>
+            </Box>
+          </Box>
+        </Paper>
+      )}
 
       {/* Actions Table */}
-      <Card>
+      <Card variant="outlined">
         <TableContainer>
           <Table>
             <TableHead>
-              <TableRow>
-                <TableCell>Action</TableCell>
-                <TableCell>Category</TableCell>
-                <TableCell>Method/Endpoint</TableCell>
-                <TableCell>Risk Level</TableCell>
-                <TableCell>Status</TableCell>
-                <TableCell>Usage</TableCell>
-                <TableCell align="center">Actions</TableCell>
+              <TableRow sx={{ bgcolor: 'grey.50' }}>
+                <TableCell padding="checkbox" sx={{ width: '48px' }}>
+                  <Checkbox
+                    color="primary"
+                    indeterminate={selectedActions.length > 0 && selectedActions.length < actions.length}
+                    checked={actions.length > 0 && selectedActions.length === actions.length}
+                    onChange={handleSelectAll}
+                    size="small"
+                  />
+                </TableCell>
+                <TableCell 
+                  sx={{ 
+                    fontWeight: 600, 
+                    fontSize: '0.875rem', 
+                    color: 'text.primary',
+                    cursor: 'pointer',
+                    userSelect: 'none',
+                    '&:hover': { bgcolor: 'grey.100' }
+                  }}
+                  onClick={() => handleSort('displayName')}
+                >
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    Name & Description
+                    {sortBy === 'displayName' && (
+                      sortOrder === 'asc' ? <ArrowUpIcon fontSize="small" /> : <ArrowDownIcon fontSize="small" />
+                    )}
+                  </Box>
+                </TableCell>
+                <TableCell align="center" sx={{ fontWeight: 600, fontSize: '0.875rem', color: 'text.primary', width: '120px' }}>
+                  Actions
+                </TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
-              {actions.map((action) => (
-                <TableRow key={action.id} hover>
-                  <TableCell>
-                    <Box>
-                      <Typography variant="subtitle2" fontWeight="medium" fontFamily="monospace">
-                        {action.name}
-                      </Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        {action.description}
-                      </Typography>
-                    </Box>
-                  </TableCell>
-                  <TableCell>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <Box sx={{ color: `${getCategoryColor(action.category)}.main` }}>
-                        {getCategoryIcon(action.category)}
-                      </Box>
-                      <Chip
-                        label={action.category}
-                        size="small"
-                        color={getCategoryColor(action.category) as any}
-                        variant="outlined"
-                      />
-                    </Box>
-                  </TableCell>
-                  <TableCell>
-                    {action.httpMethod && action.endpoint ? (
-                      <Box>
-                        <Chip
-                          label={action.httpMethod}
-                          size="small"
-                          variant="outlined"
-                          sx={{ mb: 0.5, fontFamily: 'monospace' }}
-                        />
-                        <Typography variant="body2" fontFamily="monospace" color="text.secondary">
-                          {action.endpoint}
-                        </Typography>
-                      </Box>
-                    ) : (
-                      <Typography variant="body2" color="text.secondary">
-                        System Action
-                      </Typography>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    <Chip
-                      label={action.riskLevel}
-                      size="small"
-                      color={getRiskColor(action.riskLevel) as any}
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <Chip
-                      label={action.status}
-                      size="small"
-                      color={getStatusColor(action.status) as any}
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <Typography variant="body2">
-                      {action.usageCount.toLocaleString()}
+              {loading ? (
+                <TableRow>
+                  <TableCell colSpan={3} sx={{ textAlign: 'center', py: 4 }}>
+                    <Typography variant="body1" color="text.secondary">
+                      Loading actions...
                     </Typography>
                   </TableCell>
-                  <TableCell align="center">
-                    <Box sx={{ display: 'flex', gap: 1 }}>
-                      <IconButton size="small" color="primary">
-                        <ViewIcon fontSize="small" />
-                      </IconButton>
-                      <IconButton 
-                        size="small" 
-                        color="primary"
-                        onClick={() => handleClickOpen(action)}
-                      >
-                        <EditIcon fontSize="small" />
-                      </IconButton>
-                      <IconButton size="small" color="error">
-                        <DeleteIcon fontSize="small" />
-                      </IconButton>
-                    </Box>
+                </TableRow>
+              ) : error ? (
+                <TableRow>
+                  <TableCell colSpan={3} sx={{ textAlign: 'center', py: 4 }}>
+                    <Typography color="error" variant="body1">
+                      {error}
+                    </Typography>
                   </TableCell>
                 </TableRow>
-              ))}
+              ) : actions.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={3} sx={{ textAlign: 'center', py: 4 }}>
+                    <Typography variant="body1" color="text.secondary">
+                      No actions found
+                    </Typography>
+                    {hasActiveFilters && (
+                      <Button
+                        size="small"
+                        onClick={clearFilters}
+                        sx={{ mt: 1 }}
+                      >
+                        Clear filters to see all actions
+                      </Button>
+                    )}
+                  </TableCell>
+                </TableRow>
+              ) : (
+                actions.map((action) => {
+                  const isItemSelected = selectedActions.includes(action._id);
+                  return (
+                    <TableRow
+                      key={action._id}
+                      hover
+                      selected={isItemSelected}
+                      sx={{ '&:last-child td, &:last-child th': { border: 0 } }}
+                    >
+                      <TableCell padding="checkbox">
+                        <Checkbox
+                          color="primary"
+                          checked={isItemSelected}
+                          onChange={() => handleSelectAction(action._id)}
+                          size="small"
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                          <Avatar 
+                            sx={{ 
+                              width: 40, 
+                              height: 40, 
+                              bgcolor: `${getCategoryColor(action.category)}.main`,
+                              color: 'white'
+                            }}
+                          >
+                            {getCategoryIcon(action.category)}
+                          </Avatar>
+                          <Box>
+                            <Typography 
+                              variant="subtitle2" 
+                              fontWeight="500" 
+                              color="text.primary"
+                              sx={{ mb: 0.5 }}
+                            >
+                              {action.displayName}
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary">
+                              {action.description || 'No description available'}
+                            </Typography>
+                          </Box>
+                        </Box>
+                      </TableCell>
+                      <TableCell align="center">
+                        <Box sx={{ display: 'flex', gap: 0.5, justifyContent: 'center' }}>
+                          <Tooltip title="View">
+                            <IconButton
+                              size="small"
+                              color="primary"
+                              onClick={() => handleViewOpen(action)}
+                            >
+                              <ViewIcon fontSize="small" />
+                            </IconButton>
+                          </Tooltip>
+                          <Tooltip title="Edit">
+                            <IconButton
+                              size="small"
+                              color="primary"
+                              onClick={() => handleClickOpen(action)}
+                            >
+                              <EditIcon fontSize="small" />
+                            </IconButton>
+                          </Tooltip>
+                          <Tooltip title="Delete">
+                            <IconButton
+                              size="small"
+                              color="error"
+                              onClick={() => handleDeleteOpen(action)}
+                            >
+                              <DeleteIcon fontSize="small" />
+                            </IconButton>
+                          </Tooltip>
+                        </Box>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })
+              )}
             </TableBody>
           </Table>
         </TableContainer>
+        
+        <TablePagination
+          rowsPerPageOptions={[5, 10, 25, 50]}
+          component="div"
+          count={total}
+          rowsPerPage={rowsPerPage}
+          page={page}
+          onPageChange={handleChangePage}
+          onRowsPerPageChange={handleChangeRowsPerPage}
+          sx={{
+            borderTop: '1px solid',
+            borderColor: 'divider',
+            '& .MuiTablePagination-selectLabel, & .MuiTablePagination-displayedRows': {
+              fontSize: '0.875rem',
+              color: 'text.secondary',
+            },
+          }}
+        />
       </Card>
 
       {/* Floating Action Button */}
       <Fab
         color="primary"
         aria-label="add"
-        sx={{ position: 'fixed', bottom: 24, right: 24 }}
         onClick={() => handleClickOpen()}
+        sx={{
+          position: 'fixed',
+          bottom: 24,
+          right: 24,
+        }}
       >
         <AddIcon />
       </Fab>
 
-      {/* Action Dialog */}
-      <Dialog open={open} onClose={handleClose} maxWidth="md" fullWidth>
-        <DialogTitle>
-          {selectedAction ? 'Edit Action' : 'Create New Action'}
+      {/* Create/Edit Action Dialog */}
+      <Dialog
+        open={open}
+        onClose={handleClose}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: 2,
+            boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
+            m: 2,
+          }
+        }}
+      >
+        <DialogTitle sx={{
+          pb: 1,
+          pt: 2.5,
+          px: 3,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between'
+        }}>
+          <Typography variant="h6" fontWeight="600" color="text.primary">
+            {selectedAction ? 'Edit Action' : 'Create Action'}
+          </Typography>
+          <IconButton
+            onClick={handleClose}
+            size="small"
+            sx={{
+              color: 'grey.500',
+              '&:hover': {
+                bgcolor: 'grey.100'
+              }
+            }}
+          >
+            <CloseIcon fontSize="small" />
+          </IconButton>
         </DialogTitle>
-        <DialogContent>
-          <Grid container spacing={3} sx={{ mt: 1 }}>
-            <Grid item xs={12} md={6}>
+
+        <DialogContent sx={{ px: 3, pt: 2, pb: 2 }}>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5, mt: 1 }}>
+            <TextField
+              fullWidth
+              label="Name"
+              value={displayName}
+              onChange={(e) => {
+                const value = e.target.value;
+                setDisplayName(value);
+                if (value.trim().length < 2) {
+                  setDisplayNameError('Name must be at least 2 characters long.');
+                } else {
+                  setDisplayNameError('');
+                }
+              }}
+              variant="outlined"
+              placeholder="e.g., Read User Profile, Delete Account, System Backup"
+              error={!!displayNameError}
+              helperText={displayNameError || 'Enter the action name'}
+            />
+
+            <TextField
+              fullWidth
+              label="Description"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              variant="outlined"
+              placeholder="Brief description of the action"
+              multiline
+              rows={3}
+            />
+          </Box>
+        </DialogContent>
+
+        <DialogActions sx={{
+          px: 3,
+          pb: 3,
+          pt: 1,
+          gap: 1.5
+        }}>
+          <Button
+            onClick={handleClose}
+            variant="outlined"
+            disabled={isSubmitting}
+            sx={{
+              textTransform: 'none',
+              minWidth: 100,
+              borderColor: 'grey.300',
+              color: 'text.secondary',
+              '&:hover': {
+                borderColor: 'grey.400',
+                bgcolor: 'grey.50'
+              }
+            }}
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={handleSubmit}
+            variant="contained"
+            disabled={isSubmitting || !displayName.trim() || !!displayNameError}
+            sx={{
+              textTransform: 'none',
+              minWidth: 120,
+              bgcolor: 'primary.main',
+              '&:hover': {
+                bgcolor: 'primary.dark'
+              }
+            }}
+          >
+            {isSubmitting ? 'Saving...' : (selectedAction ? 'Update Action' : 'Create Action')}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* View Action Dialog */}
+      <Dialog
+        open={viewOpen}
+        onClose={handleViewClose}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: 2,
+            boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
+            m: 2,
+          }
+        }}
+      >
+        <DialogTitle sx={{
+          pb: 1,
+          pt: 2.5,
+          px: 3,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between'
+        }}>
+          <Typography variant="h6" fontWeight="600" color="text.primary">
+            View Action
+          </Typography>
+          <IconButton
+            onClick={handleViewClose}
+            size="small"
+            sx={{
+              color: 'grey.500',
+              '&:hover': {
+                bgcolor: 'grey.100'
+              }
+            }}
+          >
+            <CloseIcon fontSize="small" />
+          </IconButton>
+        </DialogTitle>
+
+        <DialogContent sx={{ px: 3, pt: 2, pb: 2 }}>
+          {viewAction && (
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5, mt: 1 }}>
+              {/* Name */}
               <TextField
                 fullWidth
-                label="Action Name"
-                defaultValue={selectedAction?.name || ''}
+                label="Name"
+                value={viewAction.displayName}
                 variant="outlined"
-                placeholder="e.g., read_user_profile"
+                InputProps={{ readOnly: true }}
+                sx={{ '& .MuiInputBase-input': { bgcolor: 'grey.50' } }}
               />
-            </Grid>
-            <Grid item xs={12} md={6}>
-              <FormControl fullWidth>
-                <InputLabel>Category</InputLabel>
-                <Select
-                  value={selectedAction?.category || 'Read'}
-                  label="Category"
-                >
-                  <MenuItem value="Read">Read</MenuItem>
-                  <MenuItem value="Write">Write</MenuItem>
-                  <MenuItem value="Execute">Execute</MenuItem>
-                  <MenuItem value="Delete">Delete</MenuItem>
-                  <MenuItem value="Admin">Admin</MenuItem>
-                </Select>
-              </FormControl>
-            </Grid>
-            <Grid item xs={12}>
+
+              {/* Description */}
               <TextField
                 fullWidth
                 label="Description"
+                value={viewAction.description || 'No description available'}
+                variant="outlined"
                 multiline
-                rows={2}
-                defaultValue={selectedAction?.description || ''}
-                variant="outlined"
+                rows={3}
+                InputProps={{ readOnly: true }}
+                sx={{ '& .MuiInputBase-input': { bgcolor: 'grey.50' } }}
               />
-            </Grid>
-            <Grid item xs={12} md={6}>
-              <FormControl fullWidth>
-                <InputLabel>HTTP Method</InputLabel>
-                <Select
-                  value={selectedAction?.httpMethod || ''}
-                  label="HTTP Method"
-                >
-                  <MenuItem value="">None</MenuItem>
-                  <MenuItem value="GET">GET</MenuItem>
-                  <MenuItem value="POST">POST</MenuItem>
-                  <MenuItem value="PUT">PUT</MenuItem>
-                  <MenuItem value="DELETE">DELETE</MenuItem>
-                  <MenuItem value="PATCH">PATCH</MenuItem>
-                </Select>
-              </FormControl>
-            </Grid>
-            <Grid item xs={12} md={6}>
-              <TextField
-                fullWidth
-                label="Endpoint"
-                defaultValue={selectedAction?.endpoint || ''}
-                variant="outlined"
-                placeholder="/api/resource/{id}"
-              />
-            </Grid>
-            <Grid item xs={12} md={6}>
-              <FormControl fullWidth>
-                <InputLabel>Risk Level</InputLabel>
-                <Select
-                  value={selectedAction?.riskLevel || 'Low'}
-                  label="Risk Level"
-                >
-                  <MenuItem value="Low">Low</MenuItem>
-                  <MenuItem value="Medium">Medium</MenuItem>
-                  <MenuItem value="High">High</MenuItem>
-                  <MenuItem value="Critical">Critical</MenuItem>
-                </Select>
-              </FormControl>
-            </Grid>
-            <Grid item xs={12} md={6}>
-              <FormControl fullWidth>
-                <InputLabel>Status</InputLabel>
-                <Select
-                  value={selectedAction?.status || 'Active'}
-                  label="Status"
-                >
-                  <MenuItem value="Active">Active</MenuItem>
-                  <MenuItem value="Inactive">Inactive</MenuItem>
-                  <MenuItem value="Deprecated">Deprecated</MenuItem>
-                </Select>
-              </FormControl>
-            </Grid>
-          </Grid>
+
+              {/* Metadata */}
+              <Box>
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 1, fontWeight: 500 }}>
+                  Metadata
+                </Typography>
+                <Box sx={{
+                  border: '1px solid',
+                  borderColor: 'grey.200',
+                  borderRadius: 1,
+                  p: 1.5,
+                  bgcolor: 'grey.50',
+                }}>
+                  <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
+                    <Box>
+                      <Typography variant="caption" color="text.secondary">
+                        Created By
+                      </Typography>
+                      <Typography variant="body2">
+                        {viewAction.metadata.createdBy}
+                      </Typography>
+                    </Box>
+                    <Box>
+                      <Typography variant="caption" color="text.secondary">
+                        Version
+                      </Typography>
+                      <Typography variant="body2">
+                        {viewAction.metadata.version}
+                      </Typography>
+                    </Box>
+                    <Box>
+                      <Typography variant="caption" color="text.secondary">
+                        Created At
+                      </Typography>
+                      <Typography variant="body2">
+                        {new Date(viewAction.createdAt).toLocaleDateString()}
+                      </Typography>
+                    </Box>
+                    <Box>
+                      <Typography variant="caption" color="text.secondary">
+                        Last Updated
+                      </Typography>
+                      <Typography variant="body2">
+                        {new Date(viewAction.updatedAt).toLocaleDateString()}
+                      </Typography>
+                    </Box>
+                  </Box>
+                </Box>
+              </Box>
+            </Box>
+          )}
         </DialogContent>
-        <DialogActions>
-          <Button onClick={handleClose}>Cancel</Button>
-          <Button onClick={handleClose} variant="contained">
-            {selectedAction ? 'Update' : 'Create'}
+
+        <DialogActions sx={{
+          px: 3,
+          pb: 3,
+          pt: 1
+        }}>
+          <Button
+            onClick={handleViewClose}
+            variant="outlined"
+            sx={{
+              textTransform: 'none',
+              minWidth: 100
+            }}
+          >
+            Close
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog
+        open={deleteOpen}
+        onClose={handleDeleteClose}
+        maxWidth="xs"
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: 2,
+          }
+        }}
+      >
+        <DialogTitle sx={{ pb: 2 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            <Avatar sx={{ bgcolor: 'error.main' }}>
+              <DeleteIcon />
+            </Avatar>
+            <Box>
+              <Typography variant="h6" fontWeight="600" color="text.primary">
+                Delete Action
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                This action cannot be undone
+              </Typography>
+            </Box>
+          </Box>
+        </DialogTitle>
+        <DialogContent sx={{ pt: 0 }}>
+          <Typography variant="body1">
+            Are you sure you want to delete <strong>"{deleteAction?.displayName}"</strong>?
+          </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+            This will permanently remove the action and all associated configurations.
+          </Typography>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 3, gap: 1.5 }}>
+          <Button
+            onClick={handleDeleteClose}
+            variant="text"
+            color="inherit"
+            sx={{ textTransform: 'none', fontWeight: 500 }}
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={handleDelete}
+            variant="contained"
+            color="error"
+            disabled={isDeleting}
+            sx={{ textTransform: 'none', fontWeight: 600 }}
+          >
+            {isDeleting ? 'Deleting...' : 'Delete Action'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Bulk Delete Confirmation Dialog */}
+      <Dialog
+        open={bulkDeleteOpen}
+        onClose={handleBulkDeleteClose}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: 2,
+          }
+        }}
+      >
+        <DialogTitle sx={{ pb: 2 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            <Avatar sx={{ bgcolor: 'error.main' }}>
+              <BulkDeleteIcon />
+            </Avatar>
+            <Box>
+              <Typography variant="h6" fontWeight="600" color="text.primary">
+                Delete {selectedActions.length} Actions
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                This action cannot be undone
+              </Typography>
+            </Box>
+          </Box>
+        </DialogTitle>
+        <DialogContent sx={{ pt: 0 }}>
+          <Typography variant="body1" sx={{ mb: 2 }}>
+            Are you sure you want to delete the following actions?
+          </Typography>
+          <Box sx={{ 
+            maxHeight: 200, 
+            overflow: 'auto', 
+            border: '1px solid', 
+            borderColor: 'grey.200', 
+            borderRadius: 1,
+            bgcolor: 'grey.50'
+          }}>
+            {selectedActions.map((actionId) => {
+              const action = actions.find(a => a._id === actionId);
+              return action ? (
+                <Box key={actionId} sx={{ p: 1.5, borderBottom: '1px solid', borderColor: 'grey.200' }}>
+                  <Typography variant="body2" fontWeight="500">
+                    {action.displayName}
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    {action.description || 'No description available'}
+                  </Typography>
+                </Box>
+              ) : null;
+            })}
+          </Box>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 3, gap: 1.5 }}>
+          <Button
+            onClick={handleBulkDeleteClose}
+            variant="text"
+            color="inherit"
+            sx={{ textTransform: 'none', fontWeight: 500 }}
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={handleBulkDelete}
+            variant="contained"
+            color="error"
+            disabled={isDeleting}
+            sx={{ textTransform: 'none', fontWeight: 600 }}
+          >
+            {isDeleting ? 'Deleting...' : `Delete ${selectedActions.length} Actions`}
           </Button>
         </DialogActions>
       </Dialog>

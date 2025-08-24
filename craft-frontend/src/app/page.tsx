@@ -95,7 +95,7 @@ export default function HomePage() {
 
         {/* Features Section */}
         <Grid container spacing={4} sx={{ mb: 6 }}>
-          <Grid item xs={12} md={4}>
+          <Grid size={{ xs: 12, md: 4 }}>
             <Card sx={{ height: '100%' }}>
               <CardContent sx={{ textAlign: 'center', p: 4 }}>
                 <SecurityIcon sx={{ fontSize: 48, color: 'primary.main', mb: 2 }} />
@@ -110,7 +110,7 @@ export default function HomePage() {
             </Card>
           </Grid>
 
-          <Grid item xs={12} md={4}>
+          <Grid size={{ xs: 12, md: 4 }}>
             <Card sx={{ height: '100%' }}>
               <CardContent sx={{ textAlign: 'center', p: 4 }}>
                 <DashboardIcon sx={{ fontSize: 48, color: 'primary.main', mb: 2 }} />
@@ -125,7 +125,7 @@ export default function HomePage() {
             </Card>
           </Grid>
 
-          <Grid item xs={12} md={4}>
+          <Grid size={{ xs: 12, md: 4 }}>
             <Card sx={{ height: '100%' }}>
               <CardContent sx={{ textAlign: 'center', p: 4 }}>
                 <SecurityIcon sx={{ fontSize: 48, color: 'secondary.main', mb: 2 }} />

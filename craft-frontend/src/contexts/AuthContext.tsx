@@ -105,9 +105,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           payload: {
             user: response.data,
             token,
-            refreshToken: typeof window !== 'undefined' 
-              ? localStorage.getItem('refreshToken') || undefined 
-              : undefined,
+            ...(typeof window !== 'undefined' && localStorage.getItem('refreshToken') && {
+              refreshToken: localStorage.getItem('refreshToken')!
+            }),
           },
         });
       } else {
@@ -143,6 +143,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return () => {
         window.removeEventListener('auth:error', handleAuthError);
       };
+    } else {
+      return () => {}; // Empty cleanup function for consistency
     }
   }, [checkAuth]);
 
@@ -158,7 +160,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           payload: {
             user: response.data.user,
             token: response.data.token,
-            refreshToken: response.data.refreshToken,
+            ...(response.data.refreshToken && {
+              refreshToken: response.data.refreshToken
+            }),
           },
         });
       } else {

@@ -4,63 +4,7 @@ import { ValidationError, NotFoundError } from '@/exceptions/AppError';
 import { asyncHandler } from '@/middleware/errorHandler';
 import { PaginationHelper } from '@/utils/pagination';
 import { logger } from '@/utils/logger';
-
-// Note: Policy model would need to be created
-// For now, I'll create a placeholder interface
-interface IPolicy {
-  _id: string;
-  id: string;
-  name: string;
-  description: string;
-  effect: 'Allow' | 'Deny';
-  status: 'Active' | 'Inactive' | 'Draft';
-  priority: number;
-  rules: any[];
-  subjects: string[];
-  resources: string[];
-  actions: string[];
-  conditions: any[];
-  metadata: {
-    createdBy: string;
-    lastModifiedBy: string;
-    tags: string[];
-    version: string;
-  };
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-// Placeholder Policy model - would be replaced with actual Mongoose model
-const Policy = {
-  find: (filter: any) => ({
-    populate: (path: string, select?: string) => ({
-      sort: (sort: any) => ({
-        skip: (skip: number) => ({
-          limit: (limit: number) => ({
-            lean: () => Promise.resolve([] as IPolicy[])
-          })
-        })
-      })
-    })
-  }),
-  countDocuments: (filter: any) => Promise.resolve(0),
-  findOne: (filter: any) => ({
-    populate: (path: string, select?: string) => ({
-      lean: () => Promise.resolve(null as IPolicy | null)
-    })
-  }),
-  findById: (id: string) => ({
-    populate: (path: string, select?: string) => Promise.resolve(null as IPolicy | null)
-  }),
-  create: (data: any) => Promise.resolve({} as IPolicy),
-  findByIdAndUpdate: (id: string, updates: any, options: any) => ({
-    populate: (path: string, select?: string) => Promise.resolve(null as IPolicy | null)
-  }),
-  findByIdAndDelete: (id: string) => Promise.resolve(null as IPolicy | null),
-  updateMany: (filter: any, updates: any, options?: any) => Promise.resolve({ matchedCount: 0, modifiedCount: 0 }),
-  deleteMany: (filter: any) => Promise.resolve({ deletedCount: 0 }),
-  aggregate: (pipeline: any[]) => Promise.resolve([])
-};
+import { Policy, IPolicy } from '@/models/Policy';
 
 export class PolicyController {
   // Get all policies with pagination and filtering
@@ -107,8 +51,6 @@ export class PolicyController {
     // Execute queries
     const [policies, total] = await Promise.all([
       Policy.find(filter)
-        .populate('metadata.createdBy', 'name email')
-        .populate('metadata.lastModifiedBy', 'name email')
         .sort(sortObject)
         .skip(skip)
         .limit(paginationOptions.limit)
@@ -128,10 +70,7 @@ export class PolicyController {
   static getPolicyById = asyncHandler(async (req: Request, res: Response): Promise<void> => {
     const { id } = req.params;
 
-    const policy = await Policy.findOne({ id })
-      .populate('metadata.createdBy', 'name email')
-      .populate('metadata.lastModifiedBy', 'name email')
-      .lean();
+    const policy = await Policy.findOne({ id }).lean();
 
     if (!policy) {
       throw new NotFoundError('Policy not found');
@@ -160,19 +99,21 @@ export class PolicyController {
     } = req.body;
 
     // Validate required fields
-    if (!id || !name || !effect) {
-      throw new ValidationError('ID, name, and effect are required');
+    if (!name || !effect) {
+      throw new ValidationError('Name and effect are required');
     }
 
-    // Check if policy already exists
-    const existingPolicy = await Policy.findOne({ id });
-    if (existingPolicy) {
-      throw new ValidationError('Policy with this ID already exists');
+    // Check if policy already exists (if id provided)
+    if (id) {
+      const existingPolicy = await Policy.findOne({ id });
+      if (existingPolicy) {
+        throw new ValidationError('Policy with this ID already exists');
+      }
     }
 
     // Create policy
     const policyData = {
-      id,
+      ...(id && { id }),
       name: name.trim(),
       description: description?.trim(),
       effect,
@@ -184,16 +125,18 @@ export class PolicyController {
       actions: actions || [],
       conditions: conditions || [],
       metadata: {
-        createdBy: req.user!._id,
-        lastModifiedBy: req.user!._id,
+        createdBy: req.user?._id || 'system',
+        lastModifiedBy: req.user?._id || 'system',
         tags: tags || [],
         version: '1.0.0',
+        isSystem: false,
+        isCustom: true,
       },
     };
 
     const policy = await Policy.create(policyData);
 
-    logger.info(`Policy created: ${policy.id} by ${req.user?.email}`);
+    logger.info(`Policy created: ${policy.id} by ${req.user?.email || 'system'}`);
 
     res.status(201).json({
       success: true,
@@ -224,17 +167,15 @@ export class PolicyController {
     } else {
       updates.metadata = existingPolicy.metadata;
     }
-    updates.metadata.lastModifiedBy = req.user!._id;
+    updates.metadata.lastModifiedBy = req.user?._id || 'system';
 
     const policy = await Policy.findByIdAndUpdate(
       existingPolicy._id,
       updates,
       { new: true, runValidators: true }
-    )
-      .populate('metadata.createdBy', 'name email')
-      .populate('metadata.lastModifiedBy', 'name email');
+    );
 
-    logger.info(`Policy updated: ${policy.id} by ${req.user?.email}`);
+    logger.info(`Policy updated: ${policy?.id} by ${req.user?.email || 'system'}`);
 
     res.status(200).json({
       success: true,
@@ -254,7 +195,7 @@ export class PolicyController {
 
     await Policy.findByIdAndDelete(policy._id);
 
-    logger.info(`Policy deleted: ${policy.id} by ${req.user?.email}`);
+    logger.info(`Policy deleted: ${policy.id} by ${req.user?.email || 'system'}`);
 
     res.status(200).json({
       success: true,
@@ -364,12 +305,12 @@ export class PolicyController {
       { id: { $in: policyIds } },
       { 
         ...updates,
-        'metadata.lastModifiedBy': req.user!._id
+        'metadata.lastModifiedBy': req.user?._id || 'system'
       },
       { runValidators: true }
     );
 
-    logger.info(`Bulk update performed on ${result.modifiedCount} policies by ${req.user?.email}`);
+    logger.info(`Bulk update performed on ${result.modifiedCount} policies by ${req.user?.email || 'system'}`);
 
     res.status(200).json({
       success: true,
@@ -390,7 +331,7 @@ export class PolicyController {
 
     const result = await Policy.deleteMany({ id: { $in: policyIds } });
 
-    logger.info(`Bulk delete performed on ${result.deletedCount} policies by ${req.user?.email}`);
+    logger.info(`Bulk delete performed on ${result.deletedCount} policies by ${req.user?.email || 'system'}`);
 
     res.status(200).json({
       success: true,

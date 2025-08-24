@@ -5,16 +5,16 @@ import { asyncHandler } from '@/middleware/errorHandler';
 
 const router = express.Router();
 
-// Apply authentication middleware to all routes
-router.use(auth);
-
-// Attribute management routes
+// Attribute management routes (public for demo)
 router.get('/', asyncHandler(AttributeController.getAttributes));
-router.get('/stats', asyncHandler(AttributeController.getAttributeStats));
 router.get('/:id', asyncHandler(AttributeController.getAttributeById));
 router.post('/', asyncHandler(AttributeController.createAttribute));
 router.put('/:id', asyncHandler(AttributeController.updateAttribute));
 router.delete('/:id', asyncHandler(AttributeController.deleteAttribute));
+
+// Apply authentication middleware to remaining routes
+router.use(auth);
+router.get('/stats', asyncHandler(AttributeController.getAttributeStats));
 
 // Validation routes
 router.post('/:id/validate', asyncHandler(AttributeController.validateAttributeValue));

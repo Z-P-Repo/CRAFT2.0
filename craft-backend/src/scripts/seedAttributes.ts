@@ -1,0 +1,237 @@
+import mongoose from 'mongoose';
+import { Attribute } from '@/models/Attribute';
+import { config } from '@/config/environment';
+import { logger } from '@/utils/logger';
+
+const sampleAttributes = [
+  {
+    id: 'attr_department',
+    name: 'department',
+    displayName: 'Department',
+    description: 'User department within organization',
+    category: 'subject',
+    dataType: 'string',
+    isRequired: true,
+    isMultiValue: false,
+    defaultValue: 'IT',
+    constraints: {
+      enumValues: ['IT', 'HR', 'Finance', 'Marketing', 'Operations', 'Legal', 'Engineering']
+    },
+    validation: {},
+    metadata: {
+      createdBy: 'system',
+      lastModifiedBy: 'system',
+      tags: ['core', 'subject'],
+      isSystem: true,
+      isCustom: false,
+      version: '1.0.0'
+    },
+    mapping: {},
+    active: true
+  },
+  {
+    id: 'attr_clearance_level',
+    name: 'clearanceLevel',
+    displayName: 'Clearance Level',
+    description: 'Security clearance level (1-5)',
+    category: 'subject',
+    dataType: 'number',
+    isRequired: true,
+    isMultiValue: false,
+    defaultValue: 1,
+    constraints: {
+      minValue: 1,
+      maxValue: 5,
+      enumValues: [1, 2, 3, 4, 5]
+    },
+    validation: {},
+    metadata: {
+      createdBy: 'system',
+      lastModifiedBy: 'system',
+      tags: ['security', 'subject'],
+      isSystem: true,
+      isCustom: false,
+      version: '1.0.0'
+    },
+    mapping: {},
+    active: true
+  },
+  {
+    id: 'attr_classification',
+    name: 'classification',
+    displayName: 'Classification',
+    description: 'Data classification level',
+    category: 'resource',
+    dataType: 'string',
+    isRequired: false,
+    isMultiValue: false,
+    defaultValue: 'public',
+    constraints: {
+      enumValues: ['public', 'internal', 'confidential', 'restricted', 'top-secret']
+    },
+    validation: {},
+    metadata: {
+      createdBy: 'system',
+      lastModifiedBy: 'system',
+      tags: ['security', 'resource'],
+      isSystem: true,
+      isCustom: false,
+      version: '1.0.0'
+    },
+    mapping: {},
+    active: true
+  },
+  {
+    id: 'attr_current_time',
+    name: 'currentTime',
+    displayName: 'Current Time',
+    description: 'Timestamp of access request',
+    category: 'environment',
+    dataType: 'date',
+    isRequired: false,
+    isMultiValue: false,
+    constraints: {},
+    validation: {},
+    metadata: {
+      createdBy: 'system',
+      lastModifiedBy: 'system',
+      tags: ['temporal', 'environment'],
+      isSystem: true,
+      isCustom: false,
+      version: '1.0.0'
+    },
+    mapping: {},
+    active: true
+  },
+  {
+    id: 'attr_risk_level',
+    name: 'riskLevel',
+    displayName: 'Risk Level',
+    description: 'Risk level of the action',
+    category: 'action',
+    dataType: 'string',
+    isRequired: false,
+    isMultiValue: false,
+    defaultValue: 'low',
+    constraints: {
+      enumValues: ['low', 'medium', 'high', 'critical']
+    },
+    validation: {},
+    metadata: {
+      createdBy: 'system',
+      lastModifiedBy: 'system',
+      tags: ['risk', 'action'],
+      isSystem: true,
+      isCustom: false,
+      version: '1.0.0'
+    },
+    mapping: {},
+    active: true
+  },
+  {
+    id: 'attr_location',
+    name: 'location',
+    displayName: 'Location',
+    description: 'Physical or logical location',
+    category: 'environment',
+    dataType: 'string',
+    isRequired: false,
+    isMultiValue: false,
+    constraints: {
+      enumValues: ['office', 'home', 'branch', 'datacenter', 'cloud']
+    },
+    validation: {},
+    metadata: {
+      createdBy: 'system',
+      lastModifiedBy: 'system',
+      tags: ['location', 'environment'],
+      isSystem: true,
+      isCustom: false,
+      version: '1.0.0'
+    },
+    mapping: {},
+    active: true
+  },
+  {
+    id: 'attr_file_size',
+    name: 'fileSize',
+    displayName: 'File Size',
+    description: 'Size of the file in bytes',
+    category: 'resource',
+    dataType: 'number',
+    isRequired: false,
+    isMultiValue: false,
+    constraints: {
+      minValue: 0
+    },
+    validation: {},
+    metadata: {
+      createdBy: 'system',
+      lastModifiedBy: 'system',
+      tags: ['file', 'resource'],
+      isSystem: true,
+      isCustom: false,
+      version: '1.0.0'
+    },
+    mapping: {},
+    active: true
+  },
+  {
+    id: 'attr_is_encrypted',
+    name: 'isEncrypted',
+    displayName: 'Is Encrypted',
+    description: 'Whether the resource is encrypted',
+    category: 'resource',
+    dataType: 'boolean',
+    isRequired: false,
+    isMultiValue: false,
+    defaultValue: false,
+    constraints: {},
+    validation: {},
+    metadata: {
+      createdBy: 'system',
+      lastModifiedBy: 'system',
+      tags: ['security', 'resource'],
+      isSystem: true,
+      isCustom: false,
+      version: '1.0.0'
+    },
+    mapping: {},
+    active: true
+  }
+];
+
+async function seedAttributes() {
+  try {
+    // Connect to MongoDB
+    await mongoose.connect(config.mongodb.uri);
+    logger.info('Connected to MongoDB for seeding');
+
+    // Clear existing attributes (optional)
+    await Attribute.deleteMany({});
+    logger.info('Cleared existing attributes');
+
+    // Insert sample attributes
+    const createdAttributes = await Attribute.insertMany(sampleAttributes);
+    logger.info(`Created ${createdAttributes.length} sample attributes`);
+
+    // Log the created attributes
+    createdAttributes.forEach(attr => {
+      logger.info(`Created attribute: ${attr.displayName} (${attr.id})`);
+    });
+
+    logger.info('Attribute seeding completed successfully');
+  } catch (error) {
+    logger.error('Error seeding attributes:', error);
+  } finally {
+    await mongoose.connection.close();
+    logger.info('Database connection closed');
+  }
+}
+
+// Run the seeding if this file is executed directly
+if (require.main === module) {
+  seedAttributes();
+}
+
+export default seedAttributes;

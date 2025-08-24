@@ -162,24 +162,6 @@ export default function LoginPage() {
               </Typography>
             </Box>
           </Box>
-
-          {/* Demo Credentials Section for Development */}
-          {process.env.NODE_ENV === 'development' && (
-            <Box sx={{ mt: 4, p: 2, bgcolor: 'grey.50', borderRadius: 1 }}>
-              <Typography variant="subtitle2" gutterBottom>
-                Demo Credentials:
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                Admin: admin@example.com | Admin123!
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                User: user@example.com | User123!
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                Manager: manager@example.com | Manager123!
-              </Typography>
-            </Box>
-          )}
         </Paper>
       </Box>
     </Container>

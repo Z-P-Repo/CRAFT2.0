@@ -244,10 +244,11 @@ class ApiClient {
     });
   }
 
-  async delete<T = any>(url: string): Promise<ApiResponse<T>> {
+  async delete<T = any>(url: string, data?: any): Promise<ApiResponse<T>> {
     return this.request<T>({
       method: 'DELETE',
       url,
+      data,
     });
   }
 

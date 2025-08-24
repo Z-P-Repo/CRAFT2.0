@@ -168,33 +168,6 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         })}
       </List>
 
-      <Divider />
-      
-      {/* User Info */}
-      {!collapsed && (
-        <Box sx={{ p: 2 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-            <Avatar sx={{ width: 32, height: 32, mr: 1, bgcolor: 'primary.main' }}>
-              {user?.name?.[0]?.toUpperCase()}
-            </Avatar>
-            <Box sx={{ flex: 1, minWidth: 0 }}>
-              <Typography variant="body2" noWrap sx={{ fontWeight: 500 }}>
-                {user?.name}
-              </Typography>
-              <Typography variant="caption" color="text.secondary" noWrap>
-                {user?.email}
-              </Typography>
-            </Box>
-          </Box>
-          <Chip
-            label={user?.role?.toUpperCase()}
-            size="small"
-            color="primary"
-            variant="outlined"
-            sx={{ fontSize: '0.75rem' }}
-          />
-        </Box>
-      )}
     </Box>
   );
 
@@ -228,16 +201,29 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
             {menuItems.find(item => item.path === pathname)?.text || 'Dashboard'}
           </Typography>
 
-          <IconButton
-            size="large"
-            aria-label="account of current user"
-            aria-controls="primary-search-account-menu"
-            aria-haspopup="true"
-            onClick={handleProfileMenuOpen}
-            color="inherit"
-          >
-            <AccountCircle />
-          </IconButton>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Box sx={{ textAlign: 'right', display: { xs: 'none', sm: 'block' } }}>
+              <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                {user?.name}
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                {user?.role?.toUpperCase()}
+              </Typography>
+            </Box>
+            <IconButton
+              size="large"
+              aria-label="account of current user"
+              aria-controls="primary-search-account-menu"
+              aria-haspopup="true"
+              onClick={handleProfileMenuOpen}
+              color="inherit"
+              sx={{ ml: 1 }}
+            >
+              <Avatar sx={{ width: 32, height: 32, bgcolor: 'primary.main' }}>
+                {user?.name?.[0]?.toUpperCase()}
+              </Avatar>
+            </IconButton>
+          </Box>
           <Menu
             id="primary-search-account-menu"
             anchorEl={anchorEl}
@@ -251,8 +237,42 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
             }}
             open={Boolean(anchorEl)}
             onClose={handleProfileMenuClose}
+            PaperProps={{
+              sx: { 
+                minWidth: 220,
+                mt: 1,
+                '& .MuiMenuItem-root': {
+                  px: 2,
+                  py: 1
+                }
+              }
+            }}
           >
-            <MenuItem onClick={handleLogout}>
+            {/* User Info Header */}
+            <Box sx={{ px: 2, py: 1.5, borderBottom: '1px solid', borderColor: 'divider' }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                <Avatar sx={{ width: 40, height: 40, mr: 1.5, bgcolor: 'primary.main' }}>
+                  {user?.name?.[0]?.toUpperCase()}
+                </Avatar>
+                <Box>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
+                    {user?.name}
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    {user?.email}
+                  </Typography>
+                </Box>
+              </Box>
+              <Chip
+                label={user?.role?.toUpperCase()}
+                size="small"
+                color="primary"
+                variant="outlined"
+                sx={{ fontSize: '0.75rem' }}
+              />
+            </Box>
+            
+            <MenuItem onClick={handleLogout} sx={{ mt: 1 }}>
               <ListItemIcon>
                 <LogoutIcon fontSize="small" />
               </ListItemIcon>
@@ -310,13 +330,59 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         sx={{
           flexGrow: 1,
           width: { md: `calc(100% - ${drawerWidth}px)` },
-          minHeight: '100vh',
+          height: '100vh',
+          overflow: 'auto',
           backgroundColor: 'grey.50',
+          display: 'flex',
+          flexDirection: 'column',
         }}
       >
         <Toolbar />
-        <Box sx={{ p: 3 }}>
+        <Box sx={{ 
+          p: 3, 
+          flexGrow: 1,
+          overflow: 'auto',
+          minHeight: 'calc(100vh - 64px - 60px)', // Subtract toolbar and footer height
+        }}>
           {children}
+        </Box>
+        
+        {/* Footer */}
+        <Box
+          component="footer"
+          sx={{
+            borderTop: '1px solid',
+            borderColor: 'divider',
+            backgroundColor: 'background.paper',
+            px: 3,
+            py: 2,
+            mt: 'auto',
+          }}
+        >
+          <Box sx={{ 
+            display: 'flex', 
+            justifyContent: 'space-between', 
+            alignItems: 'center',
+            flexWrap: 'wrap',
+            gap: 2
+          }}>
+            <Box>
+              <Typography variant="body2" color="text.secondary">
+                © 2024 CRAFT Permission System. All rights reserved.
+              </Typography>
+            </Box>
+            <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+              <Typography variant="body2" color="text.secondary">
+                Version 1.0.0
+              </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ display: { xs: 'none', sm: 'block' } }}>
+                •
+              </Typography>
+              <Typography variant="body2" color="primary.main" sx={{ cursor: 'pointer', display: { xs: 'none', sm: 'block' } }}>
+                Documentation
+              </Typography>
+            </Box>
+          </Box>
         </Box>
       </Box>
     </Box>

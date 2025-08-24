@@ -4,56 +4,7 @@ import { ValidationError, NotFoundError } from '@/exceptions/AppError';
 import { asyncHandler } from '@/middleware/errorHandler';
 import { PaginationHelper } from '@/utils/pagination';
 import { logger } from '@/utils/logger';
-
-// Subject interface (would be replaced with actual Mongoose model)
-interface ISubject {
-  _id: string;
-  id: string;
-  name: string;
-  type: 'user' | 'group' | 'role' | 'service' | 'device';
-  description?: string;
-  attributes: Map<string, any>;
-  parentId?: string;
-  children: string[];
-  active: boolean;
-  metadata: {
-    createdBy: string;
-    lastModifiedBy: string;
-    tags: string[];
-    externalId?: string;
-  };
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-// Placeholder Subject model
-const Subject = {
-  find: (filter: any) => ({
-    populate: (path: string, select?: string) => ({
-      sort: (sort: any) => ({
-        skip: (skip: number) => ({
-          limit: (limit: number) => ({
-            lean: () => Promise.resolve([] as ISubject[])
-          })
-        })
-      })
-    })
-  }),
-  countDocuments: (filter: any) => Promise.resolve(0),
-  findOne: (filter: any) => ({
-    populate: (path: string, select?: string) => ({
-      lean: () => Promise.resolve(null as ISubject | null)
-    })
-  }),
-  create: (data: any) => Promise.resolve({} as ISubject),
-  findOneAndUpdate: (filter: any, updates: any, options: any) => ({
-    populate: (path: string, select?: string) => Promise.resolve(null as ISubject | null)
-  }),
-  findOneAndDelete: (filter: any) => Promise.resolve(null as ISubject | null),
-  updateMany: (filter: any, updates: any) => Promise.resolve({ matchedCount: 0, modifiedCount: 0 }),
-  deleteMany: (filter: any) => Promise.resolve({ deletedCount: 0 }),
-  aggregate: (pipeline: any[]) => Promise.resolve([])
-};
+import { Subject, ISubject } from '@/models/Subject';
 
 export class SubjectController {
   // Get all subjects with pagination and filtering
@@ -62,28 +13,26 @@ export class SubjectController {
     const {
       search,
       type,
+      status,
+      department,
+      role,
       active,
-      parentId,
-      tags,
     } = req.query;
 
     // Build filter object
     const filter: any = {};
     
     if (type) filter.type = type;
+    if (status) filter.status = status;
+    if (department) filter.department = department;
+    if (role) filter.role = role;
     if (active !== undefined) filter.active = active === 'true';
-    if (parentId) filter.parentId = parentId;
-    
-    if (tags) {
-      const tagArray = Array.isArray(tags) ? tags : [tags];
-      filter['metadata.tags'] = { $in: tagArray };
-    }
 
     // Add search filter
     if (search) {
       const searchFilter = PaginationHelper.buildSearchFilter(
         search as string,
-        ['name', 'description', 'id']
+        ['name', 'displayName', 'email', 'description', 'id', 'department', 'role']
       );
       Object.assign(filter, searchFilter);
     }
@@ -98,8 +47,6 @@ export class SubjectController {
     // Execute queries
     const [subjects, total] = await Promise.all([
       Subject.find(filter)
-        .populate('parentId', 'id name type')
-        .populate('children', 'id name type')
         .sort(sortObject)
         .skip(skip)
         .limit(paginationOptions.limit)
@@ -119,10 +66,11 @@ export class SubjectController {
   static getSubjectById = asyncHandler(async (req: Request, res: Response): Promise<void> => {
     const { id } = req.params;
 
-    const subject = await Subject.findOne({ id })
-      .populate('parentId', 'id name type')
-      .populate('children', 'id name type')
-      .lean();
+    // Try to find by MongoDB _id first, then by custom id field
+    let subject = await Subject.findById(id).lean();
+    if (!subject) {
+      subject = await Subject.findOne({ id }).lean();
+    }
 
     if (!subject) {
       throw new NotFoundError('Subject not found');
@@ -139,53 +87,58 @@ export class SubjectController {
     const {
       id,
       name,
+      displayName,
+      email,
       type,
+      role,
+      department,
       description,
-      attributes,
-      parentId,
-      tags,
-      externalId,
+      status,
+      permissions,
+      createdBy,
     } = req.body;
 
     // Validate required fields
-    if (!id || !name || !type) {
-      throw new ValidationError('ID, name, and type are required');
+    if (!displayName) {
+      throw new ValidationError('Display name is required');
     }
 
-    // Check if subject already exists
-    const existingSubject = await Subject.findOne({ id });
+    // Check if subject already exists (by displayName or email if provided)
+    const existingSubject = await Subject.findOne({
+      $or: [
+        { displayName },
+        ...(email ? [{ email }] : [])
+      ]
+    });
     if (existingSubject) {
-      throw new ValidationError('Subject with this ID already exists');
-    }
-
-    // Validate parent if provided
-    if (parentId) {
-      const parent = await Subject.findOne({ id: parentId });
-      if (!parent) {
-        throw new ValidationError('Parent subject not found');
-      }
+      throw new ValidationError('Subject with this display name or email already exists');
     }
 
     // Create subject
     const subjectData = {
-      id,
-      name: name.trim(),
+      id: id || `subject-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      name: name || displayName.toLowerCase().replace(/\s+/g, ''),
+      displayName: displayName.trim(),
+      email: email?.trim().toLowerCase(),
       type,
+      role: role?.trim(),
+      department: department?.trim(),
       description: description?.trim(),
-      attributes: new Map(Object.entries(attributes || {})),
-      parentId,
-      children: [],
+      status: status || 'active',
+      permissions: permissions || [],
       metadata: {
-        createdBy: req.user!._id,
-        lastModifiedBy: req.user!._id,
-        tags: tags || [],
-        externalId,
+        createdBy: createdBy || req.user?.name || null,
+        lastModifiedBy: req.user?.name || null,
+        tags: [],
+        isSystem: false,
+        isCustom: true,
+        version: '1.0.0',
       },
     };
 
     const subject = await Subject.create(subjectData);
 
-    logger.info(`Subject created: ${subject.id} by ${req.user?.email}`);
+    logger.info(`Subject created: ${subject.id} by ${req.user?.email || 'anonymous'}`);
 
     res.status(201).json({
       success: true,
@@ -232,15 +185,13 @@ export class SubjectController {
     if (!updates.metadata) {
       updates.metadata = existingSubject.metadata;
     }
-    updates.metadata.lastModifiedBy = req.user!._id;
+    updates.metadata.lastModifiedBy = req.user?.name || null;
 
     const subject = await Subject.findOneAndUpdate(
       { id },
       updates,
       { new: true, runValidators: true }
-    )
-      .populate('parentId', 'id name type')
-      .populate('children', 'id name type');
+    );
 
     logger.info(`Subject updated: ${subject.id} by ${req.user?.email}`);
 
@@ -255,19 +206,24 @@ export class SubjectController {
   static deleteSubject = asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
     const { id } = req.params;
 
-    const subject = await Subject.findOne({ id });
+    // Try to find by MongoDB _id first, then by custom id field
+    let subject = await Subject.findById(id);
+    if (!subject) {
+      subject = await Subject.findOne({ id });
+    }
+    
     if (!subject) {
       throw new NotFoundError('Subject not found');
     }
 
-    // Check if subject has children
-    if (subject.children && subject.children.length > 0) {
-      throw new ValidationError('Cannot delete subject with children. Delete or reassign children first.');
+    // Prevent deletion of system subjects
+    if (subject.metadata.isSystem) {
+      throw new ValidationError('Cannot delete system subjects');
     }
 
-    await Subject.findOneAndDelete({ id });
+    await Subject.findByIdAndDelete(subject._id);
 
-    logger.info(`Subject deleted: ${subject.id} by ${req.user?.email}`);
+    logger.info(`Subject deleted: ${subject.id} (MongoDB ID: ${subject._id}) by ${req.user?.email || 'anonymous'}`);
 
     res.status(200).json({
       success: true,
@@ -405,7 +361,7 @@ export class SubjectController {
       { id: { $in: subjectIds } },
       {
         ...updates,
-        'metadata.lastModifiedBy': req.user!._id
+        'metadata.lastModifiedBy': req.user?.name || null
       }
     );
 
@@ -426,6 +382,16 @@ export class SubjectController {
 
     if (!Array.isArray(subjectIds) || subjectIds.length === 0) {
       throw new ValidationError('Subject IDs array is required');
+    }
+
+    // Prevent deletion of system subjects
+    const systemSubjects = await Subject.find({
+      id: { $in: subjectIds },
+      'metadata.isSystem': true
+    });
+
+    if (systemSubjects.length > 0) {
+      throw new ValidationError('Cannot delete system subjects');
     }
 
     const result = await Subject.deleteMany({ id: { $in: subjectIds } });

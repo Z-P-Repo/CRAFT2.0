@@ -4,6 +4,7 @@ import { UserRepository } from '@/repositories/UserRepository';
 import { logger } from '@/utils/logger';
 import bcrypt from 'bcryptjs';
 import { config } from '@/config/environment';
+import { seedPolicies } from '@/seeds/policySeed';
 
 class DatabaseSeeder {
   private userRepository: UserRepository;
@@ -25,6 +26,7 @@ class DatabaseSeeder {
       
       // Seed data
       await this.seedUsers();
+      await seedPolicies();
       
       logger.info('✅ Database seeding completed successfully!');
       
@@ -45,9 +47,11 @@ class DatabaseSeeder {
 
   private async clearData(): Promise<void> {
     try {
-      // Clear users (add other collections as needed)
+      // Clear users and policies (add other collections as needed)
       const User = (await import('@/models/User')).User;
+      const Policy = (await import('@/models/Policy')).Policy;
       await User.deleteMany({});
+      await Policy.deleteMany({});
       
       logger.info('🧹 Cleared existing data');
     } catch (error) {

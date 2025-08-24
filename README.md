@@ -13,7 +13,7 @@ A comprehensive Attribute-Based Access Control (ABAC) permission system built wi
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/Vimal-ZP/CRAFT2.0.git
+   git clone https://github.com/Z-P-Repo/CRAFT2.0.git
    cd CRAFT2.0
    ```
 

@@ -47,6 +47,8 @@ export class AuthService {
       return {
         success: true,
         data: {
+          success: true,
+          message: 'Login successful',
           token,
           refreshToken,
           user: userWithoutPassword,

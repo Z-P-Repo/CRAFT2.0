@@ -4,99 +4,33 @@ import { ValidationError, NotFoundError } from '@/exceptions/AppError';
 import { asyncHandler } from '@/middleware/errorHandler';
 import { PaginationHelper } from '@/utils/pagination';
 import { logger } from '@/utils/logger';
-
-// Action interface
-interface IAction {
-  _id: string;
-  id: string;
-  name: string;
-  verb: string;
-  description?: string;
-  category: 'system' | 'crud' | 'business' | 'administrative' | 'security';
-  type: 'atomic' | 'composite';
-  httpMethod?: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH' | 'HEAD' | 'OPTIONS';
-  resourceTypes: string[];
-  attributes: Map<string, any>;
-  parentId?: string;
-  children: string[];
-  compositeActions?: string[];
-  riskLevel: 'low' | 'medium' | 'high' | 'critical';
-  metadata: {
-    createdBy: string;
-    lastModifiedBy: string;
-    tags: string[];
-    isCustom: boolean;
-    externalId?: string;
-    version: string;
-  };
-  active: boolean;
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-// Placeholder Action model
-const Action = {
-  find: (filter: any) => ({
-    populate: (path: string, select?: string) => ({
-      sort: (sort: any) => ({
-        skip: (skip: number) => ({
-          limit: (limit: number) => ({
-            lean: () => Promise.resolve([] as IAction[])
-          })
-        })
-      })
-    })
-  }),
-  countDocuments: (filter: any) => Promise.resolve(0),
-  findOne: (filter: any) => ({
-    populate: (path: string, select?: string) => ({
-      lean: () => Promise.resolve(null as IAction | null)
-    })
-  }),
-  create: (data: any) => Promise.resolve({} as IAction),
-  findOneAndUpdate: (filter: any, updates: any, options: any) => ({
-    populate: (path: string, select?: string) => Promise.resolve(null as IAction | null)
-  }),
-  findOneAndDelete: (filter: any) => Promise.resolve(null as IAction | null),
-  updateMany: (filter: any, updates: any) => Promise.resolve({ matchedCount: 0, modifiedCount: 0 }),
-  deleteMany: (filter: any) => Promise.resolve({ deletedCount: 0 }),
-  aggregate: (pipeline: any[]) => Promise.resolve([])
-};
+import { Action, IAction } from '@/models/Action';
 
 export class ActionController {
   // Get all actions with pagination and filtering
   static getActions = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+    logger.info('GET /actions called with query:', req.query);
+    
     const paginationOptions = PaginationHelper.validatePaginationParams(req.query);
     const {
       search,
       category,
-      type,
       riskLevel,
       active,
-      resourceType,
-      httpMethod,
-      isCustom,
     } = req.query;
 
     // Build filter object
     const filter: any = {};
     
     if (category) filter.category = category;
-    if (type) filter.type = type;
     if (riskLevel) filter.riskLevel = riskLevel;
     if (active !== undefined) filter.active = active === 'true';
-    if (httpMethod) filter.httpMethod = httpMethod;
-    if (isCustom !== undefined) filter['metadata.isCustom'] = isCustom === 'true';
-    
-    if (resourceType) {
-      filter.resourceTypes = { $in: [resourceType, '*'] };
-    }
 
     // Add search filter
     if (search) {
       const searchFilter = PaginationHelper.buildSearchFilter(
         search as string,
-        ['name', 'verb', 'description', 'id']
+        ['name', 'displayName', 'description', 'category']
       );
       Object.assign(filter, searchFilter);
     }
@@ -111,9 +45,6 @@ export class ActionController {
     // Execute queries
     const [actions, total] = await Promise.all([
       Action.find(filter)
-        .populate('parentId', 'id name verb category')
-        .populate('children', 'id name verb category')
-        .populate('compositeActions', 'id name verb riskLevel')
         .sort(sortObject)
         .skip(skip)
         .limit(paginationOptions.limit)
@@ -133,11 +64,11 @@ export class ActionController {
   static getActionById = asyncHandler(async (req: Request, res: Response): Promise<void> => {
     const { id } = req.params;
 
-    const action = await Action.findOne({ id })
-      .populate('parentId', 'id name verb category')
-      .populate('children', 'id name verb category')
-      .populate('compositeActions', 'id name verb riskLevel')
-      .lean();
+    // Try to find by custom id first, then by MongoDB _id
+    let action = await Action.findOne({ id }).lean();
+    if (!action) {
+      action = await Action.findById(id).lean();
+    }
 
     if (!action) {
       throw new NotFoundError('Action not found');
@@ -152,74 +83,48 @@ export class ActionController {
   // Create new action
   static createAction = asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
     const {
-      id,
       name,
-      verb,
+      displayName,
       description,
       category,
-      type,
       httpMethod,
-      resourceTypes,
-      attributes,
-      parentId,
-      compositeActions,
+      endpoint,
       riskLevel,
-      tags,
-      externalId,
+      active,
     } = req.body;
 
     // Validate required fields
-    if (!id || !name || !verb || !category) {
-      throw new ValidationError('ID, name, verb, and category are required');
+    if (!displayName || !name || !category || !riskLevel) {
+      throw new ValidationError('Display name, name, category, and risk level are required');
     }
 
-    // Check if action already exists
-    const existingAction = await Action.findOne({ id });
+    // Check if action already exists by name
+    const existingAction = await Action.findOne({ name });
     if (existingAction) {
-      throw new ValidationError('Action with this ID already exists');
+      throw new ValidationError('Action with this name already exists');
     }
 
-    // Validate parent if provided
-    if (parentId) {
-      const parent = await Action.findOne({ id: parentId });
-      if (!parent) {
-        throw new ValidationError('Parent action not found');
-      }
-    }
-
-    // Validate composite actions if provided
-    if (compositeActions && compositeActions.length > 0) {
-      const existingCompositeActions = await Action.find({
-        id: { $in: compositeActions },
-        active: true
-      });
-      
-      if (existingCompositeActions.length !== compositeActions.length) {
-        throw new ValidationError('One or more composite action IDs are invalid');
-      }
-    }
+    // Generate ID for the action
+    const actionId = `action-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
     // Create action
     const actionData = {
-      id,
+      id: actionId,
       name: name.trim(),
-      verb: verb.trim().toLowerCase(),
+      displayName: displayName.trim(),
       description: description?.trim(),
       category,
-      type: type || 'atomic',
-      httpMethod,
-      resourceTypes: resourceTypes || ['*'],
-      attributes: new Map(Object.entries(attributes || {})),
-      parentId,
-      children: [],
-      compositeActions: compositeActions || [],
-      riskLevel: riskLevel || 'low',
+      httpMethod: httpMethod?.trim(),
+      endpoint: endpoint?.trim(),
+      riskLevel,
+      active: active !== undefined ? active : true,
       metadata: {
-        createdBy: req.user!._id,
-        lastModifiedBy: req.user!._id,
-        tags: tags || [],
+        owner: req.user?.name || 'system',
+        createdBy: req.user?.name || null,
+        lastModifiedBy: req.user?.name || null,
+        tags: [],
+        isSystem: false,
         isCustom: true,
-        externalId,
         version: '1.0.0',
       },
     };
@@ -240,10 +145,19 @@ export class ActionController {
     const { id } = req.params;
     const updates = req.body;
 
-    // Validate action exists
-    const existingAction = await Action.findOne({ id });
+    // Validate action exists - try custom id first, then MongoDB _id
+    let existingAction = await Action.findOne({ id });
+    if (!existingAction) {
+      existingAction = await Action.findById(id);
+    }
+    
     if (!existingAction) {
       throw new NotFoundError('Action not found');
+    }
+
+    // Check permissions (only owner or admin can update) - skip for demo with optional auth
+    if (req.user && existingAction.metadata.owner !== req.user.name && req.user.role !== 'admin') {
+      throw new ValidationError('Insufficient permissions to update action');
     }
 
     // Remove non-updatable fields
@@ -252,51 +166,21 @@ export class ActionController {
     delete updates.__v;
     delete updates.createdAt;
 
-    // Validate parent if being updated
-    if (updates.parentId) {
-      if (updates.parentId === id) {
-        throw new ValidationError('Action cannot be its own parent');
-      }
-
-      const parent = await Action.findOne({ id: updates.parentId });
-      if (!parent) {
-        throw new ValidationError('Parent action not found');
-      }
-    }
-
-    // Validate composite actions if being updated
-    if (updates.compositeActions) {
-      const existingCompositeActions = await Action.find({
-        id: { $in: updates.compositeActions },
-        active: true
-      });
-      
-      if (existingCompositeActions.length !== updates.compositeActions.length) {
-        throw new ValidationError('One or more composite action IDs are invalid');
-      }
-    }
-
-    // Convert attributes to Map if provided
-    if (updates.attributes) {
-      updates.attributes = new Map(Object.entries(updates.attributes));
-    }
-
     // Update metadata
-    if (!updates.metadata) {
+    if (updates.metadata) {
+      updates.metadata = { ...existingAction.metadata, ...updates.metadata };
+    } else {
       updates.metadata = existingAction.metadata;
     }
-    updates.metadata.lastModifiedBy = req.user!._id;
+    updates.metadata.lastModifiedBy = req.user?.name || null;
 
-    const action = await Action.findOneAndUpdate(
-      { id },
+    const action = await Action.findByIdAndUpdate(
+      existingAction._id,
       updates,
       { new: true, runValidators: true }
-    )
-      .populate('parentId', 'id name verb category')
-      .populate('children', 'id name verb category')
-      .populate('compositeActions', 'id name verb riskLevel');
+    );
 
-    logger.info(`Action updated: ${action.id} by ${req.user?.email}`);
+    logger.info(`Action updated: ${action!.id} by ${req.user?.email}`);
 
     res.status(200).json({
       success: true,
@@ -309,17 +193,23 @@ export class ActionController {
   static deleteAction = asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
     const { id } = req.params;
 
-    const action = await Action.findOne({ id });
+    // Try to find by custom id first, then by MongoDB _id
+    let action = await Action.findOne({ id });
+    if (!action) {
+      action = await Action.findById(id);
+    }
+    
     if (!action) {
       throw new NotFoundError('Action not found');
     }
 
-    // Check if action has children
-    if (action.children && action.children.length > 0) {
-      throw new ValidationError('Cannot delete action with children. Delete or reassign children first.');
+    // Check permissions (only owner or admin can delete) - skip for demo with optional auth
+    if (req.user && action.metadata.owner !== req.user.name && req.user.role !== 'admin') {
+      throw new ValidationError('Insufficient permissions to delete action');
     }
 
-    await Action.findOneAndDelete({ id });
+    // Delete by MongoDB _id to ensure we delete the correct action
+    await Action.findByIdAndDelete(action._id);
 
     logger.info(`Action deleted: ${action.id} by ${req.user?.email}`);
 
@@ -571,7 +461,7 @@ export class ActionController {
       throw new ValidationError('Action IDs array is required');
     }
 
-    const result = await Action.deleteMany({ id: { $in: actionIds } });
+    const result = await Action.deleteMany({ $or: [{ id: { $in: actionIds } }, { _id: { $in: actionIds } }] });
 
     logger.info(`Bulk delete performed on ${result.deletedCount} actions by ${req.user?.email}`);
 

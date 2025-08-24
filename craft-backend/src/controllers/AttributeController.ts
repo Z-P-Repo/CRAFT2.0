@@ -4,81 +4,8 @@ import { ValidationError, NotFoundError } from '@/exceptions/AppError';
 import { asyncHandler } from '@/middleware/errorHandler';
 import { PaginationHelper } from '@/utils/pagination';
 import { logger } from '@/utils/logger';
+import { Attribute, IAttribute } from '@/models/Attribute';
 
-// Attribute interface
-interface IAttribute {
-  _id: string;
-  id: string;
-  name: string;
-  displayName: string;
-  description?: string;
-  category: 'subject' | 'resource' | 'action' | 'environment';
-  dataType: 'string' | 'number' | 'boolean' | 'date' | 'array' | 'object';
-  isRequired: boolean;
-  isMultiValue: boolean;
-  defaultValue?: any;
-  constraints: {
-    minLength?: number;
-    maxLength?: number;
-    minValue?: number;
-    maxValue?: number;
-    pattern?: string;
-    enumValues?: any[];
-    format?: string;
-  };
-  validation: {
-    isEmail?: boolean;
-    isUrl?: boolean;
-    isPhoneNumber?: boolean;
-    customValidator?: string;
-  };
-  metadata: {
-    createdBy: string;
-    lastModifiedBy: string;
-    tags: string[];
-    isSystem: boolean;
-    isCustom: boolean;
-    version: string;
-    externalId?: string;
-  };
-  mapping: {
-    sourceField?: string;
-    transformFunction?: string;
-    cacheTime?: number;
-  };
-  active: boolean;
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-// Placeholder Attribute model
-const Attribute = {
-  find: (filter: any) => ({
-    populate: (path: string, select?: string) => ({
-      sort: (sort: any) => ({
-        skip: (skip: number) => ({
-          limit: (limit: number) => ({
-            lean: () => Promise.resolve([] as IAttribute[])
-          })
-        })
-      })
-    })
-  }),
-  countDocuments: (filter: any) => Promise.resolve(0),
-  findOne: (filter: any) => ({
-    populate: (path: string, select?: string) => ({
-      lean: () => Promise.resolve(null as IAttribute | null)
-    })
-  }),
-  create: (data: any) => Promise.resolve({} as IAttribute),
-  findOneAndUpdate: (filter: any, updates: any, options: any) => ({
-    populate: (path: string, select?: string) => Promise.resolve(null as IAttribute | null)
-  }),
-  findOneAndDelete: (filter: any) => Promise.resolve(null as IAttribute | null),
-  updateMany: (filter: any, updates: any) => Promise.resolve({ matchedCount: 0, modifiedCount: 0 }),
-  deleteMany: (filter: any) => Promise.resolve({ deletedCount: 0 }),
-  aggregate: (pipeline: any[]) => Promise.resolve([])
-};
 
 export class AttributeController {
   // Get all attributes with pagination and filtering
@@ -142,7 +69,11 @@ export class AttributeController {
   static getAttributeById = asyncHandler(async (req: Request, res: Response): Promise<void> => {
     const { id } = req.params;
 
-    const attribute = await Attribute.findOne({ id }).lean();
+    // Try to find by MongoDB _id first, then by custom id field
+    let attribute = await Attribute.findById(id).lean();
+    if (!attribute) {
+      attribute = await Attribute.findOne({ id }).lean();
+    }
 
     if (!attribute) {
       throw new NotFoundError('Attribute not found');
@@ -156,6 +87,9 @@ export class AttributeController {
 
   // Create new attribute
   static createAttribute = asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
+    // Debug logging
+    console.log('Received attribute creation request:', req.body);
+    
     const {
       id,
       name,
@@ -171,11 +105,29 @@ export class AttributeController {
       mapping,
       tags,
       externalId,
+      metadata,
     } = req.body;
+
+    // Debug individual fields
+    console.log('Validation check:', {
+      id: id || 'MISSING',
+      name: name || 'MISSING', 
+      displayName: displayName || 'MISSING',
+      category: category || 'MISSING',
+      dataType: dataType || 'MISSING'
+    });
 
     // Validate required fields
     if (!id || !name || !displayName || !category || !dataType) {
-      throw new ValidationError('ID, name, displayName, category, and dataType are required');
+      const missingFields = [];
+      if (!id) missingFields.push('id');
+      if (!name) missingFields.push('name');
+      if (!displayName) missingFields.push('displayName');
+      if (!category) missingFields.push('category');
+      if (!dataType) missingFields.push('dataType');
+      
+      console.error('Missing required fields:', missingFields);
+      throw new ValidationError(`Missing required fields: ${missingFields.join(', ')}`);
     }
 
     // Check if attribute already exists
@@ -205,19 +157,19 @@ export class AttributeController {
       validation: validation || {},
       mapping: mapping || {},
       metadata: {
-        createdBy: req.user!._id,
-        lastModifiedBy: req.user!._id,
-        tags: tags || [],
-        isSystem: false,
-        isCustom: true,
-        version: '1.0.0',
+        createdBy: metadata?.createdBy || req.user?._id || 'anonymous',
+        lastModifiedBy: req.user?._id || 'anonymous',
+        tags: tags || metadata?.tags || [],
+        isSystem: metadata?.isSystem || false,
+        isCustom: metadata?.isCustom !== undefined ? metadata.isCustom : true,
+        version: metadata?.version || '1.0.0',
         externalId,
       },
     };
 
     const attribute = await Attribute.create(attributeData);
 
-    logger.info(`Attribute created: ${attribute.id} by ${req.user?.email}`);
+    logger.info(`Attribute created: ${attribute.id} by ${req.user?.email || 'anonymous'}`);
 
     res.status(201).json({
       success: true,
@@ -231,8 +183,11 @@ export class AttributeController {
     const { id } = req.params;
     const updates = req.body;
 
-    // Validate attribute exists
-    const existingAttribute = await Attribute.findOne({ id });
+    // Validate attribute exists - try MongoDB _id first, then custom id
+    let existingAttribute = await Attribute.findById(id);
+    if (!existingAttribute) {
+      existingAttribute = await Attribute.findOne({ id });
+    }
     if (!existingAttribute) {
       throw new NotFoundError('Attribute not found');
     }
@@ -258,10 +213,10 @@ export class AttributeController {
     if (!updates.metadata) {
       updates.metadata = existingAttribute.metadata;
     }
-    updates.metadata.lastModifiedBy = req.user!._id;
+    updates.metadata.lastModifiedBy = req.user?._id || 'anonymous';
 
-    const attribute = await Attribute.findOneAndUpdate(
-      { id },
+    const attribute = await Attribute.findByIdAndUpdate(
+      existingAttribute._id,
       updates,
       { new: true, runValidators: true }
     );
@@ -279,7 +234,12 @@ export class AttributeController {
   static deleteAttribute = asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
     const { id } = req.params;
 
-    const attribute = await Attribute.findOne({ id });
+    // Try to find by MongoDB _id first, then by custom id field
+    let attribute = await Attribute.findById(id);
+    if (!attribute) {
+      attribute = await Attribute.findOne({ id });
+    }
+    
     if (!attribute) {
       throw new NotFoundError('Attribute not found');
     }
@@ -289,9 +249,9 @@ export class AttributeController {
       throw new ValidationError('Cannot delete system attributes');
     }
 
-    await Attribute.findOneAndDelete({ id });
+    await Attribute.findByIdAndDelete(attribute._id);
 
-    logger.info(`Attribute deleted: ${attribute.id} by ${req.user?.email}`);
+    logger.info(`Attribute deleted: ${attribute.id} (MongoDB ID: ${attribute._id}) by ${req.user?.email || 'anonymous'}`);
 
     res.status(200).json({
       success: true,

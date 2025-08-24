@@ -122,3 +122,6 @@ export const requireSelfOrAdmin = (userIdParam: string = 'id') => {
     next();
   };
 };
+
+// Default auth export for convenience
+export const auth = requireAuth;

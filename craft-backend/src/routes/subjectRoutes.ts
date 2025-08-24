@@ -1,29 +1,29 @@
 import express from 'express';
 import { SubjectController } from '@/controllers/SubjectController';
-import { auth } from '@/middleware/auth';
+import { auth, optionalAuth } from '@/middleware/auth';
 import { asyncHandler } from '@/middleware/errorHandler';
 
 const router = express.Router();
 
-// Apply authentication middleware to all routes
-router.use(auth);
+// Subject management routes (public for demo with optional auth for tracking)
+router.get('/', optionalAuth, asyncHandler(SubjectController.getSubjects));
+router.get('/:id', optionalAuth, asyncHandler(SubjectController.getSubjectById));
+router.post('/', optionalAuth, asyncHandler(SubjectController.createSubject));
+router.put('/:id', optionalAuth, asyncHandler(SubjectController.updateSubject));
+router.delete('/:id', optionalAuth, asyncHandler(SubjectController.deleteSubject));
 
-// Subject management routes
-router.get('/', asyncHandler(SubjectController.getSubjects));
+// Bulk operations (public for demo with optional auth for tracking)
+router.put('/bulk/update', optionalAuth, asyncHandler(SubjectController.bulkUpdateSubjects));
+router.delete('/bulk/delete', optionalAuth, asyncHandler(SubjectController.bulkDeleteSubjects));
+
+// Apply authentication middleware to remaining routes
+router.use(auth);
 router.get('/stats', asyncHandler(SubjectController.getSubjectStats));
-router.get('/:id', asyncHandler(SubjectController.getSubjectById));
-router.post('/', asyncHandler(SubjectController.createSubject));
-router.put('/:id', asyncHandler(SubjectController.updateSubject));
-router.delete('/:id', asyncHandler(SubjectController.deleteSubject));
 
 // Hierarchy and relationship routes
 router.get('/:id/hierarchy', asyncHandler(SubjectController.getSubjectHierarchy));
 
 // Filter routes
 router.get('/type/:type', asyncHandler(SubjectController.getSubjectsByType));
-
-// Bulk operations
-router.put('/bulk/update', asyncHandler(SubjectController.bulkUpdateSubjects));
-router.delete('/bulk/delete', asyncHandler(SubjectController.bulkDeleteSubjects));
 
 export default router;

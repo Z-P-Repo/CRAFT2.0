@@ -33,13 +33,13 @@ export const createRateLimit = (options?: {
 // Different rate limits for different endpoints
 export const authRateLimit = createRateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 5, // Limit each IP to 5 requests per windowMs for auth endpoints
+  max: config.isDevelopment ? 100 : 5, // Higher limit for development
   message: 'Too many authentication attempts, please try again later',
 });
 
 export const apiRateLimit = createRateLimit({
   windowMs: config.rateLimit.windowMs,
-  max: config.rateLimit.maxRequests,
+  max: config.isDevelopment ? 1000 : config.rateLimit.maxRequests,
 });
 
 export const strictRateLimit = createRateLimit({

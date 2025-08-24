@@ -1,10 +1,9 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Typography,
   Box,
-  Grid,
   Card,
   CardContent,
   Button,
@@ -28,6 +27,17 @@ import {
   MenuItem,
   Fab,
   Avatar,
+  Switch,
+  FormControlLabel,
+  TablePagination,
+  Popover,
+  List,
+  ListItem,
+  ListItemText,
+  Checkbox,
+  Toolbar,
+  Tooltip,
+  InputAdornment,
 } from '@mui/material';
 import {
   People as PeopleIcon,
@@ -36,244 +46,680 @@ import {
   Delete as DeleteIcon,
   Visibility as ViewIcon,
   FilterList as FilterIcon,
-  Person,
-  Group,
+  Person as PersonIcon,
+  Group as GroupIcon,
+  AdminPanelSettings as RoleIcon,
+  Business as BusinessIcon,
+  Code as CodeIcon,
+  Schedule as ScheduleIcon,
+  MoreHoriz as MoreIcon,
+  SelectAll as SelectAllIcon,
+  CheckBox as CheckBoxIcon,
+  CheckBoxOutlineBlank as CheckBoxOutlineBlankIcon,
+  DeleteSweep as BulkDeleteIcon,
+  Close as CloseIcon,
+  Search as SearchIcon,
+  Sort as SortIcon,
+  Clear as ClearIcon,
+  ArrowUpward as ArrowUpIcon,
+  ArrowDownward as ArrowDownIcon,
 } from '@mui/icons-material';
 import DashboardLayout from '@/components/layout/DashboardLayout';
+import { apiClient } from '@/lib/api';
+import { ApiResponse } from '@/types';
 
 interface Subject {
+  _id: string;
   id: string;
   name: string;
+  displayName: string;
   email: string;
-  type: 'User' | 'Group' | 'Role';
+  type: 'user' | 'group' | 'role';
   role: string;
   department: string;
-  status: 'Active' | 'Inactive';
+  description?: string;
+  status: 'active' | 'inactive';
+  permissions: string[];
+  metadata: {
+    createdBy: string;
+    lastModifiedBy: string;
+    tags: string[];
+    isSystem: boolean;
+    isCustom: boolean;
+    version: string;
+    externalId?: string;
+  };
+  active: boolean;
   createdAt: string;
-  lastLogin: string;
+  updatedAt: string;
+  lastLogin?: string;
 }
 
 export default function SubjectsPage() {
-  const [subjects] = useState<Subject[]>([
-    {
-      id: '1',
-      name: 'John Doe',
-      email: 'john.doe@company.com',
-      type: 'User',
-      role: 'Admin',
-      department: 'IT',
-      status: 'Active',
-      createdAt: '2024-01-15',
-      lastLogin: '2024-01-21 10:30',
-    },
-    {
-      id: '2',
-      name: 'Jane Smith',
-      email: 'jane.smith@company.com',
-      type: 'User',
-      role: 'Manager',
-      department: 'HR',
-      status: 'Active',
-      createdAt: '2024-01-16',
-      lastLogin: '2024-01-21 09:15',
-    },
-    {
-      id: '3',
-      name: 'Developers',
-      email: '',
-      type: 'Group',
-      role: 'Developer',
-      department: 'Engineering',
-      status: 'Active',
-      createdAt: '2024-01-17',
-      lastLogin: '',
-    },
-    {
-      id: '4',
-      name: 'Bob Johnson',
-      email: 'bob.johnson@company.com',
-      type: 'User',
-      role: 'User',
-      department: 'Sales',
-      status: 'Inactive',
-      createdAt: '2024-01-18',
-      lastLogin: '2024-01-19 14:22',
-    },
-  ]);
+  const [subjects, setSubjects] = useState<Subject[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [total, setTotal] = useState(0);
 
   const [open, setOpen] = useState(false);
   const [selectedSubject, setSelectedSubject] = useState<Subject | null>(null);
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [selectedSubjects, setSelectedSubjects] = useState<string[]>([]);
+  const [displayName, setDisplayName] = useState('');
+  const [displayNameError, setDisplayNameError] = useState('');
+  const [selectedType, setSelectedType] = useState('');
+  const [selectedRole, setSelectedRole] = useState('');
+  const [selectedDepartment, setSelectedDepartment] = useState('');
+  const [selectedStatus, setSelectedStatus] = useState('');
+  const [email, setEmail] = useState('');
+  const [description, setDescription] = useState('');
+  const [createdBy, setCreatedBy] = useState('');
+  
+  // Search, Filter, Sort states
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterType, setFilterType] = useState('');
+  const [filterStatus, setFilterStatus] = useState('');
+  const [sortBy, setSortBy] = useState('displayName');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+  const [viewOpen, setViewOpen] = useState(false);
+  const [viewSubject, setViewSubject] = useState<Subject | null>(null);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleteSubject, setDeleteSubject] = useState<Subject | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
 
   const handleClickOpen = (subject?: Subject) => {
     setSelectedSubject(subject || null);
+    setDisplayName(subject?.displayName || '');
+    setDisplayNameError('');
+    setDescription(subject?.description || '');
     setOpen(true);
+  };
+
+  const handleViewOpen = (subject: Subject) => {
+    setViewSubject(subject);
+    setViewOpen(true);
+  };
+
+  const handleViewClose = () => {
+    setViewOpen(false);
+    setViewSubject(null);
+  };
+
+  const handleDeleteOpen = (subject: Subject) => {
+    setDeleteSubject(subject);
+    setDeleteOpen(true);
+  };
+
+  const handleDeleteClose = () => {
+    setDeleteOpen(false);
+    setDeleteSubject(null);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!deleteSubject) return;
+
+    setIsDeleting(true);
+    try {
+      const response = await apiClient.delete(`/subjects/${deleteSubject._id}`);
+      
+      if (response.success) {
+        // Refresh the data by calling fetchSubjects
+        await fetchSubjects();
+        handleDeleteClose();
+      } else {
+        throw new Error(response.error || 'Failed to delete subject');
+      }
+    } catch (error: any) {
+      console.error('Error deleting subject:', error);
+      
+      // If subject was not found (404), it might have been already deleted
+      // Refresh the data and close the dialog
+      if (error.code === 'NOT_FOUND' || error.message?.includes('not found')) {
+        console.log('Subject not found, refreshing data...');
+        await fetchSubjects();
+        handleDeleteClose();
+      } else {
+        setError('Failed to delete subject');
+      }
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   const handleClose = () => {
     setOpen(false);
     setSelectedSubject(null);
+    setDisplayName('');
+    setDisplayNameError('');
+    setDescription('');
   };
 
-  const getStatusColor = (status: string) => {
-    return status === 'Active' ? 'success' : 'error';
+  const handleDisplayNameChange = (value: string) => {
+    setDisplayName(value);
+    if (value.trim().length < 2) {
+      setDisplayNameError('Name must be at least 2 characters long.');
+    } else {
+      setDisplayNameError('');
+    }
   };
 
-  const getTypeIcon = (type: string) => {
-    return type === 'Group' ? <Group /> : <Person />;
+  // Multi-selection handlers
+  const handleSelectAllClick = (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (event.target.checked) {
+      const newSelected = paginatedSubjects.map((subject) => subject.id);
+      setSelectedSubjects(newSelected);
+    } else {
+      setSelectedSubjects([]);
+    }
   };
+  
+  const handleSubjectSelect = (subjectId: string) => {
+    const selectedIndex = selectedSubjects.indexOf(subjectId);
+    let newSelected: string[] = [];
+
+    if (selectedIndex === -1) {
+      newSelected = newSelected.concat(selectedSubjects, subjectId);
+    } else if (selectedIndex === 0) {
+      newSelected = newSelected.concat(selectedSubjects.slice(1));
+    } else if (selectedIndex === selectedSubjects.length - 1) {
+      newSelected = newSelected.concat(selectedSubjects.slice(0, -1));
+    } else if (selectedIndex > 0) {
+      newSelected = newSelected.concat(
+        selectedSubjects.slice(0, selectedIndex),
+        selectedSubjects.slice(selectedIndex + 1)
+      );
+    }
+
+    setSelectedSubjects(newSelected);
+  };
+  
+  const isSelected = (subjectId: string) => selectedSubjects.indexOf(subjectId) !== -1;
+  
+  // Bulk operations handlers
+  const handleBulkDeleteOpen = () => {
+    setBulkDeleteOpen(true);
+  };
+  
+  const handleBulkDeleteClose = () => {
+    setBulkDeleteOpen(false);
+  };
+  
+  const handleBulkDeleteConfirm = async () => {
+    if (selectedSubjects.length === 0) return;
+    
+    setIsSubmitting(true);
+    setBulkDeleteOpen(false);
+    
+    try {
+      // Use the bulk delete API endpoint with request method
+      const response = await apiClient.request({
+        method: 'DELETE',
+        url: '/subjects/bulk/delete',
+        data: {
+          subjectIds: selectedSubjects
+        }
+      });
+      
+      if (response.success) {
+        // Refresh the data by calling fetchSubjects
+        await fetchSubjects();
+        
+        // Clear selection
+        setSelectedSubjects([]);
+        
+        console.log(`Successfully deleted ${selectedSubjects.length} subjects`);
+      } else {
+        throw new Error(response.error || 'Failed to delete subjects');
+      }
+    } catch (error: any) {
+      console.error('Failed to delete subjects:', error);
+      
+      // Always refresh the data to sync with backend state
+      await fetchSubjects();
+      
+      // Clear selection regardless of error
+      setSelectedSubjects([]);
+      
+      // Only show error if it's not a "not found" case
+      if (!error.message?.includes('not found') && error.code !== 'NOT_FOUND') {
+        setError('Failed to delete some subjects. Please try again.');
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+  
+  const clearSelection = () => {
+    setSelectedSubjects([]);
+  };
+  
+  // Search and filter handlers
+  const handleSearchChange = useCallback((value: string) => {
+    setSearchTerm(value);
+    setPage(0); // Reset to first page
+  }, []);
+
+  const handleSortChange = (field: string) => {
+    const isAsc = sortBy === field && sortOrder === 'asc';
+    setSortOrder(isAsc ? 'desc' : 'asc');
+    setSortBy(field);
+    setPage(0); // Reset to first page when sorting
+  };
+
+  const clearFilters = () => {
+    setSearchTerm('');
+    setPage(0);
+  };
+
+  const hasActiveFilters = Boolean(searchTerm);
+
+  // Use subjects directly since pagination, filtering, and sorting are handled server-side
+  const paginatedSubjects = subjects;
+
+  const handleChangePage = (event: unknown, newPage: number) => {
+    setPage(newPage);
+  };
+
+  const handleChangeRowsPerPage = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setRowsPerPage(parseInt(event.target.value, 10));
+    setPage(0);
+  };
+
+  // Fetch subjects from API
+  const fetchSubjects = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const params = {
+        page: page + 1, // API uses 1-based pagination
+        limit: rowsPerPage,
+        sortBy: sortBy,
+        sortOrder: sortOrder,
+        ...(searchTerm && { search: searchTerm }),
+      };
+
+      const response: ApiResponse<Subject[]> & {
+        pagination?: {
+          page: number;
+          limit: number;
+          total: number;
+          pages: number;
+          hasNext: boolean;
+          hasPrev: boolean;
+        };
+      } = await apiClient.get('/subjects', params);
+
+      if (response.success && response.data) {
+        setSubjects(response.data);
+        setTotal(response.pagination?.total || 0);
+      } else {
+        throw new Error(response.error || 'Failed to fetch subjects');
+      }
+    } catch (err: any) {
+      console.error('Error fetching subjects:', err);
+      setError(err.message || 'Failed to load subjects');
+      // Fallback to empty array
+      setSubjects([]);
+      setTotal(0);
+    } finally {
+      setLoading(false);
+    }
+  }, [page, rowsPerPage, sortBy, sortOrder, searchTerm]);
+
+  useEffect(() => {
+    fetchSubjects();
+  }, [fetchSubjects]);
 
   const getTypeColor = (type: string) => {
     switch (type) {
-      case 'User': return 'primary';
-      case 'Group': return 'secondary';
-      case 'Role': return 'info';
+      case 'user': return 'primary';
+      case 'group': return 'secondary';
+      case 'role': return 'info';
       default: return 'default';
     }
   };
 
-  const stats = [
-    { label: 'Total Subjects', value: subjects.length, color: 'primary' },
-    { label: 'Active Users', value: subjects.filter(s => s.status === 'Active' && s.type === 'User').length, color: 'success' },
-    { label: 'Groups', value: subjects.filter(s => s.type === 'Group').length, color: 'secondary' },
-    { label: 'Online Now', value: '12', color: 'info' },
-  ];
+  const getTypeIcon = (type: string) => {
+    switch (type) {
+      case 'user': return <PersonIcon />;
+      case 'group': return <GroupIcon />;
+      case 'role': return <RoleIcon />;
+      default: return <PersonIcon />;
+    }
+  };
+
+  const getStatusColor = (status: string) => {
+    return status === 'active' ? 'success' : 'error';
+  };
+
+  const handleSubmit = async () => {
+    if (!displayName.trim() || displayNameError) {
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const subjectData = {
+        displayName: displayName.trim(),
+        description: description?.trim() || '',
+        // Set default values for required backend fields
+        name: displayName.toLowerCase().replace(/\s+/g, ''),
+        type: 'user',
+        role: 'User',
+        department: 'General',
+        status: 'active',
+      };
+
+      if (selectedSubject) {
+        // Update existing subject
+        const response = await apiClient.put(`/subjects/${selectedSubject._id}`, subjectData);
+        
+        if (response.success) {
+          // Refresh the data by calling fetchSubjects
+          await fetchSubjects();
+        }
+      } else {
+        // Create new subject
+        const response = await apiClient.post('/subjects', subjectData);
+        
+        if (response.success) {
+          // Refresh the data by calling fetchSubjects
+          await fetchSubjects();
+        }
+      }
+      
+      handleClose();
+    } catch (error) {
+      console.error('Error saving subject:', error);
+      setError('Failed to save subject');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   return (
     <DashboardLayout>
       {/* Header */}
-      <Paper elevation={1} sx={{ p: 3, mb: 4 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-          <PeopleIcon sx={{ mr: 2, color: 'primary.main' }} />
-          <Typography variant="h4" component="h1">
-            Subjects
-          </Typography>
+      <Paper elevation={0} sx={{ p: 3, mb: 3, border: '1px solid', borderColor: 'grey.200' }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+            <PeopleIcon sx={{ mr: 2, color: 'text.secondary' }} />
+            <Typography variant="h5" component="h1" fontWeight="600">
+              Subjects
+            </Typography>
+          </Box>
+          <Box sx={{ textAlign: 'right' }}>
+            <Typography variant="h6" color="primary.main" fontWeight="600">
+              {loading ? '...' : total}
+            </Typography>
+            <Typography variant="caption" color="text.secondary">
+              Total Subjects
+            </Typography>
+          </Box>
         </Box>
-        <Typography variant="body1" color="text.secondary">
-          Manage users, groups, and roles in your system.
+        <Typography variant="body2" color="text.secondary">
+          Manage users, groups, and roles in your permission system.
+          {hasActiveFilters && (
+            <Typography component="span" variant="body2" color="primary.main" sx={{ ml: 1 }}>
+              (Filtered)
+            </Typography>
+          )}
         </Typography>
       </Paper>
 
-      {/* Stats Cards */}
-      <Grid container spacing={3} sx={{ mb: 4 }}>
-        {stats.map((stat, index) => (
-          <Grid item xs={12} sm={6} md={3} key={index}>
-            <Card>
-              <CardContent>
-                <Typography variant="h4" component="div" color={`${stat.color}.main`}>
-                  {stat.value}
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  {stat.label}
-                </Typography>
-              </CardContent>
-            </Card>
-          </Grid>
-        ))}
-      </Grid>
-
-      {/* Actions Bar */}
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-        <Box sx={{ display: 'flex', gap: 2 }}>
-          <Button variant="outlined" startIcon={<FilterIcon />}>
-            Filter
+      {/* Multi-select Delete */}
+      {selectedSubjects.length > 0 && (
+        <Box sx={{ mb: 3, display: 'flex', justifyContent: 'center' }}>
+          <Button
+            variant="contained"
+            color="error"
+            startIcon={<BulkDeleteIcon />}
+            onClick={handleBulkDeleteOpen}
+            disabled={isSubmitting}
+            sx={{ textTransform: 'none' }}
+          >
+            Delete {selectedSubjects.length} Selected
           </Button>
         </Box>
-        <Button
-          variant="contained"
-          startIcon={<AddIcon />}
-          onClick={() => handleClickOpen()}
-        >
-          Add Subject
-        </Button>
-      </Box>
+      )}
+      
+      {/* Filter Bar */}
+      {selectedSubjects.length === 0 && (
+        <Paper elevation={0} sx={{ 
+          p: 2, 
+          mb: 3, 
+          border: '1px solid',
+          borderColor: 'grey.200',
+        }}>
+          <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap' }}>
+            {/* Search */}
+            <TextField
+              placeholder="Search subjects..."
+              value={searchTerm}
+              onChange={(e) => handleSearchChange(e.target.value)}
+              size="small"
+              sx={{ minWidth: '250px', flex: 1 }}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <SearchIcon color="action" fontSize="small" />
+                  </InputAdornment>
+                ),
+              }}
+            />
+
+            {/* Clear & Add buttons */}
+            <Box sx={{ display: 'flex', gap: 1, ml: 'auto' }}>
+              {hasActiveFilters && (
+                <Button
+                  size="small"
+                  onClick={clearFilters}
+                  startIcon={<ClearIcon />}
+                  sx={{ textTransform: 'none' }}
+                >
+                  Clear
+                </Button>
+              )}
+              <Button
+                variant="contained"
+                size="small"
+                startIcon={<AddIcon />}
+                onClick={() => handleClickOpen()}
+                sx={{ textTransform: 'none' }}
+              >
+                Create Subject
+              </Button>
+            </Box>
+          </Box>
+
+          {/* Active Filter Chips */}
+          {hasActiveFilters && searchTerm && (
+            <Box sx={{ mt: 2, display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+              <Chip
+                label={`Search: ${searchTerm}`}
+                onDelete={() => setSearchTerm('')}
+                size="small"
+                color="primary"
+              />
+            </Box>
+          )}
+        </Paper>
+      )}
 
       {/* Subjects Table */}
-      <Card>
-        <TableContainer>
-          <Table>
-            <TableHead>
-              <TableRow>
-                <TableCell>Subject</TableCell>
-                <TableCell>Type</TableCell>
-                <TableCell>Role</TableCell>
-                <TableCell>Department</TableCell>
-                <TableCell>Status</TableCell>
-                <TableCell>Last Login</TableCell>
-                <TableCell align="center">Actions</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {subjects.map((subject) => (
-                <TableRow key={subject.id} hover>
-                  <TableCell>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                      <Avatar sx={{ bgcolor: `${getTypeColor(subject.type)}.main` }}>
-                        {getTypeIcon(subject.type)}
-                      </Avatar>
-                      <Box>
-                        <Typography variant="subtitle2" fontWeight="medium">
-                          {subject.name}
-                        </Typography>
-                        {subject.email && (
-                          <Typography variant="body2" color="text.secondary">
-                            {subject.email}
-                          </Typography>
+      <Card variant="outlined">
+        {error && (
+          <Box sx={{ p: 3, textAlign: 'center' }}>
+            <Typography color="error" variant="body1">
+              {error}
+            </Typography>
+            <Button
+              variant="outlined"
+              onClick={fetchSubjects}
+              sx={{ mt: 2 }}
+            >
+              Retry
+            </Button>
+          </Box>
+        )}
+
+        {!error && (
+          <>
+            <TableContainer>
+              <Table>
+                <TableHead>
+                  <TableRow sx={{ bgcolor: 'grey.50' }}>
+                    <TableCell padding="checkbox">
+                      <Checkbox
+                        color="primary"
+                        indeterminate={selectedSubjects.length > 0 && selectedSubjects.length < paginatedSubjects.length}
+                        checked={paginatedSubjects.length > 0 && selectedSubjects.length === paginatedSubjects.length}
+                        onChange={handleSelectAllClick}
+                        inputProps={{
+                          'aria-label': 'select all subjects',
+                        }}
+                      />
+                    </TableCell>
+                    <TableCell 
+                      sx={{ 
+                        fontWeight: 600, 
+                        fontSize: '0.875rem', 
+                        color: 'text.primary',
+                        cursor: 'pointer',
+                        '&:hover': { backgroundColor: 'grey.50' }
+                      }}
+                      onClick={() => handleSortChange('displayName')}
+                    >
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        Name & Description
+                        {sortBy === 'displayName' && (
+                          sortOrder === 'asc' ? <ArrowUpIcon fontSize="small" /> : <ArrowDownIcon fontSize="small" />
                         )}
                       </Box>
-                    </Box>
-                  </TableCell>
-                  <TableCell>
-                    <Chip
-                      label={subject.type}
-                      size="small"
-                      color={getTypeColor(subject.type) as any}
-                      variant="outlined"
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <Typography variant="body2">
-                      {subject.role}
-                    </Typography>
-                  </TableCell>
-                  <TableCell>
-                    <Typography variant="body2">
-                      {subject.department}
-                    </Typography>
-                  </TableCell>
-                  <TableCell>
-                    <Chip
-                      label={subject.status}
-                      size="small"
-                      color={getStatusColor(subject.status) as any}
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <Typography variant="body2" color="text.secondary">
-                      {subject.lastLogin || 'Never'}
-                    </Typography>
-                  </TableCell>
-                  <TableCell align="center">
-                    <Box sx={{ display: 'flex', gap: 1 }}>
-                      <IconButton size="small" color="primary">
-                        <ViewIcon fontSize="small" />
-                      </IconButton>
-                      <IconButton 
-                        size="small" 
-                        color="primary"
-                        onClick={() => handleClickOpen(subject)}
-                      >
-                        <EditIcon fontSize="small" />
-                      </IconButton>
-                      <IconButton size="small" color="error">
-                        <DeleteIcon fontSize="small" />
-                      </IconButton>
-                    </Box>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </TableContainer>
+                    </TableCell>
+                    <TableCell align="center" sx={{ fontWeight: 600, fontSize: '0.875rem', color: 'text.primary', width: '120px', minWidth: '120px' }}>
+                      Actions
+                    </TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {loading ? (
+                    <TableRow>
+                      <TableCell colSpan={3} sx={{ textAlign: 'center', py: 4 }}>
+                        <Typography variant="body1" color="text.secondary">
+                          Loading subjects...
+                        </Typography>
+                      </TableCell>
+                    </TableRow>
+                  ) : paginatedSubjects.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={3} sx={{ textAlign: 'center', py: 4 }}>
+                        <Typography variant="body1" color="text.secondary">
+                          No subjects found
+                        </Typography>
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    paginatedSubjects.map((subject) => {
+                      const isItemSelected = isSelected(subject.id);
+                      const labelId = `enhanced-table-checkbox-${subject.id}`;
+
+                      return (
+                        <TableRow
+                          key={subject.id}
+                          hover
+                          onClick={() => handleSubjectSelect(subject.id)}
+                          role="checkbox"
+                          aria-checked={isItemSelected}
+                          tabIndex={-1}
+                          selected={isItemSelected}
+                          sx={{ cursor: 'pointer' }}
+                        >
+                          <TableCell padding="checkbox">
+                            <Checkbox
+                              color="primary"
+                              checked={isItemSelected}
+                              inputProps={{
+                                'aria-labelledby': labelId,
+                              }}
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                              <Avatar sx={{ bgcolor: `${getTypeColor(subject.type)}.main` }}>
+                                {getTypeIcon(subject.type)}
+                              </Avatar>
+                              <Box>
+                                <Typography
+                                  variant="subtitle2"
+                                  fontWeight="medium"
+                                  id={labelId}
+                                >
+                                  {subject.displayName}
+                                </Typography>
+                                <Typography variant="caption" color="text.secondary">
+                                  {subject.description || 'No description'}
+                                </Typography>
+                              </Box>
+                            </Box>
+                          </TableCell>
+                          <TableCell align="center" sx={{ width: '120px', minWidth: '120px' }}>
+                            <Box sx={{ display: 'flex', gap: 1 }}>
+                              <IconButton
+                                size="small"
+                                color="primary"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleViewOpen(subject);
+                                }}
+                              >
+                                <ViewIcon fontSize="small" />
+                              </IconButton>
+                              <IconButton
+                                size="small"
+                                color="primary"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleClickOpen(subject);
+                                }}
+                              >
+                                <EditIcon fontSize="small" />
+                              </IconButton>
+                              <IconButton
+                                size="small"
+                                color="error"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDeleteOpen(subject);
+                                }}
+                              >
+                                <DeleteIcon fontSize="small" />
+                              </IconButton>
+                            </Box>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })
+                  )}
+                </TableBody>
+              </Table>
+            </TableContainer>
+            
+            <TablePagination
+              rowsPerPageOptions={[5, 10, 25]}
+              component="div"
+              count={total}
+              rowsPerPage={rowsPerPage}
+              page={page}
+              onPageChange={handleChangePage}
+              onRowsPerPageChange={handleChangeRowsPerPage}
+            />
+          </>
+        )}
       </Card>
 
       {/* Floating Action Button */}
@@ -287,82 +733,435 @@ export default function SubjectsPage() {
       </Fab>
 
       {/* Subject Dialog */}
-      <Dialog open={open} onClose={handleClose} maxWidth="md" fullWidth>
-        <DialogTitle>
-          {selectedSubject ? 'Edit Subject' : 'Add New Subject'}
+      <Dialog
+        open={open}
+        onClose={handleClose}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: 2,
+            boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
+            m: 2,
+          }
+        }}
+      >
+        <DialogTitle sx={{
+          pb: 1,
+          pt: 2.5,
+          px: 3,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between'
+        }}>
+          <Typography variant="h6" fontWeight="600" color="text.primary">
+            {selectedSubject ? 'Edit Subject' : 'New Subject'}
+          </Typography>
+          <IconButton
+            onClick={handleClose}
+            size="small"
+            sx={{
+              color: 'grey.500',
+              '&:hover': {
+                bgcolor: 'grey.100'
+              }
+            }}
+          >
+            <CloseIcon fontSize="small" />
+          </IconButton>
         </DialogTitle>
-        <DialogContent>
-          <Grid container spacing={3} sx={{ mt: 1 }}>
-            <Grid item xs={12} md={6}>
+
+        <DialogContent sx={{ px: 3, pt: 2, pb: 2 }}>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5, mt: 1 }}>
+            <TextField
+              fullWidth
+              label="Name"
+              value={displayName}
+              onChange={(e) => handleDisplayNameChange(e.target.value)}
+              variant="outlined"
+              placeholder="e.g., John Doe, Marketing Team, Admin Role"
+              error={!!displayNameError}
+              helperText={displayNameError || 'Enter the subject name'}
+            />
+
+            <TextField
+              fullWidth
+              label="Description"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              variant="outlined"
+              placeholder="Brief description of the subject"
+              multiline
+              rows={3}
+            />
+          </Box>
+        </DialogContent>
+
+        <DialogActions sx={{
+          px: 3,
+          pb: 3,
+          pt: 1,
+          gap: 1.5
+        }}>
+          <Button
+            onClick={handleClose}
+            variant="outlined"
+            disabled={isSubmitting}
+            sx={{
+              textTransform: 'none',
+              minWidth: 100,
+              borderColor: 'grey.300',
+              color: 'text.secondary',
+              '&:hover': {
+                borderColor: 'grey.400',
+                bgcolor: 'grey.50'
+              }
+            }}
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={handleSubmit}
+            variant="contained"
+            disabled={isSubmitting || !displayName.trim() || !!displayNameError}
+            sx={{
+              textTransform: 'none',
+              minWidth: 120,
+              bgcolor: 'primary.main',
+              '&:hover': {
+                bgcolor: 'primary.dark'
+              }
+            }}
+          >
+            {isSubmitting ? 'Saving...' : (selectedSubject ? 'Update Subject' : 'Create Subject')}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* View Subject Dialog */}
+      <Dialog
+        open={viewOpen}
+        onClose={handleViewClose}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: 2,
+            boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
+            m: 2,
+          }
+        }}
+      >
+        <DialogTitle sx={{
+          pb: 1,
+          pt: 2.5,
+          px: 3,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between'
+        }}>
+          <Typography variant="h6" fontWeight="600" color="text.primary">
+            View Subject
+          </Typography>
+          <IconButton
+            onClick={handleViewClose}
+            size="small"
+            sx={{
+              color: 'grey.500',
+              '&:hover': {
+                bgcolor: 'grey.100'
+              }
+            }}
+          >
+            <CloseIcon fontSize="small" />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent sx={{ px: 3, pt: 2, pb: 2 }}>
+          {viewSubject && (
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5, mt: 1 }}>
+              {/* Name */}
               <TextField
                 fullWidth
                 label="Name"
-                defaultValue={selectedSubject?.name || ''}
+                value={viewSubject.displayName}
                 variant="outlined"
+                InputProps={{ readOnly: true }}
+                sx={{ '& .MuiInputBase-input': { bgcolor: 'grey.50' } }}
               />
-            </Grid>
-            <Grid item xs={12} md={6}>
+
+              {/* Description */}
               <TextField
                 fullWidth
-                label="Email"
-                type="email"
-                defaultValue={selectedSubject?.email || ''}
+                label="Description"
+                value={viewSubject.description || 'No description available'}
                 variant="outlined"
+                multiline
+                rows={3}
+                InputProps={{ readOnly: true }}
+                sx={{ '& .MuiInputBase-input': { bgcolor: 'grey.50' } }}
               />
-            </Grid>
-            <Grid item xs={12} md={6}>
-              <FormControl fullWidth>
-                <InputLabel>Type</InputLabel>
-                <Select
-                  value={selectedSubject?.type || 'User'}
-                  label="Type"
-                >
-                  <MenuItem value="User">User</MenuItem>
-                  <MenuItem value="Group">Group</MenuItem>
-                  <MenuItem value="Role">Role</MenuItem>
-                </Select>
-              </FormControl>
-            </Grid>
-            <Grid item xs={12} md={6}>
-              <FormControl fullWidth>
-                <InputLabel>Role</InputLabel>
-                <Select
-                  value={selectedSubject?.role || 'User'}
-                  label="Role"
-                >
-                  <MenuItem value="Admin">Admin</MenuItem>
-                  <MenuItem value="Manager">Manager</MenuItem>
-                  <MenuItem value="User">User</MenuItem>
-                  <MenuItem value="Developer">Developer</MenuItem>
-                </Select>
-              </FormControl>
-            </Grid>
-            <Grid item xs={12} md={6}>
-              <TextField
-                fullWidth
-                label="Department"
-                defaultValue={selectedSubject?.department || ''}
-                variant="outlined"
-              />
-            </Grid>
-            <Grid item xs={12} md={6}>
-              <FormControl fullWidth>
-                <InputLabel>Status</InputLabel>
-                <Select
-                  value={selectedSubject?.status || 'Active'}
-                  label="Status"
-                >
-                  <MenuItem value="Active">Active</MenuItem>
-                  <MenuItem value="Inactive">Inactive</MenuItem>
-                </Select>
-              </FormControl>
-            </Grid>
-          </Grid>
+
+              {/* Metadata */}
+              <Box>
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 1, fontWeight: 500 }}>
+                  Metadata
+                </Typography>
+                <Box sx={{
+                  border: '1px solid',
+                  borderColor: 'grey.200',
+                  borderRadius: 1,
+                  p: 1.5,
+                  bgcolor: 'grey.50',
+                }}>
+                  <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
+                    <Box>
+                      <Typography variant="caption" color="text.secondary">
+                        Created By
+                      </Typography>
+                      <Typography variant="body2">
+                        {viewSubject.metadata.createdBy}
+                      </Typography>
+                    </Box>
+                    <Box>
+                      <Typography variant="caption" color="text.secondary">
+                        Version
+                      </Typography>
+                      <Typography variant="body2">
+                        {viewSubject.metadata.version}
+                      </Typography>
+                    </Box>
+                    <Box>
+                      <Typography variant="caption" color="text.secondary">
+                        Created At
+                      </Typography>
+                      <Typography variant="body2">
+                        {new Date(viewSubject.createdAt).toLocaleDateString()}
+                      </Typography>
+                    </Box>
+                    <Box>
+                      <Typography variant="caption" color="text.secondary">
+                        Last Updated
+                      </Typography>
+                      <Typography variant="body2">
+                        {new Date(viewSubject.updatedAt).toLocaleDateString()}
+                      </Typography>
+                    </Box>
+                  </Box>
+                </Box>
+              </Box>
+            </Box>
+          )}
         </DialogContent>
-        <DialogActions>
-          <Button onClick={handleClose}>Cancel</Button>
-          <Button onClick={handleClose} variant="contained">
-            {selectedSubject ? 'Update' : 'Create'}
+        
+        <DialogActions sx={{
+          px: 3,
+          pb: 3,
+          pt: 1
+        }}>
+          <Button
+            onClick={handleViewClose}
+            variant="outlined"
+            sx={{
+              textTransform: 'none',
+              minWidth: 100
+            }}
+          >
+            Close
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog
+        open={deleteOpen}
+        onClose={handleDeleteClose}
+        maxWidth="xs"
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: 2,
+          }
+        }}
+      >
+        <DialogTitle sx={{ pb: 2 }}>
+          <Typography variant="h6" fontWeight="600" color="error.main">
+            Delete Subject
+          </Typography>
+        </DialogTitle>
+
+        <DialogContent sx={{ pb: 2 }}>
+          {deleteSubject && (
+            <Box>
+              <Typography variant="body1" gutterBottom>
+                Are you sure you want to delete this subject?
+              </Typography>
+
+              <Box sx={{
+                mt: 2,
+                p: 2,
+                bgcolor: 'grey.50',
+                borderRadius: 1,
+                border: '1px solid',
+                borderColor: 'grey.200'
+              }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                  <Avatar sx={{
+                    bgcolor: `${getTypeColor(deleteSubject.type)}.main`,
+                    width: 32,
+                    height: 32
+                  }}>
+                    {getTypeIcon(deleteSubject.type)}
+                  </Avatar>
+                  <Box>
+                    <Typography variant="subtitle2" fontWeight="600">
+                      {deleteSubject.displayName}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary" fontFamily="monospace">
+                      {deleteSubject.name}
+                    </Typography>
+                  </Box>
+                </Box>
+              </Box>
+
+              <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
+                This action cannot be undone. The subject will be permanently removed from the system.
+              </Typography>
+              
+              {deleteSubject.metadata.isSystem && (
+                <Typography variant="body2" color="error.main" sx={{ mt: 2, fontWeight: 500 }}>
+                  Warning: This is a system subject and cannot be deleted.
+                </Typography>
+              )}
+            </Box>
+          )}
+        </DialogContent>
+
+        <DialogActions sx={{ px: 3, pb: 3, gap: 1 }}>
+          <Button
+            onClick={handleDeleteClose}
+            variant="outlined"
+            disabled={isDeleting}
+            sx={{
+              textTransform: 'none',
+              minWidth: 80
+            }}
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={handleDeleteConfirm}
+            variant="contained"
+            color="error"
+            disabled={isDeleting || Boolean(deleteSubject?.metadata.isSystem)}
+            sx={{
+              textTransform: 'none',
+              minWidth: 80
+            }}
+          >
+            {isDeleting ? 'Deleting...' :
+              deleteSubject?.metadata.isSystem ? 'Cannot Delete' : 'Delete'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Bulk Delete Confirmation Dialog */}
+      <Dialog
+        open={bulkDeleteOpen}
+        onClose={handleBulkDeleteClose}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: 2,
+          }
+        }}
+      >
+        <DialogTitle sx={{ pb: 2 }}>
+          <Typography variant="h6" fontWeight="600" color="error.main">
+            Delete Multiple Subjects
+          </Typography>
+        </DialogTitle>
+        
+        <DialogContent sx={{ pb: 2 }}>
+          <Box>
+            <Typography variant="body1" gutterBottom>
+              Are you sure you want to delete {selectedSubjects.length} selected subject{selectedSubjects.length > 1 ? 's' : ''}?
+            </Typography>
+            
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 2, mb: 2 }}>
+              This action cannot be undone. The following subjects will be permanently deleted:
+            </Typography>
+            
+            <Box sx={{
+              maxHeight: '200px',
+              overflow: 'auto',
+              border: '1px solid',
+              borderColor: 'grey.200',
+              borderRadius: 1,
+              p: 1.5,
+              bgcolor: 'grey.50'
+            }}>
+              {selectedSubjects.map(subjectId => {
+                const subject = subjects.find(sub => sub.id === subjectId);
+                if (!subject) return null;
+                
+                return (
+                  <Box key={subjectId} sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1.5 }}>
+                    <Avatar sx={{
+                      bgcolor: `${getTypeColor(subject.type)}.main`,
+                      width: 28,
+                      height: 28
+                    }}>
+                      {getTypeIcon(subject.type)}
+                    </Avatar>
+                    <Box sx={{ flex: 1 }}>
+                      <Typography variant="body2" fontWeight="500">
+                        {subject.displayName}
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary" fontFamily="monospace">
+                        {subject.name}
+                      </Typography>
+                    </Box>
+                    <Chip
+                      label={subject.type}
+                      size="small"
+                      color={getTypeColor(subject.type) as any}
+                      variant="outlined"
+                    />
+                  </Box>
+                );
+              })}
+            </Box>
+            
+            <Typography variant="body2" color="warning.dark" sx={{ mt: 2, fontWeight: 500 }}>
+              Warning: Deleting subjects may affect existing policies that reference them.
+            </Typography>
+          </Box>
+        </DialogContent>
+        
+        <DialogActions sx={{ px: 3, pb: 3, gap: 1 }}>
+          <Button
+            onClick={handleBulkDeleteClose}
+            variant="outlined"
+            disabled={isSubmitting}
+            sx={{
+              textTransform: 'none',
+              minWidth: 80
+            }}
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={handleBulkDeleteConfirm}
+            variant="contained"
+            color="error"
+            disabled={isSubmitting}
+            sx={{
+              textTransform: 'none',
+              minWidth: 120
+            }}
+          >
+            {isSubmitting ? 'Deleting...' : `Delete ${selectedSubjects.length} Subject${selectedSubjects.length > 1 ? 's' : ''}`}
           </Button>
         </DialogActions>
       </Dialog>

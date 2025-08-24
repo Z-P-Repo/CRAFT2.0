@@ -105,14 +105,6 @@ const nextConfig: NextConfig = {
     return config;
   },
 
-  // Bundle analyzer
-  ...(process.env.ANALYZE === 'true' && {
-    experimental: {
-      bundleAnalyzer: {
-        enabled: true,
-      },
-    },
-  }),
 };
 
 export default nextConfig;

@@ -4,72 +4,13 @@ import { ValidationError, NotFoundError } from '@/exceptions/AppError';
 import { asyncHandler } from '@/middleware/errorHandler';
 import { PaginationHelper } from '@/utils/pagination';
 import { logger } from '@/utils/logger';
-
-// Resource interface
-interface IResource {
-  _id: string;
-  id: string;
-  name: string;
-  type: 'file' | 'document' | 'api' | 'database' | 'service' | 'folder' | 'application';
-  uri: string;
-  description?: string;
-  attributes: Map<string, any>;
-  parentId?: string;
-  children: string[];
-  permissions: {
-    read: boolean;
-    write: boolean;
-    delete: boolean;
-    execute: boolean;
-    admin: boolean;
-  };
-  metadata: {
-    owner: string;
-    createdBy: string;
-    lastModifiedBy: string;
-    tags: string[];
-    classification: 'public' | 'internal' | 'confidential' | 'restricted';
-    externalId?: string;
-    size?: number;
-    mimeType?: string;
-  };
-  active: boolean;
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-// Placeholder Resource model
-const Resource = {
-  find: (filter: any) => ({
-    populate: (path: string, select?: string) => ({
-      sort: (sort: any) => ({
-        skip: (skip: number) => ({
-          limit: (limit: number) => ({
-            lean: () => Promise.resolve([] as IResource[])
-          })
-        })
-      })
-    })
-  }),
-  countDocuments: (filter: any) => Promise.resolve(0),
-  findOne: (filter: any) => ({
-    populate: (path: string, select?: string) => ({
-      lean: () => Promise.resolve(null as IResource | null)
-    })
-  }),
-  create: (data: any) => Promise.resolve({} as IResource),
-  findOneAndUpdate: (filter: any, updates: any, options: any) => ({
-    populate: (path: string, select?: string) => Promise.resolve(null as IResource | null)
-  }),
-  findOneAndDelete: (filter: any) => Promise.resolve(null as IResource | null),
-  updateMany: (filter: any, updates: any) => Promise.resolve({ matchedCount: 0, modifiedCount: 0 }),
-  deleteMany: (filter: any) => Promise.resolve({ deletedCount: 0 }),
-  aggregate: (pipeline: any[]) => Promise.resolve([])
-};
+import { Resource, IResource } from '@/models/Resource';
 
 export class ResourceController {
   // Get all resources with pagination and filtering
   static getResources = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+    logger.info('GET /resources called with query:', req.query);
+    
     const paginationOptions = PaginationHelper.validatePaginationParams(req.query);
     const {
       search,
@@ -114,9 +55,6 @@ export class ResourceController {
     // Execute queries
     const [resources, total] = await Promise.all([
       Resource.find(filter)
-        .populate('parentId', 'id name type uri')
-        .populate('children', 'id name type uri')
-        .populate('metadata.owner', 'name email')
         .sort(sortObject)
         .skip(skip)
         .limit(paginationOptions.limit)
@@ -136,11 +74,11 @@ export class ResourceController {
   static getResourceById = asyncHandler(async (req: Request, res: Response): Promise<void> => {
     const { id } = req.params;
 
-    const resource = await Resource.findOne({ id })
-      .populate('parentId', 'id name type uri')
-      .populate('children', 'id name type uri')
-      .populate('metadata.owner', 'name email')
-      .lean();
+    // Try to find by custom id first, then by MongoDB _id
+    let resource = await Resource.findOne({ id }).lean();
+    if (!resource) {
+      resource = await Resource.findById(id).lean();
+    }
 
     if (!resource) {
       throw new NotFoundError('Resource not found');
@@ -155,8 +93,8 @@ export class ResourceController {
   // Create new resource
   static createResource = asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
     const {
-      id,
       name,
+      displayName,
       type,
       uri,
       description,
@@ -172,14 +110,14 @@ export class ResourceController {
     } = req.body;
 
     // Validate required fields
-    if (!id || !name || !type || !uri) {
-      throw new ValidationError('ID, name, type, and URI are required');
+    if (!name || !type || !uri) {
+      throw new ValidationError('Name, type, and URI are required');
     }
 
-    // Check if resource already exists
-    const existingResource = await Resource.findOne({ id });
+    // Check if resource already exists by name
+    const existingResource = await Resource.findOne({ name });
     if (existingResource) {
-      throw new ValidationError('Resource with this ID already exists');
+      throw new ValidationError('Resource with this name already exists');
     }
 
     // Validate parent if provided
@@ -190,10 +128,14 @@ export class ResourceController {
       }
     }
 
+    // Generate ID for the resource
+    const resourceId = `resource-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
     // Create resource
     const resourceData = {
-      id,
+      id: resourceId,
       name: name.trim(),
+      displayName: displayName?.trim() || name.trim(),
       type,
       uri: uri.trim(),
       description: description?.trim(),
@@ -208,9 +150,9 @@ export class ResourceController {
         admin: permissions?.admin ?? false,
       },
       metadata: {
-        owner: owner || req.user!._id,
-        createdBy: req.user!._id,
-        lastModifiedBy: req.user!._id,
+        owner: owner || req.user?.name || 'system',
+        createdBy: req.user?.name || null,
+        lastModifiedBy: req.user?.name || null,
         classification: classification || 'internal',
         tags: tags || [],
         externalId,
@@ -235,14 +177,18 @@ export class ResourceController {
     const { id } = req.params;
     const updates = req.body;
 
-    // Validate resource exists
-    const existingResource = await Resource.findOne({ id });
+    // Validate resource exists - try custom id first, then MongoDB _id
+    let existingResource = await Resource.findOne({ id });
+    if (!existingResource) {
+      existingResource = await Resource.findById(id);
+    }
+    
     if (!existingResource) {
       throw new NotFoundError('Resource not found');
     }
 
-    // Check permissions (only owner or admin can update)
-    if (existingResource.metadata.owner !== req.user!._id && req.user!.role !== 'admin') {
+    // Check permissions (only owner or admin can update) - skip for demo with optional auth
+    if (req.user && existingResource.metadata.owner !== req.user.name && req.user.role !== 'admin') {
       throw new ValidationError('Insufficient permissions to update resource');
     }
 
@@ -275,16 +221,13 @@ export class ResourceController {
     } else {
       updates.metadata = existingResource.metadata;
     }
-    updates.metadata.lastModifiedBy = req.user!._id;
+    updates.metadata.lastModifiedBy = req.user?.name || null;
 
-    const resource = await Resource.findOneAndUpdate(
-      { id },
+    const resource = await Resource.findByIdAndUpdate(
+      existingResource._id,
       updates,
       { new: true, runValidators: true }
-    )
-      .populate('parentId', 'id name type uri')
-      .populate('children', 'id name type uri')
-      .populate('metadata.owner', 'name email');
+    );
 
     logger.info(`Resource updated: ${resource.id} by ${req.user?.email}`);
 
@@ -299,13 +242,18 @@ export class ResourceController {
   static deleteResource = asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
     const { id } = req.params;
 
-    const resource = await Resource.findOne({ id });
+    // Try to find by custom id first, then by MongoDB _id
+    let resource = await Resource.findOne({ id });
+    if (!resource) {
+      resource = await Resource.findById(id);
+    }
+    
     if (!resource) {
       throw new NotFoundError('Resource not found');
     }
 
-    // Check permissions (only owner or admin can delete)
-    if (resource.metadata.owner !== req.user!._id && req.user!.role !== 'admin') {
+    // Check permissions (only owner or admin can delete) - skip for demo with optional auth
+    if (req.user && resource.metadata.owner !== req.user.name && req.user.role !== 'admin') {
       throw new ValidationError('Insufficient permissions to delete resource');
     }
 
@@ -314,7 +262,8 @@ export class ResourceController {
       throw new ValidationError('Cannot delete resource with children. Delete or reassign children first.');
     }
 
-    await Resource.findOneAndDelete({ id });
+    // Delete by MongoDB _id to ensure we delete the correct resource
+    await Resource.findByIdAndDelete(resource._id);
 
     logger.info(`Resource deleted: ${resource.id} by ${req.user?.email}`);
 
@@ -508,7 +457,7 @@ export class ResourceController {
       { id: { $in: resourceIds } },
       {
         ...updates,
-        'metadata.lastModifiedBy': req.user!._id
+        'metadata.lastModifiedBy': req.user?.name || null
       }
     );
 
