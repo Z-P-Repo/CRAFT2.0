@@ -219,7 +219,7 @@ export default function PoliciesPage() {
   const handleBulkDeleteConfirm = useCallback(async () => {
     try {
       setBulkDeleteLoading(true);
-      const response = await apiClient.delete('/policies/bulk', {
+      const response = await apiClient.delete('/policies/bulk/delete', {
         policyIds: selectedPolicies
       });
       

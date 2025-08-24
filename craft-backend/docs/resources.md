@@ -1,6 +1,6 @@
 # Resource Management Documentation
 
-The Resource Management module handles protected resources (objects) in the ABAC system. Resources represent any entity that requires access control, such as files, documents, APIs, databases, or business objects.
+The Resource Management module handles protected resources in the ABAC system. Resources represent any entity that requires access control, such as files, documents, APIs, databases, or business entities.
 
 ## Overview
 

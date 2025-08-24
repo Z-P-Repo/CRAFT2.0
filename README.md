@@ -102,7 +102,7 @@ CRAFT2.0/
 ### 🏗️ ABAC Components
 - **Policies**: Define access control rules with step-by-step wizard
 - **Subjects**: Manage users, groups, roles with comprehensive attributes
-- **Resources**: Protected objects and assets with attribute support
+- **Resources**: Protected resources and assets with attribute support
 - **Actions**: Operations that can be performed with categorization
 - **Attributes**: Contextual information for policy decisions with full CRUD
 

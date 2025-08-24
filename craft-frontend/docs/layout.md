@@ -69,7 +69,7 @@ const menuItems = [
   { text: 'Dashboard', icon: DashboardIcon, path: '/dashboard' },
   { text: 'Policies', icon: SecurityIcon, path: '/policies' },
   { text: 'Subjects', icon: PeopleIcon, path: '/subjects' },
-  { text: 'Objects', icon: FolderIcon, path: '/objects' },
+  { text: 'Resources', icon: FolderIcon, path: '/resources' },
   { text: 'Actions', icon: ActionIcon, path: '/actions' },
   { text: 'Attributes', icon: AttributeIcon, path: '/attributes' },
   { text: 'Policy Tester', icon: TesterIcon, path: '/tester' },

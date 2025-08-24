@@ -612,17 +612,17 @@ export default function CreatePolicyPage() {
                                 placeholder="Choose attributes to configure conditions"
                                 variant="outlined"
                                 size="small"
+                                InputLabelProps={{}}
                               />
                             )}
                             renderTags={(value, getTagProps) =>
                               value.map((option, index) => (
                                 <Chip
-                                  key={option.id}
+                                  {...getTagProps({ index })}
                                   variant="filled"
                                   color="primary"
                                   size="small"
                                   label={option.displayName}
-                                  {...getTagProps({ index })}
                                   sx={{ fontSize: '0.75rem' }}
                                 />
                               ))
@@ -675,6 +675,7 @@ export default function CreatePolicyPage() {
                             <Grid container spacing={2}>
                               {selectedAttributes.map((attribute) => {
                                 const isArrayOrObject = (attribute.dataType as string) === 'object' || 
+                                  (attribute.dataType as string) === 'array' ||
                                   (attribute.dataType === 'string' && attribute.constraints.enumValues && 
                                    Array.isArray(attribute.constraints.enumValues) && attribute.isMultiValue);
                                 
@@ -734,83 +735,108 @@ export default function CreatePolicyPage() {
                                         </Typography>
                                       )}
                                   
-                                      {attribute.dataType === 'string' && attribute.constraints.enumValues ? (
-                                        <FormControl fullWidth size="small">
-                                          <Select
-                                            value={isArrayOrObject
-                                              ? (selectedSubjectAttributes[attribute.id] || []) 
-                                              : (selectedSubjectAttributes[attribute.id] || '')
+                                      {((attribute.dataType === 'string' || (attribute.dataType as string) === 'array') && attribute.constraints.enumValues) ? (
+                                        isArrayOrObject ? (
+                                          <Autocomplete
+                                            multiple
+                                            freeSolo
+                                            options={attribute.constraints.enumValues || []}
+                                            value={selectedSubjectAttributes[attribute.id] || []}
+                                            onChange={(event, newValue) => {
+                                              handleSubjectAttributeSelection(attribute.id, newValue);
+                                            }}
+                                            renderInput={(params) => (
+                                              <TextField
+                                                {...params}
+                                                size="small"
+                                                label={`${attribute.displayName} Values`}
+                                                placeholder="Select existing or type new values"
+                                                helperText="Type to add new values, or select from existing ones"
+                                                InputLabelProps={{}}
+                                                sx={{ 
+                                                  bgcolor: 'grey.50',
+                                                  '& .MuiFormHelperText-root': {
+                                                    fontSize: '0.65rem',
+                                                    mt: 0.5
+                                                  }
+                                                }}
+                                              />
+                                            )}
+                                            renderTags={(value, getTagProps) =>
+                                              value.map((option, index) => (
+                                                <Chip
+                                                  {...getTagProps({ index })}
+                                                  variant="filled"
+                                                  color="primary"
+                                                  size="small"
+                                                  label={option}
+                                                  sx={{ fontSize: '0.7rem', height: 22 }}
+                                                />
+                                              ))
                                             }
-                                            onChange={(e) => {
-                                              const value = e.target.value;
-                                              if (isArrayOrObject && Array.isArray(value)) {
-                                                if (value.includes('__add_new_value__')) {
-                                                  const filteredValue = value.filter(v => v !== '__add_new_value__');
-                                                  handleSubjectAttributeSelection(attribute.id, filteredValue);
+                                            renderOption={(props, option) => (
+                                              <Box component="li" {...props}>
+                                                <Chip 
+                                                  label={option} 
+                                                  size="small" 
+                                                  color="primary"
+                                                  variant="outlined"
+                                                  sx={{ fontSize: '0.7rem' }}
+                                                />
+                                              </Box>
+                                            )}
+                                            sx={{
+                                              '& .MuiOutlinedInput-root': {
+                                                bgcolor: 'grey.50'
+                                              }
+                                            }}
+                                          />
+                                        ) : (
+                                          <FormControl fullWidth size="small">
+                                            <Select
+                                              value={selectedSubjectAttributes[attribute.id] || ''}
+                                              onChange={(e) => {
+                                                const value = e.target.value;
+                                                if (value === '__add_new_value__') {
                                                   setShowCreateValue(attribute.id);
                                                 } else {
                                                   handleSubjectAttributeSelection(attribute.id, value);
                                                 }
-                                              } else if (!isArrayOrObject && value === '__add_new_value__') {
-                                                setShowCreateValue(attribute.id);
-                                              } else {
-                                                handleSubjectAttributeSelection(attribute.id, value);
-                                              }
-                                            }}
-                                            displayEmpty
-                                            multiple={isArrayOrObject || false}
-                                            renderValue={(selected) => {
-                                              if (isArrayOrObject && Array.isArray(selected)) {
-                                                return selected.length === 0 ? 
-                                                  <em style={{ color: '#999' }}>Select values</em> : 
-                                                  selected.join(', ');
-                                              }
-                                              return selected || <em style={{ color: '#999' }}>Select value</em>;
-                                            }}
-                                            sx={{ bgcolor: 'grey.50' }}
-                                          >
-                                            {!attribute.isRequired && !isArrayOrObject && (
-                                              <MenuItem value="">
-                                                <em>Not specified</em>
-                                              </MenuItem>
-                                            )}
-                                            {attribute.constraints.enumValues.map((value: any) => (
-                                              <MenuItem key={value} value={value}>
-                                                {isArrayOrObject ? (
-                                                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                                    <Chip 
-                                                      label={value} 
-                                                      size="small" 
-                                                      variant={selectedSubjectAttributes[attribute.id]?.includes?.(value) ? "filled" : "outlined"}
-                                                      color="primary"
-                                                      sx={{ height: 20, fontSize: '0.65rem' }}
-                                                    />
-                                                  </Box>
-                                                ) : (
-                                                  value
-                                                )}
-                                              </MenuItem>
-                                            ))}
-                                            <MenuItem 
-                                              value="__add_new_value__"
-                                              sx={{
-                                                bgcolor: 'primary.50',
-                                                borderTop: '1px solid',
-                                                borderColor: 'grey.200',
-                                                '&:hover': {
-                                                  bgcolor: 'primary.100'
-                                                }
                                               }}
+                                              displayEmpty
+                                              sx={{ bgcolor: 'grey.50' }}
                                             >
-                                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, color: 'primary.main' }}>
-                                                <AddIcon fontSize="small" />
-                                                <Typography variant="caption" color="primary.main" fontWeight="600">
-                                                  Add new value
-                                                </Typography>
-                                              </Box>
-                                            </MenuItem>
-                                          </Select>
-                                        </FormControl>
+                                              {!attribute.isRequired && (
+                                                <MenuItem value="">
+                                                  <em>Not specified</em>
+                                                </MenuItem>
+                                              )}
+                                              {attribute.constraints.enumValues.map((value: any) => (
+                                                <MenuItem key={value} value={value}>
+                                                  {value}
+                                                </MenuItem>
+                                              ))}
+                                              <MenuItem 
+                                                value="__add_new_value__"
+                                                sx={{
+                                                  bgcolor: 'primary.50',
+                                                  borderTop: '1px solid',
+                                                  borderColor: 'grey.200',
+                                                  '&:hover': {
+                                                    bgcolor: 'primary.100'
+                                                  }
+                                                }}
+                                              >
+                                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, color: 'primary.main' }}>
+                                                  <AddIcon fontSize="small" />
+                                                  <Typography variant="caption" color="primary.main" fontWeight="600">
+                                                    Add new value
+                                                  </Typography>
+                                                </Box>
+                                              </MenuItem>
+                                            </Select>
+                                          </FormControl>
+                                        )
                                       ) : attribute.dataType === 'boolean' ? (
                                         <FormControl fullWidth>
                                           <FormControlLabel

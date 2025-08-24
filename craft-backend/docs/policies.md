@@ -1,10 +1,10 @@
 # Policy Engine Documentation
 
-The CRAFT backend policy engine provides comprehensive Attribute-Based Access Control (ABAC) functionality for evaluating access decisions based on subject, object, action, and environment attributes.
+The CRAFT backend policy engine provides comprehensive Attribute-Based Access Control (ABAC) functionality for evaluating access decisions based on subject, resource, action, and environment attributes.
 
 ## Overview
 
-The policy engine is the core component that evaluates access control policies to determine whether a subject can perform a specific action on a particular object under given environmental conditions. It supports complex rule evaluation, policy combinations, and real-time decision making.
+The policy engine is the core component that evaluates access control policies to determine whether a subject can perform a specific action on a particular resource under given environmental conditions. It supports complex rule evaluation, policy combinations, and real-time decision making.
 
 ## Architecture
 

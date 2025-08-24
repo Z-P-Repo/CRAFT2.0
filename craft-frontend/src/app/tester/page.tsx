@@ -223,7 +223,7 @@ export default function PolicyTesterPage() {
                   
                   <TextField
                     fullWidth
-                    label="Object/Resource"
+                    label="Resource"
                     value={object}
                     onChange={(e) => setObject(e.target.value)}
                     placeholder="e.g., /documents/report.pdf"
@@ -412,7 +412,7 @@ export default function PolicyTesterPage() {
                     <TableCell>Test Name</TableCell>
                     <TableCell>Subject</TableCell>
                     <TableCell>Action</TableCell>
-                    <TableCell>Object</TableCell>
+                    <TableCell>Resource</TableCell>
                     <TableCell>Result</TableCell>
                     <TableCell>Timestamp</TableCell>
                   </TableRow>

@@ -118,7 +118,7 @@ export default function ObjectsPage() {
   const [displayName, setDisplayName] = useState('');
   const [displayNameError, setDisplayNameError] = useState('');
   const [description, setDescription] = useState('');
-  
+
   // Search, Filter, Sort states
   const [searchTerm, setSearchTerm] = useState('');
   const [sortBy, setSortBy] = useState('displayName');
@@ -223,7 +223,7 @@ export default function ObjectsPage() {
     setIsDeleting(true);
     try {
       const response = await apiClient.delete(`/resources/${deleteObject?._id}`);
-      
+
       if (response.success) {
         // Refresh the data by calling fetchObjects
         await fetchObjects();
@@ -233,7 +233,7 @@ export default function ObjectsPage() {
       }
     } catch (error: any) {
       console.error('Error deleting object:', error);
-      
+
       // If object was not found (404), it might have been already deleted
       // Refresh the data and close the dialog
       if (error.code === 'NOT_FOUND' || error.message?.includes('not found')) {
@@ -274,7 +274,7 @@ export default function ObjectsPage() {
       setSelectedObjects([]);
     }
   };
-  
+
   const handleObjectSelect = (objectId: string) => {
     const selectedIndex = selectedObjects.indexOf(objectId);
     let newSelected: string[] = [];
@@ -294,24 +294,24 @@ export default function ObjectsPage() {
 
     setSelectedObjects(newSelected);
   };
-  
+
   const isSelected = (objectId: string) => selectedObjects.indexOf(objectId) !== -1;
-  
+
   // Bulk operations handlers
   const handleBulkDeleteOpen = () => {
     setBulkDeleteOpen(true);
   };
-  
+
   const handleBulkDeleteClose = () => {
     setBulkDeleteOpen(false);
   };
-  
+
   const handleBulkDeleteConfirm = async () => {
     if (selectedObjects.length === 0) return;
-    
+
     setIsSubmitting(true);
     setBulkDeleteOpen(false);
-    
+
     try {
       // Use the bulk delete API endpoint with request method
       const response = await apiClient.request({
@@ -321,27 +321,27 @@ export default function ObjectsPage() {
           resourceIds: selectedObjects
         }
       });
-      
+
       if (response.success) {
         // Refresh the data by calling fetchObjects
         await fetchObjects();
-        
+
         // Clear selection
         setSelectedObjects([]);
-        
+
         console.log(`Successfully deleted ${selectedObjects.length} objects`);
       } else {
         throw new Error(response.error || 'Failed to delete objects');
       }
     } catch (error: any) {
       console.error('Failed to delete objects:', error);
-      
+
       // Always refresh the data to sync with backend state
       await fetchObjects();
-      
+
       // Clear selection regardless of error
       setSelectedObjects([]);
-      
+
       // Only show error if it's not a "not found" case
       if (!error.message?.includes('not found') && error.code !== 'NOT_FOUND') {
         setError('Failed to delete some objects. Please try again.');
@@ -350,7 +350,7 @@ export default function ObjectsPage() {
       setIsSubmitting(false);
     }
   };
-  
+
   const clearSelection = () => {
     setSelectedObjects([]);
   };
@@ -391,7 +391,7 @@ export default function ObjectsPage() {
       if (selectedObject) {
         // Update existing object
         const response = await apiClient.put(`/resources/${selectedObject?._id}`, objectData);
-        
+
         if (response.success) {
           // Refresh the data by calling fetchObjects
           await fetchObjects();
@@ -399,13 +399,13 @@ export default function ObjectsPage() {
       } else {
         // Create new object
         const response = await apiClient.post('/resources', objectData);
-        
+
         if (response.success) {
           // Refresh the data by calling fetchObjects
           await fetchObjects();
         }
       }
-      
+
       handleClose();
     } catch (error) {
       console.error('Error saving object:', error);
@@ -420,7 +420,7 @@ export default function ObjectsPage() {
     try {
       setLoading(true);
       setError(null);
-      
+
       const params: Record<string, any> = {
         page: page + 1,
         limit: rowsPerPage,
@@ -450,9 +450,9 @@ export default function ObjectsPage() {
         data: err.response?.data,
         config: err.config
       });
-      
+
       setError(err.response?.data?.error || err.message || 'Failed to load objects');
-      
+
       // Fallback to mock data for demo
       setObjects(mockObjects);
       setTotal(mockObjects.length);
@@ -497,11 +497,11 @@ export default function ObjectsPage() {
 
   // Search and filter logic
   const filteredObjects = objects.filter(object => {
-    const searchMatch = !searchTerm || 
+    const searchMatch = !searchTerm ||
       object?.displayName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       object?.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       object?.type?.toLowerCase().includes(searchTerm.toLowerCase());
-    
+
     return searchMatch;
   });
 
@@ -509,7 +509,7 @@ export default function ObjectsPage() {
   const sortedObjects = [...filteredObjects].sort((a, b) => {
     const aValue = String(a?.[sortBy as keyof ExtendedResourceObject] || '');
     const bValue = String(b?.[sortBy as keyof ExtendedResourceObject] || '');
-    
+
     if (sortOrder === 'asc') {
       return aValue.localeCompare(bValue);
     } else {
@@ -539,7 +539,7 @@ export default function ObjectsPage() {
           <Box sx={{ display: 'flex', alignItems: 'center' }}>
             <FolderIcon sx={{ mr: 2, color: 'text.secondary' }} />
             <Typography variant="h5" component="h1" fontWeight="600">
-              Objects
+              Resources
             </Typography>
           </Box>
           <Box sx={{ textAlign: 'right' }}>
@@ -547,7 +547,7 @@ export default function ObjectsPage() {
               {loading ? '...' : total}
             </Typography>
             <Typography variant="caption" color="text.secondary">
-              Total Objects
+              Total Resources
             </Typography>
           </Box>
         </Box>
@@ -576,12 +576,12 @@ export default function ObjectsPage() {
           </Button>
         </Box>
       )}
-      
+
       {/* Filter Bar */}
       {selectedObjects.length === 0 && (
-        <Paper elevation={0} sx={{ 
-          p: 2, 
-          mb: 3, 
+        <Paper elevation={0} sx={{
+          p: 2,
+          mb: 3,
           border: '1px solid',
           borderColor: 'grey.200',
         }}>
@@ -640,7 +640,7 @@ export default function ObjectsPage() {
         </Paper>
       )}
 
-      {/* Objects Table */}
+      {/* Resources Table */}
       <Card variant="outlined">
         {error && (
           <Box sx={{ p: 3, textAlign: 'center' }}>
@@ -674,10 +674,10 @@ export default function ObjectsPage() {
                         }}
                       />
                     </TableCell>
-                    <TableCell 
-                      sx={{ 
-                        fontWeight: 600, 
-                        fontSize: '0.875rem', 
+                    <TableCell
+                      sx={{
+                        fontWeight: 600,
+                        fontSize: '0.875rem',
                         color: 'text.primary',
                         cursor: 'pointer',
                         '&:hover': { backgroundColor: 'grey.50' }
@@ -798,7 +798,7 @@ export default function ObjectsPage() {
                 </TableBody>
               </Table>
             </TableContainer>
-            
+
             <TablePagination
               rowsPerPageOptions={[5, 10, 25]}
               component="div"
@@ -812,17 +812,16 @@ export default function ObjectsPage() {
         )}
       </Card>
 
-      {/* Floating Action Button */}
-      <Fab
-        color="primary"
-        aria-label="add"
-        sx={{ position: 'fixed', bottom: 24, right: 24 }}
+      <Fab 
+        color="primary" 
+        aria-label="add" 
+        sx={{ position: 'fixed', bottom: 24, right: 24 }} 
         onClick={() => handleClickOpen()}
       >
         <AddIcon />
       </Fab>
 
-      {/* Object Dialog */}
+      {/* Resource Dialog */}
       <Dialog
         open={open}
         onClose={handleClose}
@@ -1042,7 +1041,7 @@ export default function ObjectsPage() {
             </Box>
           )}
         </DialogContent>
-        
+
         <DialogActions sx={{
           px: 3,
           pb: 3,
@@ -1116,7 +1115,7 @@ export default function ObjectsPage() {
               <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
                 This action cannot be undone. The object will be permanently removed from the system.
               </Typography>
-              
+
               {deleteObject?.metadata?.isSystem && (
                 <Typography variant="body2" color="error.main" sx={{ mt: 2, fontWeight: 500 }}>
                   Warning: This is a system object and cannot be deleted.
@@ -1168,20 +1167,20 @@ export default function ObjectsPage() {
       >
         <DialogTitle sx={{ pb: 2 }}>
           <Typography variant="h6" fontWeight="600" color="error.main">
-            Delete Multiple Objects
+            Delete Multiple Resources
           </Typography>
         </DialogTitle>
-        
+
         <DialogContent sx={{ pb: 2 }}>
           <Box>
             <Typography variant="body1" gutterBottom>
-              Are you sure you want to delete {selectedObjects.length} selected object{selectedObjects.length > 1 ? 's' : ''}?
+              Are you sure you want to delete {selectedObjects.length} selected resource{selectedObjects.length > 1 ? 's' : ''}?
             </Typography>
-            
+
             <Typography variant="body2" color="text.secondary" sx={{ mt: 2, mb: 2 }}>
               This action cannot be undone. The following objects will be permanently deleted:
             </Typography>
-            
+
             <Box sx={{
               maxHeight: '200px',
               overflow: 'auto',
@@ -1194,7 +1193,7 @@ export default function ObjectsPage() {
               {selectedObjects.map(objectId => {
                 const object = objects.find(obj => obj.id === objectId);
                 if (!object) return null;
-                
+
                 return (
                   <Box key={objectId} sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1.5 }}>
                     <Avatar sx={{
@@ -1222,13 +1221,13 @@ export default function ObjectsPage() {
                 );
               })}
             </Box>
-            
+
             <Typography variant="body2" color="warning.dark" sx={{ mt: 2, fontWeight: 500 }}>
               Warning: Deleting objects may affect existing policies that reference them.
             </Typography>
           </Box>
         </DialogContent>
-        
+
         <DialogActions sx={{ px: 3, pb: 3, gap: 1 }}>
           <Button
             onClick={handleBulkDeleteClose}
@@ -1251,7 +1250,7 @@ export default function ObjectsPage() {
               minWidth: 120
             }}
           >
-            {isSubmitting ? 'Deleting...' : `Delete ${selectedObjects.length} Object${selectedObjects.length > 1 ? 's' : ''}`}
+            {isSubmitting ? 'Deleting...' : `Delete ${selectedObjects.length} Resource${selectedObjects.length > 1 ? 's' : ''}`}
           </Button>
         </DialogActions>
       </Dialog>

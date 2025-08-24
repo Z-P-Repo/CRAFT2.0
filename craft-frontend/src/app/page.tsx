@@ -118,7 +118,7 @@ export default function HomePage() {
                   Intuitive Dashboard
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
-                  Manage subjects, objects, actions, and policies through an 
+                  Manage subjects, resources, actions, and policies through an 
                   easy-to-use web interface designed for administrators.
                 </Typography>
               </CardContent>
@@ -148,7 +148,7 @@ export default function HomePage() {
           </Typography>
           <Typography variant="body2" color="text.secondary">
             • Attribute-Based Access Control (ABAC) • Policy Management • 
-            Real-time Evaluation • Subject & Object Management • 
+            Real-time Evaluation • Subject & Resource Management • 
             Action Controls • Security Audit Trail
           </Typography>
         </Paper>

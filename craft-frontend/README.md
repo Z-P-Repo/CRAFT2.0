@@ -14,9 +14,9 @@ A modern, responsive React-based dashboard for managing the CRAFT (Attribute-Bas
 - **🔐 JWT Authentication** with automatic token refresh and secure routing
 - **📋 Policy Management** - Create, edit, and manage ABAC policies with 4-step wizard and dedicated view/edit pages
 - **👥 Subject Management** - Handle users, groups, and roles with detailed profiles
-- **📁 Object Management** - Manage system resources, files, databases, and APIs
+- **📁 Resource Management** - Manage system resources, files, databases, and APIs
 - **⚡ Action Management** - Define and categorize system actions with risk levels
-- **🏷️ Attribute Management** - Configure ABAC attributes for subjects, objects, and environment
+- **🏷️ Attribute Management** - Configure ABAC attributes for subjects, resources, and environment
 - **🧪 Policy Tester** - Interactive policy evaluation and testing with detailed results
 - **📊 Real-time Statistics** - Dashboard with live metrics and activity tracking
 - **🎨 Professional UI/UX** - Material-UI components with consistent theming
@@ -106,7 +106,7 @@ src/
 │   │   └── page.tsx    # Main policies listing
 │   ├── subjects/       # Subject management
 │   ├── actions/        # Actions management
-│   ├── objects/        # Objects/Resources management
+│   ├── resources/     # Resources management
 │   ├── attributes/     # Attributes management
 │   ├── layout.tsx      # Root layout with dashboard
 │   └── page.tsx        # Home page
@@ -142,7 +142,7 @@ src/
 ### Protected Routes
 - **Dashboard** (`/dashboard`): Main application dashboard
 - **Subjects** (`/subjects`): User and role management
-- **Objects** (`/objects`): Resource management
+- **Resources** (`/resources`): Resource management
 - **Actions** (`/actions`): Action definitions
 - **Policies** (`/policies`): Access policy management with comprehensive pagination and filtering
   - **Policy Creation** (`/policies/create`): 4-step wizard for policy creation
