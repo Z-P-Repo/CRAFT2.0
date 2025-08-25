@@ -1,0 +1,27 @@
+name: Deploy to on prem server
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: self-hosted
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Deploy to on prem server
+        run: |
+          sshpass -p "${{ secrets.SSH_PASS }}" ssh -o StrictHostKeyChecking=no -tt -i ~/.ssh/id_rsa "${{secrets.SSH_USER_NAME}}"@"${{secrets.SSH_HOST_IP}}" << EOF
+            cd /home/zeropixels/Documents/dev/CRAFT2.0
+            git pull origin setup-deployment-pipeline
+            cd craft-backend
+            npm ci
+            pm2 reload craft_backend --update-env
+            cd ../craft-frontend
+            npm ci
+            pm2 reload craft_frontend --update-env
+            pm2 save
+            exit
+          EOF
