@@ -98,6 +98,32 @@ interface PolicyCondition {
   value: string | number | string[];
 }
 
+// Additional interfaces for lookup data
+interface Subject {
+  id: string;
+  displayName: string;
+  name: string;
+}
+
+interface ActionObject {
+  id: string;
+  displayName: string;
+  name: string;
+}
+
+interface ResourceObject {
+  id: string;
+  displayName: string;
+  name: string;
+}
+
+interface Attribute {
+  id: string;
+  displayName: string;
+  name: string;
+  dataType: string;
+}
+
 export default function PolicyViewPage() {
   const router = useRouter();
   const params = useParams();
@@ -106,6 +132,39 @@ export default function PolicyViewPage() {
   const [policy, setPolicy] = useState<Policy | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  
+  // Lookup data for human-readable formatting
+  const [subjects, setSubjects] = useState<Subject[]>([]);
+  const [actions, setActions] = useState<ActionObject[]>([]);
+  const [resources, setResources] = useState<ResourceObject[]>([]);
+  const [attributes, setAttributes] = useState<Attribute[]>([]);
+
+  // Load lookup data for human-readable formatting
+  const loadLookupData = async () => {
+    try {
+      const [subjectsRes, actionsRes, resourcesRes, attributesRes] = await Promise.all([
+        apiClient.get('/subjects?page=1&limit=1000'),
+        apiClient.get('/actions?page=1&limit=1000'), 
+        apiClient.get('/resources?page=1&limit=1000'),
+        apiClient.get('/attributes?page=1&limit=1000')
+      ]);
+      
+      if (subjectsRes.success && subjectsRes.data) {
+        setSubjects(Array.isArray(subjectsRes.data) ? subjectsRes.data : subjectsRes.data.data || []);
+      }
+      if (actionsRes.success && actionsRes.data) {
+        setActions(Array.isArray(actionsRes.data) ? actionsRes.data : actionsRes.data.data || []);
+      }
+      if (resourcesRes.success && resourcesRes.data) {
+        setResources(Array.isArray(resourcesRes.data) ? resourcesRes.data : resourcesRes.data.data || []);
+      }
+      if (attributesRes.success && attributesRes.data) {
+        setAttributes(Array.isArray(attributesRes.data) ? attributesRes.data : attributesRes.data.data || []);
+      }
+    } catch (error) {
+      console.error('Failed to load lookup data:', error);
+    }
+  };
 
   useEffect(() => {
     if (!policyId) return;
@@ -113,13 +172,20 @@ export default function PolicyViewPage() {
     const fetchPolicy = async () => {
       try {
         setLoading(true);
-        const response = await apiClient.get(`/policies/${policyId}`);
         
-        if (response.success && response.data) {
-          setPolicy(response.data);
-        } else {
-          setError('Policy not found');
-        }
+        // Load both policy and lookup data
+        await Promise.all([
+          (async () => {
+            const response = await apiClient.get(`/policies/${policyId}`);
+            if (response.success && response.data) {
+              setPolicy(response.data);
+            } else {
+              setError('Policy not found');
+            }
+          })(),
+          loadLookupData()
+        ]);
+        
       } catch (error: any) {
         console.error('Failed to fetch policy:', error);
         setError('Failed to load policy. Please try again.');
@@ -147,144 +213,178 @@ export default function PolicyViewPage() {
   const renderHumanReadablePolicy = () => {
     if (!policy || !policy.rules.length) return null;
 
+    const getSubjectDisplayName = (subjectId: string) => {
+      const subject = subjects.find(s => s.id === subjectId);
+      return subject ? subject.displayName : `Subject (${subjectId})`;
+    };
+
+    const getActionDisplayName = (actionId: string) => {
+      const action = actions.find(a => a.id === actionId);
+      return action ? action.displayName : `Action (${actionId})`;
+    };
+
+    const getResourceDisplayName = (resourceId: string) => {
+      const resource = resources.find(r => r.id === resourceId);
+      return resource ? resource.displayName : `Resource (${resourceId})`;
+    };
+
+    const getAttributeDisplayName = (attrName: string) => {
+      const attribute = attributes.find(a => a.name === attrName || a.id === attrName);
+      return attribute ? attribute.displayName : attrName;
+    };
+
+    // Debug logging (can be removed later)
+    console.log('Rendering policy with data:', {
+      policy: policy.name,
+      subjectsCount: subjects.length,
+      actionsCount: actions.length,
+      resourcesCount: resources.length,
+      attributesCount: attributes.length,
+      rules: policy.rules.length
+    });
+
     return (
-      <Card sx={{ mb: 3, border: '1px solid', borderColor: 'grey.200' }}>
+      <Card sx={{ 
+        mb: 3, 
+        borderRadius: 2,
+        boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+        border: '1px solid',
+        borderColor: 'grey.200'
+      }}>
         <Box sx={{ 
-          bgcolor: 'linear-gradient(135deg, #f8f9ff 0%, #f0f2ff 100%)', 
-          p: 3, 
-          borderBottom: '1px solid', 
-          borderColor: 'divider' 
+          p: 4,
+          bgcolor: 'grey.50', 
+          borderRadius: 1,
+          border: '1px solid',
+          borderColor: 'grey.200'
         }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
-            <Box sx={{ 
-              p: 1.5, 
-              borderRadius: 2, 
-              bgcolor: 'primary.main',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center'
-            }}>
-              <SecurityIcon sx={{ color: 'white', fontSize: 24 }} />
-            </Box>
-            <Box>
-              <Typography variant="h6" fontWeight="600" color="text.primary">
-                Policy Summary
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                Human-readable interpretation of access control rules
-              </Typography>
-            </Box>
-          </Box>
-        </Box>
-        
-        <Box sx={{ p: 4 }}>
-          <Typography variant="h6" fontWeight="600" gutterBottom sx={{ color: 'primary.main' }}>
-            "{policy.name}"
-          </Typography>
-          
-          {policy.description && (
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 3, fontStyle: 'italic' }}>
-              {policy.description}
-            </Typography>
-          )}
-          
-          <Paper 
-            elevation={0} 
-            sx={{ 
-              p: 3, 
-              bgcolor: 'grey.50',
-              border: '1px solid',
-              borderColor: 'grey.200',
-              borderRadius: 2
-            }}
-          >
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
-              <Chip 
-                label={policy.effect}
-                color={getEffectColor(policy.effect) as any}
-                size="small"
-                sx={{ fontWeight: 600 }}
-              />
-              <Typography variant="body1" fontWeight="500">
-                This policy <strong>{policy.effect.toLowerCase()}s</strong> the following access:
-              </Typography>
-            </Box>
-            
-            <Box sx={{ pl: 2 }}>
-              {policy.rules.map((rule, index) => (
-                <Box key={rule.id} sx={{ mb: 3 }}>
-                  <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2, mb: 1 }}>
-                    <Box sx={{ 
-                      minWidth: 24, 
-                      height: 24, 
-                      borderRadius: '50%', 
-                      bgcolor: 'primary.main', 
-                      color: 'white', 
-                      display: 'flex', 
-                      alignItems: 'center', 
-                      justifyContent: 'center',
-                      fontSize: '0.75rem',
-                      fontWeight: 600
-                    }}>
-                      {index + 1}
-                    </Box>
-                    <Box sx={{ flex: 1 }}>
-                      <Typography variant="body1" sx={{ mb: 1.5 }}>
-                        <Box component="span" sx={{ fontWeight: 600, color: 'primary.main' }}>
-                          {rule.subject.type}
-                        </Box>
-                        {rule.subject.attributes.length > 0 && (
-                          <Box component="span" sx={{ color: 'text.secondary', fontSize: '0.9rem' }}>
-                            {' '}(with conditions: {rule.subject.attributes.map((attr, i) => (
-                              <Box key={i} component="span">
-                                {i > 0 && ', '}
-                                <em>{attr.name}</em> {attr.operator === 'equals' ? '=' : attr.operator} {' '}
-                                <strong>{Array.isArray(attr.value) ? attr.value.join(' or ') : attr.value}</strong>
-                              </Box>
-                            ))})
-                          </Box>
-                        )}
-                      </Typography>
-                      
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flexWrap: 'wrap' }}>
-                        <Typography variant="body2" color="text.secondary">
-                          Can perform:
+                {policy.rules.length === 1 ? (
+                  // Single rule formatting - more natural language
+                  <Typography component="div" variant="body1" sx={{ lineHeight: 1.8, fontSize: '1.1rem' }}>
+                    This policy <strong style={{ color: policy.effect === 'Allow' ? '#2e7d32' : '#d32f2f' }}>
+                      {policy.effect.toUpperCase()}S
+                    </strong>{' '}
+                    <strong style={{ color: '#1976d2' }}>
+                      {getSubjectDisplayName(policy.rules[0].subject.type)}
+                    </strong>
+                    {policy.rules[0].subject.attributes.length > 0 && (
+                      <span>
+                        {' '}(when{' '}
+                        {policy.rules[0].subject.attributes.map((attr, index, array) => {
+                          const formattedValue = Array.isArray(attr.value) ? attr.value.join(' or ') : attr.value;
+                          const condition = `${getAttributeDisplayName(attr.name)} ${attr.operator} ${formattedValue}`;
+                          if (index === array.length - 1 && array.length > 1) {
+                            return `and ${condition}`;
+                          }
+                          return condition;
+                        }).join(', ')}
+                        )
+                      </span>
+                    )}
+                    {' '}to perform{' '}
+                    <strong style={{ color: '#f57c00' }}>
+                      {getActionDisplayName(policy.rules[0].action.name)}
+                    </strong>
+                    {' '}on{' '}
+                    <strong style={{ color: '#7b1fa2' }}>
+                      {getResourceDisplayName(policy.rules[0].object.type)}
+                    </strong>
+                    {policy.rules[0].object.attributes.length > 0 && (
+                      <span>
+                        {' '}(where{' '}
+                        {policy.rules[0].object.attributes.map((attr, index, array) => {
+                          const formattedValue = Array.isArray(attr.value) ? attr.value.join(' or ') : attr.value;
+                          const condition = `${getAttributeDisplayName(attr.name)} ${attr.operator} ${formattedValue}`;
+                          if (index === array.length - 1 && array.length > 1) {
+                            return `and ${condition}`;
+                          }
+                          return condition;
+                        }).join(', ')}
+                        )
+                      </span>
+                    )}
+                    {policy.rules[0].conditions.length > 0 && (
+                      <span>
+                        , provided that {policy.rules[0].conditions.map((cond, index, array) => {
+                          const formattedValue = Array.isArray(cond.value) ? cond.value.join(' or ') : cond.value;
+                          const condition = `${cond.field} ${cond.operator} ${formattedValue}`;
+                          if (index === array.length - 1 && array.length > 1) {
+                            return `and ${condition}`;
+                          }
+                          return condition;
+                        }).join(', ')}
+                      </span>
+                    )}
+                    .
+                  </Typography>
+                ) : (
+                  // Multiple rules formatting - bullet list
+                  <Box>
+                    <Typography component="div" variant="body1" sx={{ lineHeight: 1.8, fontSize: '1.1rem', mb: 2 }}>
+                      This policy <strong style={{ color: policy.effect === 'Allow' ? '#2e7d32' : '#d32f2f' }}>
+                        {policy.effect.toUpperCase()}S
+                      </strong> the following access:
+                    </Typography>
+                    {policy.rules.map((rule, index) => (
+                      <Box key={rule.id} sx={{ mb: 2, ml: 2 }}>
+                        <Typography component="div" variant="body1" sx={{ lineHeight: 1.6 }}>
+                          <strong>{index + 1}.</strong>{' '}
+                          <strong style={{ color: '#1976d2' }}>
+                            {getSubjectDisplayName(rule.subject.type)}
+                          </strong>
+                          {rule.subject.attributes.length > 0 && (
+                            <span>
+                              {' '}(when{' '}
+                              {rule.subject.attributes.map((attr, i, array) => {
+                                const formattedValue = Array.isArray(attr.value) ? attr.value.join(' or ') : attr.value;
+                                const condition = `${getAttributeDisplayName(attr.name)} ${attr.operator} ${formattedValue}`;
+                                if (i === array.length - 1 && array.length > 1) {
+                                  return `and ${condition}`;
+                                }
+                                return condition;
+                              }).join(', ')}
+                              )
+                            </span>
+                          )}
+                          {' '}can perform{' '}
+                          <strong style={{ color: '#f57c00' }}>
+                            {getActionDisplayName(rule.action.name)}
+                          </strong>
+                          {' '}on{' '}
+                          <strong style={{ color: '#7b1fa2' }}>
+                            {getResourceDisplayName(rule.object.type)}
+                          </strong>
+                          {rule.object.attributes.length > 0 && (
+                            <span>
+                              {' '}(where{' '}
+                              {rule.object.attributes.map((attr, i, array) => {
+                                const formattedValue = Array.isArray(attr.value) ? attr.value.join(' or ') : attr.value;
+                                const condition = `${getAttributeDisplayName(attr.name)} ${attr.operator} ${formattedValue}`;
+                                if (i === array.length - 1 && array.length > 1) {
+                                  return `and ${condition}`;
+                                }
+                                return condition;
+                              }).join(', ')}
+                              )
+                            </span>
+                          )}
+                          {rule.conditions.length > 0 && (
+                            <span>
+                              , provided that {rule.conditions.map((cond, i, array) => {
+                                const formattedValue = Array.isArray(cond.value) ? cond.value.join(' or ') : cond.value;
+                                const condition = `${cond.field} ${cond.operator} ${formattedValue}`;
+                                if (i === array.length - 1 && array.length > 1) {
+                                  return `and ${condition}`;
+                                }
+                                return condition;
+                              }).join(', ')}
+                            </span>
+                          )}
                         </Typography>
-                        <Chip 
-                          label={rule.action.displayName} 
-                          size="small" 
-                          color="warning"
-                          variant="outlined"
-                        />
-                        <Typography variant="body2" color="text.secondary">
-                          on:
-                        </Typography>
-                        <Chip 
-                          label={rule.object.type} 
-                          size="small" 
-                          color="secondary"
-                          variant="outlined"
-                        />
                       </Box>
-                      
-                      {rule.conditions.length > 0 && (
-                        <Box sx={{ mt: 1.5, p: 1.5, bgcolor: 'info.50', borderRadius: 1, border: '1px solid', borderColor: 'info.200' }}>
-                          <Typography variant="caption" color="info.main" fontWeight="600" sx={{ display: 'block', mb: 0.5 }}>
-                            Additional Conditions:
-                          </Typography>
-                          {rule.conditions.map((cond, i) => (
-                            <Typography key={i} variant="body2" sx={{ fontSize: '0.85rem', color: 'text.secondary' }}>
-                              • <em>{cond.field}</em> {cond.operator} {Array.isArray(cond.value) ? cond.value.join(' or ') : cond.value}
-                            </Typography>
-                          ))}
-                        </Box>
-                      )}
-                    </Box>
+                    ))}
                   </Box>
-                </Box>
-              ))}
-            </Box>
-          </Paper>
+                )}
         </Box>
       </Card>
     );

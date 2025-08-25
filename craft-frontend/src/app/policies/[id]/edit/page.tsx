@@ -739,28 +739,35 @@ export default function EditPolicyPage() {
                                           />
                                         )}
                                         renderTags={(value, getTagProps) =>
-                                          value.map((option, index) => (
-                                            <Chip
-                                              {...getTagProps({ index })}
-                                              variant="filled"
-                                              color="primary"
-                                              size="small"
-                                              label={option}
-                                              sx={{ fontSize: '0.7rem', height: 22 }}
-                                            />
-                                          ))
+                                          value.map((option, index) => {
+                                            const { key, ...tagProps } = getTagProps({ index });
+                                            return (
+                                              <Chip
+                                                key={key}
+                                                {...tagProps}
+                                                variant="filled"
+                                                color="primary"
+                                                size="small"
+                                                label={option}
+                                                sx={{ fontSize: '0.7rem', height: 22 }}
+                                              />
+                                            );
+                                          })
                                         }
-                                        renderOption={(props, option) => (
-                                          <Box component="li" {...props}>
-                                            <Chip 
-                                              label={option} 
-                                              size="small" 
-                                              color="primary"
-                                              variant="outlined"
-                                              sx={{ fontSize: '0.7rem' }}
-                                            />
-                                          </Box>
-                                        )}
+                                        renderOption={(props, option) => {
+                                          const { key, ...otherProps } = props;
+                                          return (
+                                            <Box component="li" key={key} {...otherProps}>
+                                              <Chip 
+                                                label={option} 
+                                                size="small" 
+                                                color="primary"
+                                                variant="outlined"
+                                                sx={{ fontSize: '0.7rem' }}
+                                              />
+                                            </Box>
+                                          );
+                                        }}
                                         sx={{
                                           '& .MuiOutlinedInput-root': {
                                             bgcolor: 'grey.50'
@@ -1005,7 +1012,7 @@ export default function EditPolicyPage() {
                         borderColor: 'primary.100',
                         boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
                       }}>
-                        <Typography variant="body1" sx={{ lineHeight: 1.8, fontSize: '1.1rem' }}>
+                        <Typography component="div" variant="body1" sx={{ lineHeight: 1.8, fontSize: '1.1rem' }}>
                           This policy <strong style={{ color: effect === 'Allow' ? '#2e7d32' : '#d32f2f' }}>
                             {effect.toUpperCase()}S
                           </strong>{' '}

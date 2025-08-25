@@ -616,48 +616,55 @@ export default function CreatePolicyPage() {
                               />
                             )}
                             renderTags={(value, getTagProps) =>
-                              value.map((option, index) => (
-                                <Chip
-                                  {...getTagProps({ index })}
-                                  variant="filled"
-                                  color="primary"
-                                  size="small"
-                                  label={option.displayName}
-                                  sx={{ fontSize: '0.75rem' }}
-                                />
-                              ))
+                              value.map((option, index) => {
+                                const { key, ...tagProps } = getTagProps({ index });
+                                return (
+                                  <Chip
+                                    key={key}
+                                    {...tagProps}
+                                    variant="filled"
+                                    color="primary"
+                                    size="small"
+                                    label={option.displayName}
+                                    sx={{ fontSize: '0.75rem' }}
+                                  />
+                                );
+                              })
                             }
-                            renderOption={(props, option) => (
-                              <Box component="li" {...props} sx={{ '&:hover': { bgcolor: 'grey.50' } }}>
-                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, py: 0.5, width: '100%' }}>
-                                  <Box sx={{ 
-                                    width: 6, 
-                                    height: 6, 
-                                    borderRadius: '50%', 
-                                    bgcolor: option.isRequired ? 'error.main' : 'success.main',
-                                    flexShrink: 0
-                                  }} />
-                                  <Box sx={{ flex: 1, minWidth: 0 }}>
-                                    <Typography variant="body2" fontWeight="500" noWrap>
-                                      {option.displayName}
-                                      {option.isRequired && (
-                                        <Chip 
-                                          label="Required" 
-                                          size="small" 
-                                          color="error"
-                                          sx={{ ml: 1, height: 16, fontSize: '0.6rem' }}
-                                        />
-                                      )}
-                                    </Typography>
-                                    {option.description && (
-                                      <Typography variant="caption" color="text.secondary" noWrap>
-                                        {option.description}
+                            renderOption={(props, option) => {
+                              const { key, ...otherProps } = props;
+                              return (
+                                <Box component="li" key={key} {...otherProps} sx={{ '&:hover': { bgcolor: 'grey.50' } }}>
+                                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, py: 0.5, width: '100%' }}>
+                                    <Box sx={{ 
+                                      width: 6, 
+                                      height: 6, 
+                                      borderRadius: '50%', 
+                                      bgcolor: option.isRequired ? 'error.main' : 'success.main',
+                                      flexShrink: 0
+                                    }} />
+                                    <Box sx={{ flex: 1, minWidth: 0 }}>
+                                      <Typography variant="body2" fontWeight="500" noWrap>
+                                        {option.displayName}
+                                        {option.isRequired && (
+                                          <Chip 
+                                            label="Required" 
+                                            size="small" 
+                                            color="error"
+                                            sx={{ ml: 1, height: 16, fontSize: '0.6rem' }}
+                                          />
+                                        )}
                                       </Typography>
-                                    )}
+                                      {option.description && (
+                                        <Typography variant="caption" color="text.secondary" noWrap>
+                                          {option.description}
+                                        </Typography>
+                                      )}
+                                    </Box>
                                   </Box>
                                 </Box>
-                              </Box>
-                            )}
+                              );
+                            }}
                             sx={{
                               '& .MuiOutlinedInput-root': {
                                 bgcolor: 'white'
@@ -763,28 +770,35 @@ export default function CreatePolicyPage() {
                                               />
                                             )}
                                             renderTags={(value, getTagProps) =>
-                                              value.map((option, index) => (
-                                                <Chip
-                                                  {...getTagProps({ index })}
-                                                  variant="filled"
-                                                  color="primary"
-                                                  size="small"
-                                                  label={option}
-                                                  sx={{ fontSize: '0.7rem', height: 22 }}
-                                                />
-                                              ))
+                                              value.map((option, index) => {
+                                                const { key, ...tagProps } = getTagProps({ index });
+                                                return (
+                                                  <Chip
+                                                    key={key}
+                                                    {...tagProps}
+                                                    variant="filled"
+                                                    color="primary"
+                                                    size="small"
+                                                    label={option}
+                                                    sx={{ fontSize: '0.7rem', height: 22 }}
+                                                  />
+                                                );
+                                              })
                                             }
-                                            renderOption={(props, option) => (
-                                              <Box component="li" {...props}>
-                                                <Chip 
-                                                  label={option} 
-                                                  size="small" 
-                                                  color="primary"
-                                                  variant="outlined"
-                                                  sx={{ fontSize: '0.7rem' }}
-                                                />
-                                              </Box>
-                                            )}
+                                            renderOption={(props, option) => {
+                                              const { key, ...otherProps } = props;
+                                              return (
+                                                <Box component="li" key={key} {...otherProps}>
+                                                  <Chip 
+                                                    label={option} 
+                                                    size="small" 
+                                                    color="primary"
+                                                    variant="outlined"
+                                                    sx={{ fontSize: '0.7rem' }}
+                                                  />
+                                                </Box>
+                                              );
+                                            }}
                                             sx={{
                                               '& .MuiOutlinedInput-root': {
                                                 bgcolor: 'grey.50'
@@ -1056,7 +1070,7 @@ export default function CreatePolicyPage() {
                         borderColor: 'primary.100',
                         boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
                       }}>
-                        <Typography variant="body1" sx={{ lineHeight: 1.8, fontSize: '1.1rem' }}>
+                        <Typography component="div" variant="body1" sx={{ lineHeight: 1.8, fontSize: '1.1rem' }}>
                           This policy <strong style={{ color: '#2e7d32' }}>ALLOWS</strong>{' '}
                           <strong style={{ color: '#1976d2' }}>
                             {subjects.find(s => s.id === selectedSubject)?.displayName}
