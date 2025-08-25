@@ -49,6 +49,9 @@ A comprehensive Attribute-Based Access Control (ABAC) permission system built wi
 
   # Option 3: With custom message
   ./commit-push.sh "Your custom commit message"
+
+  # Option 4: Quick command - just type "push"
+  push
   ```
 
 - **Development**: Start both frontend and backend:
@@ -281,6 +284,9 @@ docker-compose up --build -d
 
 # Or with a custom message
 ./commit-push.sh "Add new feature: user dashboard"
+
+# Or simply type this quick command
+push
 ```
 
 ### Standard Workflow
