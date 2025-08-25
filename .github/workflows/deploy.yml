@@ -2,7 +2,7 @@ name: Deploy to on prem server
 
 on:
   push:
-    branches: [setup-deployment-pipeline]
+    branches: [main]
 
 jobs:
   deploy:
