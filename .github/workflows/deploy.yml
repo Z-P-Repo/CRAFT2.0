@@ -21,7 +21,6 @@ jobs:
             pm2 reload craft_backend --update-env
             cd ../craft-frontend
             npm ci
-            npm run build
             pm2 reload craft_frontend --update-env
             pm2 save
             exit
