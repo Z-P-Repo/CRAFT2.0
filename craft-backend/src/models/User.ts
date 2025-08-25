@@ -1,7 +1,9 @@
 import mongoose, { Schema, Document } from 'mongoose';
 import { IUser } from '@/types';
 
-export interface UserDocument extends IUser, Document {}
+export interface UserDocument extends Omit<IUser, '_id'>, Document {
+  comparePassword(candidatePassword: string): Promise<boolean>;
+}
 
 const UserSchema = new Schema<UserDocument>({
   email: {
@@ -51,7 +53,7 @@ const UserSchema = new Schema<UserDocument>({
 }, {
   timestamps: true,
   toJSON: {
-    transform: function(doc, ret) {
+    transform: function(doc, ret: any) {
       delete ret.password;
       return ret;
     }
@@ -61,6 +63,16 @@ const UserSchema = new Schema<UserDocument>({
 // Indexes
 UserSchema.index({ role: 1, active: 1 });
 UserSchema.index({ department: 1 });
+
+// Instance methods
+UserSchema.methods.comparePassword = async function(candidatePassword: string): Promise<boolean> {
+  try {
+    const bcrypt = require('bcrypt');
+    return await bcrypt.compare(candidatePassword, this.password);
+  } catch (error) {
+    return false;
+  }
+};
 
 // Virtual for full user info without password
 UserSchema.virtual('safeUser').get(function() {

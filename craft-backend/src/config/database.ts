@@ -15,7 +15,7 @@ class DatabaseConnection {
     return DatabaseConnection.instance;
   }
 
-  public async connect(): Promise<void> {
+  public async connect(): Promise<any> {
     if (this.isConnected) {
       logger.info('Database already connected');
       return;
@@ -59,7 +59,7 @@ class DatabaseConnection {
     }
   }
 
-  public async disconnect(): Promise<void> {
+  public async disconnect(): Promise<any> {
     if (!this.isConnected) {
       return;
     }

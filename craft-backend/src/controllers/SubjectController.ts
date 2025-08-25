@@ -8,7 +8,7 @@ import { Subject, ISubject } from '@/models/Subject';
 
 export class SubjectController {
   // Get all subjects with pagination and filtering
-  static getSubjects = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  static getSubjects = asyncHandler(async (req: Request, res: Response): Promise<any> => {
     const paginationOptions = PaginationHelper.validatePaginationParams(req.query);
     const {
       search,
@@ -63,7 +63,7 @@ export class SubjectController {
   });
 
   // Get subject by ID
-  static getSubjectById = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  static getSubjectById = asyncHandler(async (req: Request, res: Response): Promise<any> => {
     const { id } = req.params;
 
     // Try to find by MongoDB _id first, then by custom id field
@@ -83,7 +83,7 @@ export class SubjectController {
   });
 
   // Create new subject
-  static createSubject = asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
+  static createSubject = asyncHandler(async (req: AuthRequest, res: Response): Promise<any> => {
     const {
       id,
       name,
@@ -148,7 +148,7 @@ export class SubjectController {
   });
 
   // Update subject
-  static updateSubject = asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
+  static updateSubject = asyncHandler(async (req: AuthRequest, res: Response): Promise<any> => {
     const { id } = req.params;
     const updates = req.body;
 
@@ -193,6 +193,10 @@ export class SubjectController {
       { new: true, runValidators: true }
     );
 
+    if (!subject) {
+      throw new NotFoundError('Subject not found');
+    }
+
     logger.info(`Subject updated: ${subject.id} by ${req.user?.email}`);
 
     res.status(200).json({
@@ -203,7 +207,7 @@ export class SubjectController {
   });
 
   // Delete subject
-  static deleteSubject = asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
+  static deleteSubject = asyncHandler(async (req: AuthRequest, res: Response): Promise<any> => {
     const { id } = req.params;
 
     // Try to find by MongoDB _id first, then by custom id field
@@ -232,9 +236,13 @@ export class SubjectController {
   });
 
   // Get subject hierarchy
-  static getSubjectHierarchy = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  static getSubjectHierarchy = asyncHandler(async (req: Request, res: Response): Promise<any> => {
     const { id } = req.params;
     const { depth = 3 } = req.query;
+
+    if (!id) {
+      throw new ValidationError('Subject ID parameter is required');
+    }
 
     const buildHierarchy = async (subjectId: string, currentDepth: number): Promise<any> => {
       if (currentDepth <= 0) return null;
@@ -261,7 +269,7 @@ export class SubjectController {
       return result;
     };
 
-    const hierarchy = await buildHierarchy(id, Number(depth));
+    const hierarchy = await buildHierarchy(id, Number(depth || '3'));
 
     if (!hierarchy) {
       throw new NotFoundError('Subject not found');
@@ -274,9 +282,13 @@ export class SubjectController {
   });
 
   // Get subjects by type
-  static getSubjectsByType = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  static getSubjectsByType = asyncHandler(async (req: Request, res: Response): Promise<any> => {
     const { type } = req.params;
     const paginationOptions = PaginationHelper.validatePaginationParams(req.query);
+
+    if (!type) {
+      throw new ValidationError('Type parameter is required');
+    }
 
     if (!['user', 'group', 'role', 'service', 'device'].includes(type)) {
       throw new ValidationError('Invalid subject type');
@@ -307,7 +319,7 @@ export class SubjectController {
   });
 
   // Get subject statistics
-  static getSubjectStats = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  static getSubjectStats = asyncHandler(async (req: Request, res: Response): Promise<any> => {
     const stats = await Subject.aggregate([
       {
         $group: {
@@ -350,7 +362,7 @@ export class SubjectController {
   });
 
   // Bulk operations
-  static bulkUpdateSubjects = asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
+  static bulkUpdateSubjects = asyncHandler(async (req: AuthRequest, res: Response): Promise<any> => {
     const { subjectIds, updates } = req.body;
 
     if (!Array.isArray(subjectIds) || subjectIds.length === 0) {
@@ -377,7 +389,7 @@ export class SubjectController {
     });
   });
 
-  static bulkDeleteSubjects = asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
+  static bulkDeleteSubjects = asyncHandler(async (req: AuthRequest, res: Response): Promise<any> => {
     const { subjectIds } = req.body;
 
     if (!Array.isArray(subjectIds) || subjectIds.length === 0) {

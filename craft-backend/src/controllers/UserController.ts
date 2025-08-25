@@ -9,7 +9,7 @@ import mongoose from 'mongoose';
 
 export class UserController {
   // Get all users with pagination and filtering
-  static getUsers = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  static getUsers = asyncHandler(async (req: Request, res: Response): Promise<any> => {
     const paginationOptions = PaginationHelper.validatePaginationParams(req.query);
     const {
       search,
@@ -64,9 +64,12 @@ export class UserController {
   });
 
   // Get user by ID
-  static getUserById = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  static getUserById = asyncHandler(async (req: Request, res: Response): Promise<any> => {
     const { id } = req.params;
 
+    if (!id) {
+      throw new ValidationError('ID parameter is required');
+    }
     if (!mongoose.Types.ObjectId.isValid(id)) {
       throw new ValidationError('Invalid user ID');
     }
@@ -87,7 +90,7 @@ export class UserController {
   });
 
   // Create new user
-  static createUser = asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
+  static createUser = asyncHandler(async (req: AuthRequest, res: Response): Promise<any> => {
     const { email, password, name, role, department, managerId, attributes } = req.body;
 
     // Validate required fields
@@ -128,8 +131,7 @@ export class UserController {
     await user.save();
 
     // Remove password from response
-    const userResponse = user.toObject();
-    delete userResponse.password;
+    const { password: _, ...userResponse } = user.toObject();
 
     logger.info(`User created: ${user.email} by ${req.user?.email}`);
 
@@ -141,9 +143,12 @@ export class UserController {
   });
 
   // Update user
-  static updateUser = asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
+  static updateUser = asyncHandler(async (req: AuthRequest, res: Response): Promise<any> => {
     const { id } = req.params;
-    const updates = req.body;
+
+    if (!id) {
+      throw new ValidationError('ID parameter is required');
+    }    const updates = req.body;
 
     if (!mongoose.Types.ObjectId.isValid(id)) {
       throw new ValidationError('Invalid user ID');
@@ -193,9 +198,12 @@ export class UserController {
   });
 
   // Delete user
-  static deleteUser = asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
+  static deleteUser = asyncHandler(async (req: AuthRequest, res: Response): Promise<any> => {
     const { id } = req.params;
 
+    if (!id) {
+      throw new ValidationError('ID parameter is required');
+    }
     if (!mongoose.Types.ObjectId.isValid(id)) {
       throw new ValidationError('Invalid user ID');
     }
@@ -215,9 +223,12 @@ export class UserController {
   });
 
   // Change user password
-  static changePassword = asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
+  static changePassword = asyncHandler(async (req: AuthRequest, res: Response): Promise<any> => {
     const { id } = req.params;
-    const { currentPassword, newPassword } = req.body;
+
+    if (!id) {
+      throw new ValidationError('ID parameter is required');
+    }    const { currentPassword, newPassword } = req.body;
 
     if (!currentPassword || !newPassword) {
       throw new ValidationError('Current password and new password are required');
@@ -251,9 +262,12 @@ export class UserController {
   });
 
   // Toggle user status
-  static toggleUserStatus = asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
+  static toggleUserStatus = asyncHandler(async (req: AuthRequest, res: Response): Promise<any> => {
     const { id } = req.params;
 
+    if (!id) {
+      throw new ValidationError('ID parameter is required');
+    }
     if (!mongoose.Types.ObjectId.isValid(id)) {
       throw new ValidationError('Invalid user ID');
     }
@@ -276,7 +290,7 @@ export class UserController {
   });
 
   // Get user statistics
-  static getUserStats = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  static getUserStats = asyncHandler(async (req: Request, res: Response): Promise<any> => {
     const stats = await User.aggregate([
       {
         $group: {
@@ -329,7 +343,7 @@ export class UserController {
   });
 
   // Bulk operations
-  static bulkUpdateUsers = asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
+  static bulkUpdateUsers = asyncHandler(async (req: AuthRequest, res: Response): Promise<any> => {
     const { userIds, updates } = req.body;
 
     if (!Array.isArray(userIds) || userIds.length === 0) {
@@ -359,7 +373,7 @@ export class UserController {
     });
   });
 
-  static bulkDeleteUsers = asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
+  static bulkDeleteUsers = asyncHandler(async (req: AuthRequest, res: Response): Promise<any> => {
     const { userIds } = req.body;
 
     if (!Array.isArray(userIds) || userIds.length === 0) {

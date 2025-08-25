@@ -12,7 +12,7 @@ export class AuthController {
     this.authService = new AuthService();
   }
 
-  login = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  login = asyncHandler(async (req: Request, res: Response): Promise<any> => {
     const { email, password } = req.body;
 
     if (!email || !password) {
@@ -36,7 +36,7 @@ export class AuthController {
     });
   });
 
-  register = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  register = asyncHandler(async (req: Request, res: Response): Promise<any> => {
     const { email, password, name, role, department, managerId } = req.body;
 
     if (!email || !password || !name) {
@@ -67,7 +67,7 @@ export class AuthController {
     });
   });
 
-  refreshToken = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  refreshToken = asyncHandler(async (req: Request, res: Response): Promise<any> => {
     const { refreshToken } = req.body;
 
     if (!refreshToken) {
@@ -91,7 +91,7 @@ export class AuthController {
     });
   });
 
-  changePassword = asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
+  changePassword = asyncHandler(async (req: AuthRequest, res: Response): Promise<any> => {
     const { currentPassword, newPassword } = req.body;
 
     if (!currentPassword || !newPassword) {
@@ -122,7 +122,7 @@ export class AuthController {
     });
   });
 
-  validateToken = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  validateToken = asyncHandler(async (req: Request, res: Response): Promise<any> => {
     const authHeader = req.headers.authorization;
     
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -147,7 +147,7 @@ export class AuthController {
     });
   });
 
-  getProfile = asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
+  getProfile = asyncHandler(async (req: AuthRequest, res: Response): Promise<any> => {
     if (!req.user) {
       throw new ValidationError('User not authenticated');
     }
@@ -158,7 +158,7 @@ export class AuthController {
     });
   });
 
-  logout = asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
+  logout = asyncHandler(async (req: AuthRequest, res: Response): Promise<any> => {
     // In a real application, you might want to blacklist the token
     // For now, we'll just return a success message
     logger.info(`User logged out: ${req.user?.email}`);

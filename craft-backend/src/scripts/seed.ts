@@ -13,7 +13,7 @@ class DatabaseSeeder {
     this.userRepository = new UserRepository();
   }
 
-  async run(): Promise<void> {
+  async run(): Promise<any> {
     try {
       logger.info('🌱 Starting database seeding...');
       
@@ -45,7 +45,7 @@ class DatabaseSeeder {
     }
   }
 
-  private async clearData(): Promise<void> {
+  private async clearData(): Promise<any> {
     try {
       // Clear users and policies (add other collections as needed)
       const User = (await import('@/models/User')).User;
@@ -60,7 +60,7 @@ class DatabaseSeeder {
     }
   }
 
-  private async seedUsers(): Promise<void> {
+  private async seedUsers(): Promise<any> {
     try {
       const users = [
         {

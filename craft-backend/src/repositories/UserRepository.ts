@@ -27,7 +27,7 @@ export class UserRepository implements IRepository<IUser> {
       const users = await query.exec();
       logger.debug(`Found ${users.length} users`);
       
-      return users.map(user => user.toObject());
+      return users.map(user => user.toObject()) as IUser[];
     } catch (error) {
       logger.error('Error finding users:', error);
       throw error;
@@ -40,7 +40,7 @@ export class UserRepository implements IRepository<IUser> {
       
       if (user) {
         logger.debug(`Found user: ${user.email}`);
-        return user.toObject();
+        return user.toObject() as IUser;
       }
       
       return null;
@@ -57,7 +57,7 @@ export class UserRepository implements IRepository<IUser> {
       
       if (user) {
         logger.debug(`Found user by email: ${email}`);
-        return user.toObject();
+        return user.toObject() as IUser;
       }
       
       return null;
@@ -74,9 +74,8 @@ export class UserRepository implements IRepository<IUser> {
       
       logger.info(`Created new user: ${savedUser.email}`);
       
-      // Return user without password
-      const { password, ...userWithoutPassword } = savedUser.toObject();
-      return userWithoutPassword;
+      // Return the full user object as per IUser interface
+      return savedUser.toObject() as IUser;
     } catch (error) {
       logger.error('Error creating user:', error);
       throw error;
@@ -93,7 +92,7 @@ export class UserRepository implements IRepository<IUser> {
 
       if (user) {
         logger.info(`Updated user: ${user.email}`);
-        return user.toObject();
+        return user.toObject() as IUser;
       }
       
       return null;
@@ -127,7 +126,7 @@ export class UserRepository implements IRepository<IUser> {
         .exec();
       
       logger.debug(`Found ${users.length} users with role: ${role}`);
-      return users.map(user => user.toObject());
+      return users.map(user => user.toObject()) as IUser[];
     } catch (error) {
       logger.error(`Error finding users by role ${role}:`, error);
       throw error;
@@ -142,7 +141,7 @@ export class UserRepository implements IRepository<IUser> {
         .exec();
       
       logger.debug(`Found ${users.length} users in department: ${department}`);
-      return users.map(user => user.toObject());
+      return users.map(user => user.toObject()) as IUser[];
     } catch (error) {
       logger.error(`Error finding users by department ${department}:`, error);
       throw error;
@@ -179,7 +178,7 @@ export class UserRepository implements IRepository<IUser> {
 
       if (user) {
         logger.info(`${active ? 'Activated' : 'Deactivated'} user: ${user.email}`);
-        return user.toObject();
+        return user.toObject() as IUser;
       }
       
       return null;

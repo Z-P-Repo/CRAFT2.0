@@ -94,7 +94,7 @@ class Server {
     this.app.use(errorHandler);
   }
 
-  public async start(): Promise<void> {
+  public async start(): Promise<any> {
     try {
       // Connect to database
       await databaseConnection.connect();

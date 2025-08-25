@@ -9,19 +9,19 @@ const router = express.Router();
 router.use(auth);
 
 // User management routes
-router.get('/', asyncHandler(UserController.getUsers));
-router.get('/stats', asyncHandler(UserController.getUserStats));
-router.get('/:id', asyncHandler(UserController.getUserById));
-router.post('/', asyncHandler(UserController.createUser));
-router.put('/:id', asyncHandler(UserController.updateUser));
-router.delete('/:id', asyncHandler(UserController.deleteUser));
+router.get('/', UserController.getUsers);
+router.get('/stats', UserController.getUserStats);
+router.get('/:id', UserController.getUserById);
+router.post('/', UserController.createUser);
+router.put('/:id', UserController.updateUser);
+router.delete('/:id', UserController.deleteUser);
 
 // Password management
-router.put('/:id/change-password', asyncHandler(UserController.changePassword));
-router.put('/:id/toggle-status', asyncHandler(UserController.toggleUserStatus));
+router.put('/:id/change-password', UserController.changePassword);
+router.put('/:id/toggle-status', UserController.toggleUserStatus);
 
 // Bulk operations
-router.put('/bulk/update', asyncHandler(UserController.bulkUpdateUsers));
-router.delete('/bulk/delete', asyncHandler(UserController.bulkDeleteUsers));
+router.put('/bulk/update', UserController.bulkUpdateUsers);
+router.delete('/bulk/delete', UserController.bulkDeleteUsers);
 
 export default router;

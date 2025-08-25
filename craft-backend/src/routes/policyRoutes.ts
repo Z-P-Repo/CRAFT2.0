@@ -9,22 +9,22 @@ const router = express.Router();
 // router.use(auth);
 
 // Policy management routes
-router.get('/', asyncHandler(PolicyController.getPolicies));
-router.get('/stats', asyncHandler(PolicyController.getPolicyStats));
-router.get('/:id', asyncHandler(PolicyController.getPolicyById));
-router.post('/', asyncHandler(PolicyController.createPolicy));
-router.put('/:id', asyncHandler(PolicyController.updatePolicy));
-router.delete('/:id', asyncHandler(PolicyController.deletePolicy));
+router.get('/', PolicyController.getPolicies);
+router.get('/stats', PolicyController.getPolicyStats);
+router.get('/:id', PolicyController.getPolicyById);
+router.post('/', PolicyController.createPolicy);
+router.put('/:id', PolicyController.updatePolicy);
+router.delete('/:id', PolicyController.deletePolicy);
 
 // Policy evaluation
-router.post('/evaluate', asyncHandler(PolicyController.evaluatePolicy));
+router.post('/evaluate', PolicyController.evaluatePolicy);
 
 // Filter routes
-router.get('/effect/:effect', asyncHandler(PolicyController.getPoliciesByEffect));
-router.get('/status/:status', asyncHandler(PolicyController.getPoliciesByStatus));
+router.get('/effect/:effect', PolicyController.getPoliciesByEffect);
+router.get('/status/:status', PolicyController.getPoliciesByStatus);
 
 // Bulk operations
-router.put('/bulk/update', asyncHandler(PolicyController.bulkUpdatePolicies));
-router.delete('/bulk/delete', asyncHandler(PolicyController.bulkDeletePolicies));
+router.put('/bulk/update', PolicyController.bulkUpdatePolicies);
+router.delete('/bulk/delete', PolicyController.bulkDeletePolicies);
 
 export default router;

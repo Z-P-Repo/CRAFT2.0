@@ -6,25 +6,25 @@ import { asyncHandler } from '@/middleware/errorHandler';
 const router = express.Router();
 
 // Attribute management routes (public for demo)
-router.get('/', asyncHandler(AttributeController.getAttributes));
-router.get('/:id', asyncHandler(AttributeController.getAttributeById));
-router.post('/', asyncHandler(AttributeController.createAttribute));
-router.put('/:id', asyncHandler(AttributeController.updateAttribute));
-router.delete('/:id', asyncHandler(AttributeController.deleteAttribute));
+router.get('/', AttributeController.getAttributes);
+router.get('/:id', AttributeController.getAttributeById);
+router.post('/', AttributeController.createAttribute);
+router.put('/:id', AttributeController.updateAttribute);
+router.delete('/:id', AttributeController.deleteAttribute);
 
 // Apply authentication middleware to remaining routes
 router.use(auth);
-router.get('/stats', asyncHandler(AttributeController.getAttributeStats));
+router.get('/stats', AttributeController.getAttributeStats);
 
 // Validation routes
-router.post('/:id/validate', asyncHandler(AttributeController.validateAttributeValue));
+router.post('/:id/validate', AttributeController.validateAttributeValue);
 
 // Filter routes
-router.get('/category/:category', asyncHandler(AttributeController.getAttributesByCategory));
-router.get('/schema/:category', asyncHandler(AttributeController.getAttributeSchema));
+router.get('/category/:category', AttributeController.getAttributesByCategory);
+router.get('/schema/:category', AttributeController.getAttributeSchema);
 
 // Bulk operations
-router.put('/bulk/update', asyncHandler(AttributeController.bulkUpdateAttributes));
-router.delete('/bulk/delete', asyncHandler(AttributeController.bulkDeleteAttributes));
+router.put('/bulk/update', AttributeController.bulkUpdateAttributes);
+router.delete('/bulk/delete', AttributeController.bulkDeleteAttributes);
 
 export default router;

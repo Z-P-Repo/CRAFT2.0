@@ -191,9 +191,9 @@ const AttributeSchema = new Schema<IAttribute>({
 }, {
   timestamps: true,
   toJSON: {
-    transform: function(doc, ret) {
+    transform: function(doc, ret: any) {
       // Add the id field from _id for consistency
-      ret.id = ret.id || ret._id.toString();
+      ret.id = ret.id || ret._id?.toString();
       return ret;
     }
   }

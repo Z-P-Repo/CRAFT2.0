@@ -9,7 +9,7 @@ import { Attribute, IAttribute } from '@/models/Attribute';
 
 export class AttributeController {
   // Get all attributes with pagination and filtering
-  static getAttributes = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  static getAttributes = asyncHandler(async (req: Request, res: Response): Promise<any> => {
     const paginationOptions = PaginationHelper.validatePaginationParams(req.query);
     const {
       search,
@@ -66,7 +66,7 @@ export class AttributeController {
   });
 
   // Get attribute by ID
-  static getAttributeById = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  static getAttributeById = asyncHandler(async (req: Request, res: Response): Promise<any> => {
     const { id } = req.params;
 
     // Try to find by MongoDB _id first, then by custom id field
@@ -86,7 +86,7 @@ export class AttributeController {
   });
 
   // Create new attribute
-  static createAttribute = asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
+  static createAttribute = asyncHandler(async (req: AuthRequest, res: Response): Promise<any> => {
     // Debug logging
     console.log('Received attribute creation request:', req.body);
     
@@ -179,7 +179,7 @@ export class AttributeController {
   });
 
   // Update attribute
-  static updateAttribute = asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
+  static updateAttribute = asyncHandler(async (req: AuthRequest, res: Response): Promise<any> => {
     const { id } = req.params;
     const updates = req.body;
 
@@ -221,6 +221,10 @@ export class AttributeController {
       { new: true, runValidators: true }
     );
 
+    if (!attribute) {
+      throw new NotFoundError('Attribute not found after update');
+    }
+
     logger.info(`Attribute updated: ${attribute.id} by ${req.user?.email}`);
 
     res.status(200).json({
@@ -231,7 +235,7 @@ export class AttributeController {
   });
 
   // Delete attribute
-  static deleteAttribute = asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
+  static deleteAttribute = asyncHandler(async (req: AuthRequest, res: Response): Promise<any> => {
     const { id } = req.params;
 
     // Try to find by MongoDB _id first, then by custom id field
@@ -260,7 +264,7 @@ export class AttributeController {
   });
 
   // Validate attribute value
-  static validateAttributeValue = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  static validateAttributeValue = asyncHandler(async (req: Request, res: Response): Promise<any> => {
     const { id } = req.params;
     const { value } = req.body;
 
@@ -282,9 +286,13 @@ export class AttributeController {
   });
 
   // Get attributes by category
-  static getAttributesByCategory = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  static getAttributesByCategory = asyncHandler(async (req: Request, res: Response): Promise<any> => {
     const { category } = req.params;
     const paginationOptions = PaginationHelper.validatePaginationParams(req.query);
+
+    if (!category) {
+      throw new ValidationError('Category parameter is required');
+    }
 
     const validCategories = ['subject', 'resource', 'action', 'environment'];
     if (!validCategories.includes(category)) {
@@ -316,8 +324,12 @@ export class AttributeController {
   });
 
   // Get attribute schema for a category
-  static getAttributeSchema = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  static getAttributeSchema = asyncHandler(async (req: Request, res: Response): Promise<any> => {
     const { category } = req.params;
+
+    if (!category) {
+      throw new ValidationError('Category parameter is required');
+    }
 
     const validCategories = ['subject', 'resource', 'action', 'environment'];
     if (!validCategories.includes(category)) {
@@ -376,7 +388,7 @@ export class AttributeController {
   });
 
   // Get attribute statistics
-  static getAttributeStats = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  static getAttributeStats = asyncHandler(async (req: Request, res: Response): Promise<any> => {
     const stats = await Attribute.aggregate([
       {
         $group: {
@@ -432,7 +444,7 @@ export class AttributeController {
   });
 
   // Bulk operations
-  static bulkUpdateAttributes = asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
+  static bulkUpdateAttributes = asyncHandler(async (req: AuthRequest, res: Response): Promise<any> => {
     const { attributeIds, updates } = req.body;
 
     if (!Array.isArray(attributeIds) || attributeIds.length === 0) {
@@ -459,7 +471,7 @@ export class AttributeController {
     });
   });
 
-  static bulkDeleteAttributes = asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
+  static bulkDeleteAttributes = asyncHandler(async (req: AuthRequest, res: Response): Promise<any> => {
     const { attributeIds } = req.body;
 
     if (!Array.isArray(attributeIds) || attributeIds.length === 0) {

@@ -13,7 +13,7 @@ export interface AuthRequest extends Request {
 const userRepository = new UserRepository();
 
 export const requireAuth = asyncHandler(
-  async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+  async (req: AuthRequest, res: Response, next: NextFunction): Promise<any> => {
     const authHeader = req.headers.authorization;
     
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -54,7 +54,7 @@ export const requireAuth = asyncHandler(
 );
 
 export const optionalAuth = asyncHandler(
-  async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+  async (req: AuthRequest, res: Response, next: NextFunction): Promise<any> => {
     const authHeader = req.headers.authorization;
     
     if (!authHeader || !authHeader.startsWith('Bearer ')) {

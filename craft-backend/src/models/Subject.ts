@@ -11,6 +11,7 @@ export interface ISubject extends Document {
   description?: string;
   status: 'active' | 'inactive';
   permissions: string[];
+  children?: string[];
   metadata: {
     createdBy: string | null;
     lastModifiedBy: string | null;
@@ -88,6 +89,10 @@ const SubjectSchema = new Schema<ISubject>({
     type: String,
     trim: true,
   }],
+  children: [{
+    type: String,
+    trim: true,
+  }],
   metadata: {
     createdBy: {
       type: String,
@@ -131,13 +136,13 @@ const SubjectSchema = new Schema<ISubject>({
 }, {
   timestamps: true,
   toJSON: {
-    transform: function(doc, ret) {
+    transform: function(doc, ret: any) {
       delete ret.__v;
       return ret;
     },
   },
   toObject: {
-    transform: function(doc, ret) {
+    transform: function(doc, ret: any) {
       delete ret.__v;
       return ret;
     },

@@ -8,7 +8,7 @@ import { Policy, IPolicy } from '@/models/Policy';
 
 export class PolicyController {
   // Get all policies with pagination and filtering
-  static getPolicies = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  static getPolicies = asyncHandler(async (req: Request, res: Response): Promise<any> => {
     const paginationOptions = PaginationHelper.validatePaginationParams(req.query);
     const {
       search,
@@ -67,7 +67,7 @@ export class PolicyController {
   });
 
   // Get policy by ID
-  static getPolicyById = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  static getPolicyById = asyncHandler(async (req: Request, res: Response): Promise<any> => {
     const { id } = req.params;
 
     const policy = await Policy.findOne({ id }).lean();
@@ -83,7 +83,7 @@ export class PolicyController {
   });
 
   // Create new policy
-  static createPolicy = asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
+  static createPolicy = asyncHandler(async (req: AuthRequest, res: Response): Promise<any> => {
     const {
       id,
       name,
@@ -146,7 +146,7 @@ export class PolicyController {
   });
 
   // Update policy
-  static updatePolicy = asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
+  static updatePolicy = asyncHandler(async (req: AuthRequest, res: Response): Promise<any> => {
     const { id } = req.params;
     const updates = req.body;
 
@@ -185,7 +185,7 @@ export class PolicyController {
   });
 
   // Delete policy
-  static deletePolicy = asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
+  static deletePolicy = asyncHandler(async (req: AuthRequest, res: Response): Promise<any> => {
     const { id } = req.params;
 
     const policy = await Policy.findOne({ id });
@@ -204,7 +204,7 @@ export class PolicyController {
   });
 
   // Evaluate policy
-  static evaluatePolicy = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  static evaluatePolicy = asyncHandler(async (req: Request, res: Response): Promise<any> => {
     const { policyId, subject, resource, action, environment } = req.body;
 
     if (!policyId || !subject || !resource || !action) {
@@ -236,7 +236,7 @@ export class PolicyController {
   });
 
   // Get policy statistics
-  static getPolicyStats = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  static getPolicyStats = asyncHandler(async (req: Request, res: Response): Promise<any> => {
     const stats = await Policy.aggregate([
       {
         $group: {
@@ -288,7 +288,7 @@ export class PolicyController {
   });
 
   // Bulk operations
-  static bulkUpdatePolicies = asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
+  static bulkUpdatePolicies = asyncHandler(async (req: AuthRequest, res: Response): Promise<any> => {
     const { policyIds, updates } = req.body;
 
     if (!Array.isArray(policyIds) || policyIds.length === 0) {
@@ -322,7 +322,7 @@ export class PolicyController {
     });
   });
 
-  static bulkDeletePolicies = asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
+  static bulkDeletePolicies = asyncHandler(async (req: AuthRequest, res: Response): Promise<any> => {
     const { policyIds } = req.body;
 
     if (!Array.isArray(policyIds) || policyIds.length === 0) {
@@ -343,9 +343,13 @@ export class PolicyController {
   });
 
   // Get policies by effect
-  static getPoliciesByEffect = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  static getPoliciesByEffect = asyncHandler(async (req: Request, res: Response): Promise<any> => {
     const { effect } = req.params;
     const paginationOptions = PaginationHelper.validatePaginationParams(req.query);
+
+    if (!effect) {
+      throw new ValidationError('Effect parameter is required');
+    }
 
     if (!['Allow', 'Deny'].includes(effect)) {
       throw new ValidationError('Effect must be either Allow or Deny');
@@ -376,9 +380,13 @@ export class PolicyController {
   });
 
   // Get policies by status
-  static getPoliciesByStatus = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  static getPoliciesByStatus = asyncHandler(async (req: Request, res: Response): Promise<any> => {
     const { status } = req.params;
     const paginationOptions = PaginationHelper.validatePaginationParams(req.query);
+
+    if (!status) {
+      throw new ValidationError('Status parameter is required');
+    }
 
     if (!['Active', 'Inactive', 'Draft'].includes(status)) {
       throw new ValidationError('Status must be Active, Inactive, or Draft');

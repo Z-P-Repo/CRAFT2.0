@@ -8,7 +8,7 @@ import { Resource, IResource } from '@/models/Resource';
 
 export class ResourceController {
   // Get all resources with pagination and filtering
-  static getResources = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  static getResources = asyncHandler(async (req: Request, res: Response): Promise<any> => {
     logger.info('GET /resources called with query:', req.query);
     
     const paginationOptions = PaginationHelper.validatePaginationParams(req.query);
@@ -71,7 +71,7 @@ export class ResourceController {
   });
 
   // Get resource by ID
-  static getResourceById = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  static getResourceById = asyncHandler(async (req: Request, res: Response): Promise<any> => {
     const { id } = req.params;
 
     // Try to find by custom id first, then by MongoDB _id
@@ -91,7 +91,7 @@ export class ResourceController {
   });
 
   // Create new resource
-  static createResource = asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
+  static createResource = asyncHandler(async (req: AuthRequest, res: Response): Promise<any> => {
     const {
       name,
       displayName,
@@ -173,7 +173,7 @@ export class ResourceController {
   });
 
   // Update resource
-  static updateResource = asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
+  static updateResource = asyncHandler(async (req: AuthRequest, res: Response): Promise<any> => {
     const { id } = req.params;
     const updates = req.body;
 
@@ -229,6 +229,10 @@ export class ResourceController {
       { new: true, runValidators: true }
     );
 
+    if (!resource) {
+      throw new NotFoundError('Resource not found');
+    }
+
     logger.info(`Resource updated: ${resource.id} by ${req.user?.email}`);
 
     res.status(200).json({
@@ -239,7 +243,7 @@ export class ResourceController {
   });
 
   // Delete resource
-  static deleteResource = asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
+  static deleteResource = asyncHandler(async (req: AuthRequest, res: Response): Promise<any> => {
     const { id } = req.params;
 
     // Try to find by custom id first, then by MongoDB _id
@@ -274,7 +278,7 @@ export class ResourceController {
   });
 
   // Get resource tree
-  static getResourceTree = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  static getResourceTree = asyncHandler(async (req: Request, res: Response): Promise<any> => {
     const { rootId } = req.params;
     const { depth = 5, includePermissions = false } = req.query;
 
@@ -332,9 +336,13 @@ export class ResourceController {
   });
 
   // Get resources by type
-  static getResourcesByType = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  static getResourcesByType = asyncHandler(async (req: Request, res: Response): Promise<any> => {
     const { type } = req.params;
     const paginationOptions = PaginationHelper.validatePaginationParams(req.query);
+
+    if (!type) {
+      throw new ValidationError('Type parameter is required');
+    }
 
     const validTypes = ['file', 'document', 'api', 'database', 'service', 'folder', 'application'];
     if (!validTypes.includes(type)) {
@@ -366,9 +374,13 @@ export class ResourceController {
   });
 
   // Get resources by classification
-  static getResourcesByClassification = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  static getResourcesByClassification = asyncHandler(async (req: Request, res: Response): Promise<any> => {
     const { classification } = req.params;
     const paginationOptions = PaginationHelper.validatePaginationParams(req.query);
+
+    if (!classification) {
+      throw new ValidationError('Classification parameter is required');
+    }
 
     const validClassifications = ['public', 'internal', 'confidential', 'restricted'];
     if (!validClassifications.includes(classification)) {
@@ -400,7 +412,7 @@ export class ResourceController {
   });
 
   // Get resource statistics
-  static getResourceStats = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  static getResourceStats = asyncHandler(async (req: Request, res: Response): Promise<any> => {
     const stats = await Resource.aggregate([
       {
         $group: {
@@ -446,7 +458,7 @@ export class ResourceController {
   });
 
   // Bulk operations
-  static bulkUpdateResources = asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
+  static bulkUpdateResources = asyncHandler(async (req: AuthRequest, res: Response): Promise<any> => {
     const { resourceIds, updates } = req.body;
 
     if (!Array.isArray(resourceIds) || resourceIds.length === 0) {
@@ -473,7 +485,7 @@ export class ResourceController {
     });
   });
 
-  static bulkDeleteResources = asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
+  static bulkDeleteResources = asyncHandler(async (req: AuthRequest, res: Response): Promise<any> => {
     const { resourceIds } = req.body;
 
     if (!Array.isArray(resourceIds) || resourceIds.length === 0) {

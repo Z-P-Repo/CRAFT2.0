@@ -11,6 +11,7 @@ export interface IAction extends Document {
   endpoint?: string;
   riskLevel: 'low' | 'medium' | 'high' | 'critical';
   active: boolean;
+  children?: string[];
   metadata: {
     owner: string;
     createdBy: string;
@@ -80,6 +81,10 @@ const ActionSchema = new Schema<IAction>({
     default: true,
     index: true,
   },
+  children: [{
+    type: String,
+    trim: true,
+  }],
   metadata: {
     owner: {
       type: String,

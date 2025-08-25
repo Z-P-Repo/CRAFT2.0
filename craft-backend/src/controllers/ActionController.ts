@@ -8,7 +8,7 @@ import { Action, IAction } from '@/models/Action';
 
 export class ActionController {
   // Get all actions with pagination and filtering
-  static getActions = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  static getActions = asyncHandler(async (req: Request, res: Response): Promise<any> => {
     logger.info('GET /actions called with query:', req.query);
     
     const paginationOptions = PaginationHelper.validatePaginationParams(req.query);
@@ -61,7 +61,7 @@ export class ActionController {
   });
 
   // Get action by ID
-  static getActionById = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  static getActionById = asyncHandler(async (req: Request, res: Response): Promise<any> => {
     const { id } = req.params;
 
     // Try to find by custom id first, then by MongoDB _id
@@ -81,7 +81,7 @@ export class ActionController {
   });
 
   // Create new action
-  static createAction = asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
+  static createAction = asyncHandler(async (req: AuthRequest, res: Response): Promise<any> => {
     const {
       name,
       displayName,
@@ -141,7 +141,7 @@ export class ActionController {
   });
 
   // Update action
-  static updateAction = asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
+  static updateAction = asyncHandler(async (req: AuthRequest, res: Response): Promise<any> => {
     const { id } = req.params;
     const updates = req.body;
 
@@ -190,7 +190,7 @@ export class ActionController {
   });
 
   // Delete action
-  static deleteAction = asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
+  static deleteAction = asyncHandler(async (req: AuthRequest, res: Response): Promise<any> => {
     const { id } = req.params;
 
     // Try to find by custom id first, then by MongoDB _id
@@ -220,7 +220,7 @@ export class ActionController {
   });
 
   // Get actions by resource type
-  static getActionsByResourceType = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  static getActionsByResourceType = asyncHandler(async (req: Request, res: Response): Promise<any> => {
     const { resourceType } = req.params;
     const { includeGeneric = true } = req.query;
     const paginationOptions = PaginationHelper.validatePaginationParams(req.query);
@@ -266,9 +266,13 @@ export class ActionController {
   });
 
   // Get actions by category
-  static getActionsByCategory = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  static getActionsByCategory = asyncHandler(async (req: Request, res: Response): Promise<any> => {
     const { category } = req.params;
     const paginationOptions = PaginationHelper.validatePaginationParams(req.query);
+
+    if (!category) {
+      throw new ValidationError('Category parameter is required');
+    }
 
     const validCategories = ['system', 'crud', 'business', 'administrative', 'security'];
     if (!validCategories.includes(category)) {
@@ -300,9 +304,13 @@ export class ActionController {
   });
 
   // Get actions by risk level
-  static getActionsByRiskLevel = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  static getActionsByRiskLevel = asyncHandler(async (req: Request, res: Response): Promise<any> => {
     const { riskLevel } = req.params;
     const paginationOptions = PaginationHelper.validatePaginationParams(req.query);
+
+    if (!riskLevel) {
+      throw new ValidationError('Risk level parameter is required');
+    }
 
     const validRiskLevels = ['low', 'medium', 'high', 'critical'];
     if (!validRiskLevels.includes(riskLevel)) {
@@ -334,9 +342,13 @@ export class ActionController {
   });
 
   // Get action hierarchy
-  static getActionHierarchy = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  static getActionHierarchy = asyncHandler(async (req: Request, res: Response): Promise<any> => {
     const { id } = req.params;
     const { depth = 3 } = req.query;
+
+    if (!id) {
+      throw new ValidationError('Action ID parameter is required');
+    }
 
     const buildHierarchy = async (actionId: string, currentDepth: number): Promise<any> => {
       if (currentDepth <= 0) return null;
@@ -377,7 +389,7 @@ export class ActionController {
   });
 
   // Get action statistics
-  static getActionStats = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  static getActionStats = asyncHandler(async (req: Request, res: Response): Promise<any> => {
     const stats = await Action.aggregate([
       {
         $group: {
@@ -427,7 +439,7 @@ export class ActionController {
   });
 
   // Bulk operations
-  static bulkUpdateActions = asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
+  static bulkUpdateActions = asyncHandler(async (req: AuthRequest, res: Response): Promise<any> => {
     const { actionIds, updates } = req.body;
 
     if (!Array.isArray(actionIds) || actionIds.length === 0) {
@@ -454,7 +466,7 @@ export class ActionController {
     });
   });
 
-  static bulkDeleteActions = asyncHandler(async (req: AuthRequest, res: Response): Promise<void> => {
+  static bulkDeleteActions = asyncHandler(async (req: AuthRequest, res: Response): Promise<any> => {
     const { actionIds } = req.body;
 
     if (!Array.isArray(actionIds) || actionIds.length === 0) {
