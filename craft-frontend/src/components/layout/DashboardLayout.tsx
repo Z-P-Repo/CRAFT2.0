@@ -51,6 +51,7 @@ const menuItems = [
   { text: 'Resources', icon: FolderIcon, path: '/resources' },
   { text: 'Actions', icon: ActionIcon, path: '/actions' },
   { text: 'Attributes', icon: AttributeIcon, path: '/attributes' },
+  { text: 'Users', icon: AccountCircle, path: '/users' },
   { text: 'Policy Tester', icon: TesterIcon, path: '/tester' },
 ];
 
@@ -209,7 +210,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                 {user?.name}
               </Typography>
               <Typography variant="caption" color="text.secondary">
-                {user?.role?.toUpperCase()}
+                {user?.role?.replace('_', ' ').toUpperCase()}
               </Typography>
             </Box>
             <IconButton
@@ -266,7 +267,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                 </Box>
               </Box>
               <Chip
-                label={user?.role?.toUpperCase()}
+                label={user?.role?.replace('_', ' ').toUpperCase()}
                 size="small"
                 color="primary"
                 variant="outlined"

@@ -66,7 +66,7 @@ export class AuthService {
 
   async register(userData: Partial<IUser>): Promise<IServiceResult<IUser>> {
     try {
-      const { email, password, name, role = 'user' } = userData;
+      const { email, password, name, role = 'basic' } = userData;
 
       if (!email || !password || !name) {
         throw new ValidationError('Email, password, and name are required');

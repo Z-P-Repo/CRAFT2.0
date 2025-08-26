@@ -28,10 +28,10 @@ const UserSchema = new Schema<UserDocument>({
   role: {
     type: String,
     enum: {
-      values: ['admin', 'user', 'manager', 'senior_manager'],
+      values: ['super_admin', 'admin', 'basic'],
       message: '{VALUE} is not a valid role'
     },
-    default: 'user'
+    default: 'basic'
   },
   attributes: {
     type: Schema.Types.Mixed,

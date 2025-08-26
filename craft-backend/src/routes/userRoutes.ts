@@ -19,6 +19,7 @@ router.delete('/:id', UserController.deleteUser);
 // Password management
 router.put('/:id/change-password', UserController.changePassword);
 router.put('/:id/toggle-status', UserController.toggleUserStatus);
+router.put('/:id/change-role', UserController.changeUserRole);
 
 // Bulk operations
 router.put('/bulk/update', UserController.bulkUpdateUsers);

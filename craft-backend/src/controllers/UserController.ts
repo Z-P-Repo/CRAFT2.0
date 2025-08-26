@@ -121,7 +121,7 @@ export class UserController {
       email: email.toLowerCase(),
       password,
       name: name.trim(),
-      role: role || 'user',
+      role: role || 'basic',
       department,
       managerId,
       attributes: new Map(Object.entries(attributes || {})),
@@ -302,14 +302,14 @@ export class UserController {
           inactive: {
             $sum: { $cond: [{ $eq: ['$active', false] }, 1, 0] }
           },
+          super_admins: {
+            $sum: { $cond: [{ $eq: ['$role', 'super_admin'] }, 1, 0] }
+          },
           admins: {
             $sum: { $cond: [{ $eq: ['$role', 'admin'] }, 1, 0] }
           },
-          managers: {
-            $sum: { $cond: [{ $eq: ['$role', 'manager'] }, 1, 0] }
-          },
-          users: {
-            $sum: { $cond: [{ $eq: ['$role', 'user'] }, 1, 0] }
+          basic_users: {
+            $sum: { $cond: [{ $eq: ['$role', 'basic'] }, 1, 0] }
           }
         }
       }
@@ -333,9 +333,9 @@ export class UserController {
           total: 0,
           active: 0,
           inactive: 0,
+          super_admins: 0,
           admins: 0,
-          managers: 0,
-          users: 0
+          basic_users: 0
         },
         departmentStats,
       },
@@ -390,6 +390,78 @@ export class UserController {
         deletedCount: result.deletedCount,
       },
       message: `${result.deletedCount} users deleted successfully`,
+    });
+  });
+
+  // Change user role - only admins and super admins can change roles
+  static changeUserRole = asyncHandler(async (req: AuthRequest, res: Response): Promise<any> => {
+    const { id } = req.params;
+    const { role } = req.body;
+    const currentUser = req.user;
+
+    if (!id) {
+      throw new ValidationError('ID parameter is required');
+    }
+    if (!role) {
+      throw new ValidationError('Role is required');
+    }
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      throw new ValidationError('Invalid user ID');
+    }
+
+    // Check if current user has permission to change roles
+    if (!currentUser || (currentUser.role !== 'admin' && currentUser.role !== 'super_admin')) {
+      throw new ValidationError('Insufficient permissions to change user roles');
+    }
+
+    // Validate the new role
+    const validRoles = ['super_admin', 'admin', 'basic'];
+    if (!validRoles.includes(role)) {
+      throw new ValidationError('Invalid role. Must be one of: super_admin, admin, basic');
+    }
+
+    // Additional permission checks
+    if (currentUser.role === 'admin') {
+      // Admins can only assign 'admin' and 'basic' roles, not 'super_admin'
+      if (role === 'super_admin') {
+        throw new ValidationError('Admins cannot assign super admin role');
+      }
+      
+      // Admins cannot change the role of super admins
+      const targetUser = await User.findById(id).select('role email');
+      if (!targetUser) {
+        throw new NotFoundError('User not found');
+      }
+      
+      if (targetUser.role === 'super_admin') {
+        throw new ValidationError('Admins cannot change the role of super admins');
+      }
+    }
+
+    // Prevent users from changing their own role to avoid privilege escalation
+    if (currentUser._id === id) {
+      throw new ValidationError('Users cannot change their own role');
+    }
+
+    // Update the user role
+    const user = await User.findByIdAndUpdate(
+      id,
+      { role },
+      { new: true, runValidators: true }
+    )
+      .select('-password')
+      .populate('managerId', 'name email department');
+
+    if (!user) {
+      throw new NotFoundError('User not found');
+    }
+
+    logger.info(`User role changed: ${user.email} -> ${role} by ${currentUser.email}`);
+
+    res.status(200).json({
+      success: true,
+      data: user,
+      message: `User role updated to ${role} successfully`,
     });
   });
 }

@@ -4,7 +4,7 @@ export interface User {
   _id?: string;
   email: string;
   name: string;
-  role: 'admin' | 'user' | 'manager' | 'senior_manager';
+  role: 'super_admin' | 'admin' | 'basic';
   attributes: Record<string, any>;
   active: boolean;
   managerId?: string;
