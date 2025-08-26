@@ -35,6 +35,7 @@ import {
   List,
   ListItem,
   ListItemText,
+  ListItemButton,
   Checkbox,
   Toolbar,
   Tooltip,
@@ -1348,8 +1349,7 @@ export default function AttributesPage() {
         </Typography>
         
         <List dense>
-          <ListItem 
-            button 
+          <ListItemButton 
             onClick={() => {
               setSortBy('displayName');
               setSortOrder('asc');
@@ -1359,9 +1359,8 @@ export default function AttributesPage() {
           >
             <ListItemText primary="Name (A-Z)" />
             {sortBy === 'displayName' && sortOrder === 'asc' && <ArrowUpIcon fontSize="small" />}
-          </ListItem>
-          <ListItem 
-            button 
+          </ListItemButton>
+          <ListItemButton 
             onClick={() => {
               setSortBy('displayName');
               setSortOrder('desc');
@@ -1371,9 +1370,8 @@ export default function AttributesPage() {
           >
             <ListItemText primary="Name (Z-A)" />
             {sortBy === 'displayName' && sortOrder === 'desc' && <ArrowDownIcon fontSize="small" />}
-          </ListItem>
-          <ListItem 
-            button 
+          </ListItemButton>
+          <ListItemButton 
             onClick={() => {
               setSortBy('createdAt');
               setSortOrder('desc');
@@ -1383,9 +1381,8 @@ export default function AttributesPage() {
           >
             <ListItemText primary="Newest First" />
             {sortBy === 'createdAt' && sortOrder === 'desc' && <ArrowDownIcon fontSize="small" />}
-          </ListItem>
-          <ListItem 
-            button 
+          </ListItemButton>
+          <ListItemButton 
             onClick={() => {
               setSortBy('createdAt');
               setSortOrder('asc');
@@ -1395,7 +1392,7 @@ export default function AttributesPage() {
           >
             <ListItemText primary="Oldest First" />
             {sortBy === 'createdAt' && sortOrder === 'asc' && <ArrowUpIcon fontSize="small" />}
-          </ListItem>
+          </ListItemButton>
         </List>
       </Popover>
 
@@ -2036,13 +2033,15 @@ export default function AttributesPage() {
                                 size="small"
                                 color={isExistingValue ? "default" : "primary"}
                                 variant={isExistingValue ? "outlined" : "filled"}
-                                onDelete={!isExistingValue ? () => {
-                                  const newValues = parsedValues.filter((_, i) => i !== index);
-                                  setParsedValues(newValues);
-                                  setPermittedValues(newValues.map(v => 
-                                    typeof v === 'object' ? JSON.stringify(v, null, 2) : String(v)
-                                  ).join('\n'));
-                                } : undefined}
+                                {...(!isExistingValue && {
+                                  onDelete: () => {
+                                    const newValues = parsedValues.filter((_, i) => i !== index);
+                                    setParsedValues(newValues);
+                                    setPermittedValues(newValues.map(v => 
+                                      typeof v === 'object' ? JSON.stringify(v, null, 2) : String(v)
+                                    ).join('\n'));
+                                  }
+                                })}
                                 sx={{ 
                                   maxWidth: '200px',
                                   fontSize: '0.75rem',

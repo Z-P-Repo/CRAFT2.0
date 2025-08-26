@@ -173,8 +173,9 @@ export default function SubjectsPage() {
       const response = await apiClient.delete(`/subjects/${deleteSubject._id}`);
       
       if (response.success) {
-        // Refresh the data by calling fetchSubjects
-        await fetchSubjects();
+        // Remove from local state immediately
+        setSubjects(prev => prev.filter(subj => subj._id !== deleteSubject._id));
+        setTotal(prev => prev - 1);
         handleDeleteClose();
       } else {
         throw new Error(response.error || 'Failed to delete subject');
@@ -183,10 +184,11 @@ export default function SubjectsPage() {
       console.error('Error deleting subject:', error);
       
       // If subject was not found (404), it might have been already deleted
-      // Refresh the data and close the dialog
+      // Remove from local state and close the dialog
       if (error.code === 'NOT_FOUND' || error.message?.includes('not found')) {
-        console.log('Subject not found, refreshing data...');
-        await fetchSubjects();
+        console.log('Subject not found, removing from local state...');
+        setSubjects(prev => prev.filter(subj => subj._id !== deleteSubject._id));
+        setTotal(prev => prev - 1);
         handleDeleteClose();
       } else {
         setError('Failed to delete subject');
@@ -271,8 +273,9 @@ export default function SubjectsPage() {
       });
       
       if (response.success) {
-        // Refresh the data by calling fetchSubjects
-        await fetchSubjects();
+        // Update local state by filtering out deleted subjects
+        setSubjects(prev => prev.filter(subj => !selectedSubjects.includes(subj.id)));
+        setTotal(prev => prev - selectedSubjects.length);
         
         // Clear selection
         setSelectedSubjects([]);
@@ -517,7 +520,7 @@ export default function SubjectsPage() {
           <Button
             variant="contained"
             startIcon={<AddIcon />}
-            onClick={handleClickOpen}
+            onClick={() => handleClickOpen()}
             sx={{ px: 3 }}
           >
             Create Subject

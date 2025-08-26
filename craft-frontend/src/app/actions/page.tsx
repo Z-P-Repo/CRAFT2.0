@@ -34,6 +34,7 @@ import {
   List,
   ListItem,
   ListItemText,
+  ListItemButton,
   Checkbox,
   Toolbar,
   Tooltip,
@@ -287,8 +288,10 @@ export default function ActionsPage() {
         throw new Error(response.error || 'Failed to delete action');
       }
       
+      // Remove from local state immediately
+      setActions(prev => prev.filter(action => action._id !== deleteAction._id));
+      setTotal(prev => prev - 1);
       handleDeleteClose();
-      fetchActions();
       
     } catch (err: any) {
       console.error('Error deleting action:', err);
@@ -393,9 +396,12 @@ export default function ActionsPage() {
         throw new Error(response.error || 'Failed to delete actions');
       }
       
+      // Update local state by filtering out deleted actions
+      setActions(prev => prev.filter(action => !selectedActions.includes(action.id)));
+      setTotal(prev => prev - selectedActions.length);
+      
       setSelectedActions([]);
       handleBulkDeleteClose();
-      fetchActions();
       
     } catch (err: any) {
       console.error('Error bulk deleting actions:', err);
@@ -761,11 +767,11 @@ export default function ActionsPage() {
         </Typography>
         
         <List dense>
-          <ListItem button onClick={() => {}}>            
+          <ListItem onClick={() => {}} sx={{ cursor: 'pointer' }}>            
             <Checkbox size="small" />
             <ListItemText primary="Active Actions" />
           </ListItem>
-          <ListItem button onClick={() => {}}>            
+          <ListItem onClick={() => {}} sx={{ cursor: 'pointer' }}>            
             <Checkbox size="small" />
             <ListItemText primary="Inactive Actions" />
           </ListItem>
@@ -794,8 +800,7 @@ export default function ActionsPage() {
         </Typography>
         
         <List dense>
-          <ListItem 
-            button 
+          <ListItemButton 
             onClick={() => {
               setSortBy('displayName');
               setSortOrder('asc');
@@ -805,9 +810,8 @@ export default function ActionsPage() {
           >
             <ListItemText primary="Name (A-Z)" />
             {sortBy === 'displayName' && sortOrder === 'asc' && <ArrowUpIcon fontSize="small" />}
-          </ListItem>
-          <ListItem 
-            button 
+          </ListItemButton>
+          <ListItemButton 
             onClick={() => {
               setSortBy('displayName');
               setSortOrder('desc');
@@ -817,9 +821,8 @@ export default function ActionsPage() {
           >
             <ListItemText primary="Name (Z-A)" />
             {sortBy === 'displayName' && sortOrder === 'desc' && <ArrowDownIcon fontSize="small" />}
-          </ListItem>
-          <ListItem 
-            button 
+          </ListItemButton>
+          <ListItemButton 
             onClick={() => {
               setSortBy('createdAt');
               setSortOrder('desc');
@@ -829,9 +832,8 @@ export default function ActionsPage() {
           >
             <ListItemText primary="Newest First" />
             {sortBy === 'createdAt' && sortOrder === 'desc' && <ArrowDownIcon fontSize="small" />}
-          </ListItem>
-          <ListItem 
-            button 
+          </ListItemButton>
+          <ListItemButton 
             onClick={() => {
               setSortBy('createdAt');
               setSortOrder('asc');
@@ -841,7 +843,7 @@ export default function ActionsPage() {
           >
             <ListItemText primary="Oldest First" />
             {sortBy === 'createdAt' && sortOrder === 'asc' && <ArrowUpIcon fontSize="small" />}
-          </ListItem>
+          </ListItemButton>
         </List>
       </Popover>
 

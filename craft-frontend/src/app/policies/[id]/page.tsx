@@ -265,12 +265,12 @@ export default function PolicyViewPage() {
                       {policy.effect.toUpperCase()}S
                     </strong>{' '}
                     <strong style={{ color: '#1976d2' }}>
-                      {getSubjectDisplayName(policy.rules[0].subject.type)}
+                      {getSubjectDisplayName(policy.rules[0]?.subject?.type || '')}
                     </strong>
-                    {policy.rules[0].subject.attributes.length > 0 && (
+                    {(policy.rules[0]?.subject?.attributes?.length || 0) > 0 && (
                       <span>
                         {' '}(when{' '}
-                        {policy.rules[0].subject.attributes.map((attr, index, array) => {
+                        {policy.rules[0]?.subject?.attributes?.map((attr, index, array) => {
                           const formattedValue = Array.isArray(attr.value) ? attr.value.join(' or ') : attr.value;
                           const condition = `${getAttributeDisplayName(attr.name)} ${attr.operator} ${formattedValue}`;
                           if (index === array.length - 1 && array.length > 1) {
@@ -283,16 +283,16 @@ export default function PolicyViewPage() {
                     )}
                     {' '}to perform{' '}
                     <strong style={{ color: '#f57c00' }}>
-                      {getActionDisplayName(policy.rules[0].action.name)}
+                      {getActionDisplayName(policy.rules[0]?.action?.name || '')}
                     </strong>
                     {' '}on{' '}
                     <strong style={{ color: '#7b1fa2' }}>
-                      {getResourceDisplayName(policy.rules[0].object.type)}
+                      {getResourceDisplayName(policy.rules[0]?.object?.type || '')}
                     </strong>
-                    {policy.rules[0].object.attributes.length > 0 && (
+                    {(policy.rules[0]?.object?.attributes?.length || 0) > 0 && (
                       <span>
                         {' '}(where{' '}
-                        {policy.rules[0].object.attributes.map((attr, index, array) => {
+                        {policy.rules[0]?.object?.attributes?.map((attr, index, array) => {
                           const formattedValue = Array.isArray(attr.value) ? attr.value.join(' or ') : attr.value;
                           const condition = `${getAttributeDisplayName(attr.name)} ${attr.operator} ${formattedValue}`;
                           if (index === array.length - 1 && array.length > 1) {
@@ -303,9 +303,9 @@ export default function PolicyViewPage() {
                         )
                       </span>
                     )}
-                    {policy.rules[0].conditions.length > 0 && (
+                    {(policy.rules[0]?.conditions?.length || 0) > 0 && (
                       <span>
-                        , provided that {policy.rules[0].conditions.map((cond, index, array) => {
+                        , provided that {policy.rules[0]?.conditions?.map((cond, index, array) => {
                           const formattedValue = Array.isArray(cond.value) ? cond.value.join(' or ') : cond.value;
                           const condition = `${cond.field} ${cond.operator} ${formattedValue}`;
                           if (index === array.length - 1 && array.length > 1) {

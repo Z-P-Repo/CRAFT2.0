@@ -280,7 +280,7 @@ export default function EditPolicyPage() {
       const firstRule = originalPolicy.rules[0];
       const subjectAttrs: { [key: string]: any } = {};
       
-      firstRule.subject.attributes.forEach((attr: any) => {
+      firstRule?.subject?.attributes?.forEach((attr: any) => {
         // Try to find the attribute in the loaded attributes list to get the correct ID
         const attributeObj = attributes.find(a => a.name === attr.name || a.id === attr.name);
         if (attributeObj) {

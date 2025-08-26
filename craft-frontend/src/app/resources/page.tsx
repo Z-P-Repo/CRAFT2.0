@@ -33,6 +33,7 @@ import {
   Popover,
   List,
   ListItem,
+  ListItemButton,
   ListItemText,
   Checkbox,
   Toolbar,
@@ -231,8 +232,9 @@ export default function ObjectsPage() {
       const response = await apiClient.delete(`/resources/${deleteObject?._id}`);
 
       if (response.success) {
-        // Refresh the data by calling fetchObjects
-        await fetchObjects();
+        // Remove from local state immediately
+        setObjects(prev => prev.filter(obj => obj._id !== deleteObject._id));
+        setTotal(prev => prev - 1);
         handleDeleteClose();
       } else {
         throw new Error(response.error || 'Failed to delete object');
@@ -241,10 +243,11 @@ export default function ObjectsPage() {
       console.error('Error deleting object:', error);
 
       // If object was not found (404), it might have been already deleted
-      // Refresh the data and close the dialog
+      // Remove from local state and close the dialog
       if (error.code === 'NOT_FOUND' || error.message?.includes('not found')) {
-        console.log('Object not found, refreshing data...');
-        await fetchObjects();
+        console.log('Object not found, removing from local state...');
+        setObjects(prev => prev.filter(obj => obj._id !== deleteObject._id));
+        setTotal(prev => prev - 1);
         handleDeleteClose();
       } else {
         setError('Failed to delete object');
@@ -329,8 +332,9 @@ export default function ObjectsPage() {
       });
 
       if (response.success) {
-        // Refresh the data by calling fetchObjects
-        await fetchObjects();
+        // Update local state by filtering out deleted objects
+        setObjects(prev => prev.filter(obj => !selectedObjects.includes(obj.id || obj._id || '')));
+        setTotal(prev => prev - selectedObjects.length);
 
         // Clear selection
         setSelectedObjects([]);
@@ -874,14 +878,14 @@ export default function ObjectsPage() {
         </Typography>
         
         <List dense>
-          <ListItem button onClick={() => {}}>            
+          <ListItemButton onClick={() => {}}>            
             <Checkbox size="small" />
             <ListItemText primary="Active Resources" />
-          </ListItem>
-          <ListItem button onClick={() => {}}>            
+          </ListItemButton>
+          <ListItemButton onClick={() => {}}>            
             <Checkbox size="small" />
             <ListItemText primary="Inactive Resources" />
-          </ListItem>
+          </ListItemButton>
         </List>
       </Popover>
 
@@ -907,8 +911,7 @@ export default function ObjectsPage() {
         </Typography>
         
         <List dense>
-          <ListItem 
-            button 
+          <ListItemButton 
             onClick={() => {
               setSortBy('displayName');
               setSortOrder('asc');
@@ -918,9 +921,8 @@ export default function ObjectsPage() {
           >
             <ListItemText primary="Name (A-Z)" />
             {sortBy === 'displayName' && sortOrder === 'asc' && <ArrowUpIcon fontSize="small" />}
-          </ListItem>
-          <ListItem 
-            button 
+          </ListItemButton>
+          <ListItemButton 
             onClick={() => {
               setSortBy('displayName');
               setSortOrder('desc');
@@ -930,9 +932,8 @@ export default function ObjectsPage() {
           >
             <ListItemText primary="Name (Z-A)" />
             {sortBy === 'displayName' && sortOrder === 'desc' && <ArrowDownIcon fontSize="small" />}
-          </ListItem>
-          <ListItem 
-            button 
+          </ListItemButton>
+          <ListItemButton 
             onClick={() => {
               setSortBy('createdAt');
               setSortOrder('desc');
@@ -942,9 +943,8 @@ export default function ObjectsPage() {
           >
             <ListItemText primary="Newest First" />
             {sortBy === 'createdAt' && sortOrder === 'desc' && <ArrowDownIcon fontSize="small" />}
-          </ListItem>
-          <ListItem 
-            button 
+          </ListItemButton>
+          <ListItemButton 
             onClick={() => {
               setSortBy('createdAt');
               setSortOrder('asc');
@@ -954,7 +954,7 @@ export default function ObjectsPage() {
           >
             <ListItemText primary="Oldest First" />
             {sortBy === 'createdAt' && sortOrder === 'asc' && <ArrowUpIcon fontSize="small" />}
-          </ListItem>
+          </ListItemButton>
         </List>
       </Popover>
 
