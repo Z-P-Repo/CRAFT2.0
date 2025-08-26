@@ -233,8 +233,11 @@ export default function ObjectsPage() {
 
       if (response.success) {
         // Remove from local state immediately
-        setObjects(prev => prev.filter(obj => obj._id !== deleteObject._id));
-        setTotal(prev => prev - 1);
+        const updatedObjects = objects.filter(obj => obj._id !== deleteObject._id);
+        setObjects(updatedObjects);
+        // Only count objects that have id (and will be displayed)
+        const objectsWithId = updatedObjects.filter(obj => obj.id);
+        setTotal(objectsWithId.length);
         handleDeleteClose();
       } else {
         throw new Error(response.error || 'Failed to delete object');
@@ -246,8 +249,11 @@ export default function ObjectsPage() {
       // Remove from local state and close the dialog
       if (error.code === 'NOT_FOUND' || error.message?.includes('not found')) {
         console.log('Object not found, removing from local state...');
-        setObjects(prev => prev.filter(obj => obj._id !== deleteObject._id));
-        setTotal(prev => prev - 1);
+        const updatedObjects = objects.filter(obj => obj._id !== deleteObject._id);
+        setObjects(updatedObjects);
+        // Only count objects that have id (and will be displayed)
+        const objectsWithId = updatedObjects.filter(obj => obj.id);
+        setTotal(objectsWithId.length);
         handleDeleteClose();
       } else {
         setError('Failed to delete object');
@@ -333,8 +339,11 @@ export default function ObjectsPage() {
 
       if (response.success) {
         // Update local state by filtering out deleted objects
-        setObjects(prev => prev.filter(obj => !selectedObjects.includes(obj.id || obj._id || '')));
-        setTotal(prev => prev - selectedObjects.length);
+        const updatedObjects = objects.filter(obj => obj.id && !selectedObjects.includes(obj.id));
+        setObjects(updatedObjects);
+        // Only count objects that have id (and will be displayed)
+        const objectsWithId = updatedObjects.filter(obj => obj.id);
+        setTotal(objectsWithId.length);
 
         // Clear selection
         setSelectedObjects([]);
@@ -464,7 +473,9 @@ export default function ObjectsPage() {
 
       if (response.success && response.data) {
         setObjects(response.data);
-        setTotal(response.pagination?.total || 0);
+        // Only count objects that have id (and will be displayed)
+        const objectsWithId = response.data.filter((obj: ExtendedResourceObject) => obj.id);
+        setTotal(objectsWithId.length);
       } else {
         throw new Error(response.error || 'Failed to fetch objects');
       }
@@ -482,7 +493,9 @@ export default function ObjectsPage() {
 
       // Fallback to mock data for demo
       setObjects(mockObjects);
-      setTotal(mockObjects.length);
+      // Only count objects that have id (and will be displayed)
+      const objectsWithId = mockObjects.filter(obj => obj.id);
+      setTotal(objectsWithId.length);
     } finally {
       setLoading(false);
     }
