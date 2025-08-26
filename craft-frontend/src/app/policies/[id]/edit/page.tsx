@@ -55,7 +55,6 @@ interface Policy {
   description?: string;
   effect: 'Allow' | 'Deny';
   status: 'Active' | 'Inactive' | 'Draft';
-  priority: number;
   rules: PolicyRule[];
   subjects: string[];
   resources: string[];
@@ -219,7 +218,6 @@ export default function EditPolicyPage() {
   const [description, setDescription] = useState('');
   const [effect, setEffect] = useState<'Allow' | 'Deny'>('Allow');
   const [status, setStatus] = useState<'Active' | 'Inactive' | 'Draft'>('Draft');
-  const [priority, setPriority] = useState(100);
 
   // Selection data
   const [selectedSubject, setSelectedSubject] = useState<string>('');
@@ -253,7 +251,6 @@ export default function EditPolicyPage() {
           setDescription(policy.description || '');
           setEffect(policy.effect);
           setStatus(policy.status);
-          setPriority(policy.priority);
           
           // Populate selections (simplified - taking first rule's data)
           if (policy.rules.length > 0) {
@@ -478,7 +475,6 @@ export default function EditPolicyPage() {
         description: description?.trim() || '',
         effect: effect,
         status: status,
-        priority: priority,
         rules,
         subjects: [selectedSubject],
         resources: selectedResources,
@@ -994,146 +990,214 @@ export default function EditPolicyPage() {
 
       case 3:
         return (
-          <Card sx={{ p: 4 }}>
-            <Box sx={{ mb: 3 }}>
-              <Typography variant="h5" fontWeight="600" gutterBottom>
+          <Card sx={{ mt: 3, borderRadius: 2, boxShadow: '0 2px 8px rgba(0,0,0,0.08)', border: '1px solid', borderColor: 'grey.200' }}>
+            <Box sx={{ p: 4 }}>
+              <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 3 }}>
+                <SaveIcon color="primary" />
                 Review & Save
               </Typography>
-              <Typography variant="body2" color="text.secondary">
-                Review your policy changes before saving
-              </Typography>
-            </Box>
 
             <Grid container spacing={3}>
               <Grid size={{ xs: 12 }}>
-                <Paper sx={{ p: 4, bgcolor: 'primary.50', border: '2px solid', borderColor: 'primary.200', mb: 3 }}>
-                  <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2, mb: 2 }}>
-                    <SecurityIcon sx={{ color: 'primary.main', fontSize: 28, mt: 0.5 }} />
-                    <Box>
-                      <Typography variant="h6" color="primary.main" fontWeight="700" gutterBottom>
-                        "{displayName}" Policy
-                      </Typography>
-                      {description && (
-                        <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic', mb: 2 }}>
-                          {description}
-                        </Typography>
-                      )}
-                      
-                      <Box sx={{ 
-                        bgcolor: 'white', 
-                        p: 3, 
-                        borderRadius: 2, 
-                        border: '1px solid', 
-                        borderColor: 'primary.100',
-                        boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
-                      }}>
-                        <Typography component="div" variant="body1" sx={{ lineHeight: 1.8, fontSize: '1.1rem' }}>
-                          This policy <strong style={{ color: effect === 'Allow' ? '#2e7d32' : '#d32f2f' }}>
-                            {effect.toUpperCase()}S
-                          </strong>{' '}
-                          <strong style={{ color: '#1976d2' }}>
-                            {subjects.find(s => s.id === selectedSubject)?.displayName}
-                          </strong>
-                          {Object.keys(selectedSubjectAttributes).length > 0 && (
-                            <span>
-                              {' '}(when{' '}
-                              {Object.entries(selectedSubjectAttributes)
-                                .filter(([_, value]) => value !== '' && value !== null && value !== undefined)
-                                .map(([attrId, value], index, array) => {
-                                  const attr = attributes.find(a => a.id === attrId);
-                                  if (!attr) return '';
-                                  const formattedValue = Array.isArray(value) ? value.join(' or ') : value;
-                                  const condition = `${attr.displayName.toLowerCase()} is ${formattedValue}`;
-                                  if (index === array.length - 1 && array.length > 1) {
-                                    return `and ${condition}`;
-                                  }
-                                  return condition;
-                                })
-                                .filter(Boolean)
-                                .join(', ')}
-                              )
-                            </span>
-                          )}
-                          {' '}to perform{' '}
-                          <strong style={{ color: '#ed6c02' }}>
-                            {selectedActions.length === 1 
-                              ? actions.find(a => a.id === selectedActions[0])?.displayName?.toLowerCase()
-                              : selectedActions.length === 2
-                                ? `${actions.find(a => a.id === selectedActions[0])?.displayName?.toLowerCase()} and ${actions.find(a => a.id === selectedActions[1])?.displayName?.toLowerCase()}`
-                                : `${selectedActions.slice(0, -1).map(id => actions.find(a => a.id === id)?.displayName?.toLowerCase()).join(', ')}, and ${actions.find(a => a.id === selectedActions[selectedActions.length - 1])?.displayName?.toLowerCase()}`
-                            }
-                          </strong>
-                          {' '}actions on{' '}
-                          <strong style={{ color: '#9c27b0' }}>
-                            {selectedResources.length === 1
-                              ? resources.find(r => r.id === selectedResources[0])?.displayName
-                              : selectedResources.length === 2
-                                ? `${resources.find(r => r.id === selectedResources[0])?.displayName} and ${resources.find(r => r.id === selectedResources[1])?.displayName}`
-                                : `${selectedResources.slice(0, -1).map(id => resources.find(r => r.id === id)?.displayName).join(', ')}, and ${resources.find(r => r.id === selectedResources[selectedResources.length - 1])?.displayName}`
-                            }
-                          </strong>.
-                        </Typography>
-                      </Box>
-                    </Box>
+                {/* Human-Readable Policy Statement */}
+                <Paper 
+                  elevation={0}
+                  sx={{ 
+                    mb: 3, 
+                    p: 4,
+                    bgcolor: 'grey.50',
+                    borderRadius: 2,
+                    border: '1px solid',
+                    borderColor: 'grey.200'
+                  }}
+                >
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
+                    <SecurityIcon sx={{ color: 'primary.main', fontSize: 24 }} />
+                    <Typography variant="h6" fontWeight="600">
+                      Policy Summary
+                    </Typography>
                   </Box>
+                  
+                  <Typography 
+                    component="div" 
+                    variant="body1" 
+                    sx={{ lineHeight: 1.8, fontSize: '1.1rem' }}
+                  >
+                    This policy <strong style={{ color: effect === 'Allow' ? '#2e7d32' : '#d32f2f' }}>
+                      {effect.toUpperCase()}S
+                    </strong>{' '}
+                    <strong style={{ color: '#1976d2' }}>
+                      {subjects.find(s => s.id === selectedSubject)?.displayName}
+                    </strong>
+                    {Object.keys(selectedSubjectAttributes).length > 0 && (
+                      <span>
+                        {' '}(when{' '}
+                        {Object.entries(selectedSubjectAttributes)
+                          .filter(([_, value]) => value !== '' && value !== null && value !== undefined)
+                          .map(([attrId, value], index, array) => {
+                            const attr = attributes.find(a => a.id === attrId);
+                            if (!attr) return '';
+                            const formattedValue = Array.isArray(value) ? value.join(' or ') : value;
+                            const condition = `${attr.displayName.toLowerCase()} is ${formattedValue}`;
+                            if (index === array.length - 1 && array.length > 1) {
+                              return `and ${condition}`;
+                            }
+                            return condition;
+                          })
+                          .filter(Boolean)
+                          .join(', ')}
+                        )
+                      </span>
+                    )}
+                    {' '}to perform{' '}
+                    <strong style={{ color: '#f57c00' }}>
+                      {selectedActions.length === 1 
+                        ? actions.find(a => a.id === selectedActions[0])?.displayName?.toLowerCase()
+                        : selectedActions.length === 2
+                          ? `${actions.find(a => a.id === selectedActions[0])?.displayName?.toLowerCase()} and ${actions.find(a => a.id === selectedActions[1])?.displayName?.toLowerCase()}`
+                          : `${selectedActions.slice(0, -1).map(id => actions.find(a => a.id === id)?.displayName?.toLowerCase()).join(', ')}, and ${actions.find(a => a.id === selectedActions[selectedActions.length - 1])?.displayName?.toLowerCase()}`
+                      }
+                    </strong>
+                    {' '}actions on{' '}
+                    <strong style={{ color: '#7b1fa2' }}>
+                      {selectedResources.length === 1
+                        ? resources.find(r => r.id === selectedResources[0])?.displayName
+                        : selectedResources.length === 2
+                          ? `${resources.find(r => r.id === selectedResources[0])?.displayName} and ${resources.find(r => r.id === selectedResources[1])?.displayName}`
+                          : `${selectedResources.slice(0, -1).map(id => resources.find(r => r.id === id)?.displayName).join(', ')}, and ${resources.find(r => r.id === selectedResources[selectedResources.length - 1])?.displayName}`
+                      }
+                    </strong>.
+                  </Typography>
                 </Paper>
 
-                <Paper sx={{ p: 3, bgcolor: 'grey.50' }}>
-                  <Typography variant="h6" gutterBottom>
-                    Policy Configuration
-                  </Typography>
-                  
-                  <Grid container spacing={3}>
-                    <Grid size={{ xs: 12, md: 4 }}>
-                      <FormControl fullWidth>
-                        <InputLabel>Effect</InputLabel>
-                        <Select
-                          value={effect}
-                          onChange={(e) => setEffect(e.target.value as 'Allow' | 'Deny')}
-                          label="Effect"
-                        >
-                          <MenuItem value="Allow">Allow</MenuItem>
-                          <MenuItem value="Deny">Deny</MenuItem>
-                        </Select>
-                      </FormControl>
-                    </Grid>
-                    <Grid size={{ xs: 12, md: 4 }}>
-                      <FormControl fullWidth>
-                        <InputLabel>Status</InputLabel>
-                        <Select
-                          value={status}
-                          onChange={(e) => setStatus(e.target.value as 'Active' | 'Inactive' | 'Draft')}
-                          label="Status"
-                        >
-                          <MenuItem value="Active">Active</MenuItem>
-                          <MenuItem value="Inactive">Inactive</MenuItem>
-                          <MenuItem value="Draft">Draft</MenuItem>
-                        </Select>
-                      </FormControl>
-                    </Grid>
-                    <Grid size={{ xs: 12, md: 4 }}>
-                      <TextField
-                        fullWidth
-                        label="Priority"
-                        type="number"
-                        value={priority}
-                        onChange={(e) => setPriority(Number(e.target.value))}
-                        inputProps={{ min: 1, max: 100 }}
-                        helperText="1 (highest) to 100 (lowest)"
-                      />
-                    </Grid>
+                {/* Policy Configuration */}
+                <Card sx={{ borderRadius: 2, boxShadow: '0 2px 8px rgba(0,0,0,0.08)', border: '1px solid', borderColor: 'grey.200' }}>
+                  <Box sx={{ p: 4 }}>
+                    <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 3 }}>
+                      <SecurityIcon color="primary" />
+                      Policy Configuration
+                    </Typography>
                     
-                    <Grid size={{ xs: 12 }}>
-                      <Divider sx={{ my: 2 }} />
-                      <Grid container spacing={2}>
-                        <Grid size={{ xs: 12, md: 6 }}>
-                          <Typography variant="body2"><strong>Selected Actions:</strong> {selectedActions.length}</Typography>
-                          <Typography variant="body2"><strong>Selected Resources:</strong> {selectedResources.length}</Typography>
-                        </Grid>
+                    <Grid container spacing={3}>
+                      {/* Effect Section */}
+                      <Grid size={{ xs: 12, md: 6 }}>
+                        <Paper 
+                          variant="outlined" 
+                          sx={{ 
+                            p: 3, 
+                            borderRadius: 2,
+                            bgcolor: 'grey.50',
+                            border: '1px solid',
+                            borderColor: 'grey.200',
+                            height: '100%'
+                          }}
+                        >
+                          <Typography variant="overline" sx={{ color: 'primary.main', fontWeight: 600, fontSize: '0.75rem' }}>
+                            Policy Effect
+                          </Typography>
+                          <Box sx={{ mt: 2, display: 'flex', gap: 1 }}>
+                            <Button
+                              variant={effect === 'Allow' ? 'contained' : 'outlined'}
+                              color={effect === 'Allow' ? 'success' : 'inherit'}
+                              size="small"
+                              onClick={() => setEffect('Allow')}
+                              sx={{ 
+                                textTransform: 'none',
+                                fontWeight: effect === 'Allow' ? 600 : 400,
+                                minWidth: '80px'
+                              }}
+                            >
+                              <CheckIcon sx={{ fontSize: '1rem', mr: 0.5 }} />
+                              Allow
+                            </Button>
+                            <Button
+                              variant={effect === 'Deny' ? 'contained' : 'outlined'}
+                              color={effect === 'Deny' ? 'error' : 'inherit'}
+                              size="small"
+                              onClick={() => setEffect('Deny')}
+                              sx={{ 
+                                textTransform: 'none',
+                                fontWeight: effect === 'Deny' ? 600 : 400,
+                                minWidth: '80px'
+                              }}
+                            >
+                              <CloseIcon sx={{ fontSize: '1rem', mr: 0.5 }} />
+                              Deny
+                            </Button>
+                          </Box>
+                          <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
+                            {effect === 'Allow' ? 'This policy will grant access' : 'This policy will block access'}
+                          </Typography>
+                        </Paper>
+                      </Grid>
+                      
+                      {/* Status Section */}
+                      <Grid size={{ xs: 12, md: 6 }}>
+                        <Paper 
+                          variant="outlined" 
+                          sx={{ 
+                            p: 3, 
+                            borderRadius: 2,
+                            bgcolor: 'grey.50',
+                            border: '1px solid',
+                            borderColor: 'grey.200',
+                            height: '100%'
+                          }}
+                        >
+                          <Typography variant="overline" sx={{ color: 'secondary.main', fontWeight: 600, fontSize: '0.75rem' }}>
+                            Policy Status
+                          </Typography>
+                          <Box sx={{ mt: 2, display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                            <Button
+                              variant={status === 'Active' ? 'contained' : 'outlined'}
+                              color={status === 'Active' ? 'success' : 'inherit'}
+                              size="small"
+                              onClick={() => setStatus('Active')}
+                              sx={{ 
+                                textTransform: 'none',
+                                fontWeight: status === 'Active' ? 600 : 400,
+                                minWidth: '70px'
+                              }}
+                            >
+                              Active
+                            </Button>
+                            <Button
+                              variant={status === 'Inactive' ? 'contained' : 'outlined'}
+                              color={status === 'Inactive' ? 'warning' : 'inherit'}
+                              size="small"
+                              onClick={() => setStatus('Inactive')}
+                              sx={{ 
+                                textTransform: 'none',
+                                fontWeight: status === 'Inactive' ? 600 : 400,
+                                minWidth: '70px'
+                              }}
+                            >
+                              Inactive
+                            </Button>
+                            <Button
+                              variant={status === 'Draft' ? 'contained' : 'outlined'}
+                              color={status === 'Draft' ? 'info' : 'inherit'}
+                              size="small"
+                              onClick={() => setStatus('Draft')}
+                              sx={{ 
+                                textTransform: 'none',
+                                fontWeight: status === 'Draft' ? 600 : 400,
+                                minWidth: '70px'
+                              }}
+                            >
+                              Draft
+                            </Button>
+                          </Box>
+                          <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
+                            {status === 'Active' && 'Policy is enforced and active'}
+                            {status === 'Inactive' && 'Policy is disabled but preserved'}
+                            {status === 'Draft' && 'Policy is being developed'}
+                          </Typography>
+                        </Paper>
                       </Grid>
                     </Grid>
-                  </Grid>
-                </Paper>
+                  </Box>
+                </Card>
               </Grid>
             </Grid>
 
@@ -1148,6 +1212,7 @@ export default function EditPolicyPage() {
                 Policy updated successfully! Redirecting to policy view...
               </Alert>
             )}
+            </Box>
           </Card>
         );
 

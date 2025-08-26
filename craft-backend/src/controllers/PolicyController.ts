@@ -14,7 +14,6 @@ export class PolicyController {
       search,
       effect,
       status,
-      priority,
       createdBy,
       tags,
     } = req.query;
@@ -24,7 +23,6 @@ export class PolicyController {
     
     if (effect) filter.effect = effect;
     if (status) filter.status = status;
-    if (priority) filter.priority = { $gte: parseInt(priority as string) };
     if (createdBy) filter['metadata.createdBy'] = createdBy;
     
     if (tags) {
@@ -89,7 +87,6 @@ export class PolicyController {
       name,
       description,
       effect,
-      priority,
       rules,
       subjects,
       resources,
@@ -118,15 +115,14 @@ export class PolicyController {
       description: description?.trim(),
       effect,
       status: 'Draft',
-      priority: priority || 1,
       rules: rules || [],
       subjects: subjects || [],
       resources: resources || [],
       actions: actions || [],
       conditions: conditions || [],
       metadata: {
-        createdBy: req.user?._id || 'system',
-        lastModifiedBy: req.user?._id || 'system',
+        createdBy: req.user?.email || 'system',
+        lastModifiedBy: req.user?.email || 'system',
         tags: tags || [],
         version: '1.0.0',
         isSystem: false,
@@ -167,7 +163,7 @@ export class PolicyController {
     } else {
       updates.metadata = existingPolicy.metadata;
     }
-    updates.metadata.lastModifiedBy = req.user?._id || 'system';
+    updates.metadata.lastModifiedBy = req.user?.email || 'system';
 
     const policy = await Policy.findByIdAndUpdate(
       existingPolicy._id,
@@ -261,16 +257,6 @@ export class PolicyController {
       }
     ]);
 
-    const priorityStats = await Policy.aggregate([
-      {
-        $group: {
-          _id: '$priority',
-          count: { $sum: 1 }
-        }
-      },
-      { $sort: { _id: 1 } }
-    ]);
-
     res.status(200).json({
       success: true,
       data: {
@@ -282,7 +268,6 @@ export class PolicyController {
           allow: 0,
           deny: 0
         },
-        priorityStats,
       },
     });
   });

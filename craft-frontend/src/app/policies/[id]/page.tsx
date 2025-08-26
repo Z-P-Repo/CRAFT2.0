@@ -51,7 +51,6 @@ interface Policy {
   description?: string;
   effect: 'Allow' | 'Deny';
   status: 'Active' | 'Inactive' | 'Draft';
-  priority: number;
   rules: PolicyRule[];
   subjects: string[];
   resources: string[];
@@ -489,57 +488,57 @@ export default function PolicyViewPage() {
         {/* Detailed Rules */}
         {policy.rules.length > 0 && (
           <Card sx={{ mt: 3, borderRadius: 2, boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }}>
-            <Box sx={{ p: 4 }}>
-              <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 3 }}>
+            <Box sx={{ p: 3 }}>
+              <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
                 <SecurityIcon color="primary" />
                 Policy Rules
               </Typography>
               
-              <Grid container spacing={3}>
+              <Grid container spacing={2}>
                 {policy.rules.map((rule, index) => (
                   <Grid key={rule.id} size={{ xs: 12 }}>
                     <Paper 
                       variant="outlined" 
                       sx={{ 
-                        p: 3, 
+                        p: 2, 
                         borderRadius: 2,
                         bgcolor: 'grey.50',
                         border: '1px solid',
                         borderColor: 'grey.200'
                       }}
                     >
-                      <Typography variant="subtitle1" fontWeight="600" gutterBottom sx={{ mb: 2, color: 'primary.main' }}>
+                      <Typography variant="subtitle2" fontWeight="600" gutterBottom sx={{ mb: 1.5, color: 'primary.main' }}>
                         Rule {index + 1}
                       </Typography>
                       
-                      <Grid container spacing={3}>
+                      <Grid container spacing={2}>
                         <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                           <Box sx={{ 
-                            p: 2, 
+                            p: 1.5, 
                             bgcolor: 'white', 
                             borderRadius: 1, 
                             border: '1px solid', 
                             borderColor: 'grey.200',
                             height: '100%'
                           }}>
-                            <Typography variant="overline" sx={{ color: 'primary.main', fontWeight: 600, fontSize: '0.75rem' }}>
+                            <Typography variant="overline" sx={{ color: 'primary.main', fontWeight: 600, fontSize: '0.7rem' }}>
                               Subject
                             </Typography>
-                            <Typography variant="body1" fontWeight="500" sx={{ mt: 1 }}>
+                            <Typography variant="body2" fontWeight="500" sx={{ mt: 0.5 }}>
                               {getSubjectDisplayName(rule.subject.type)}
                             </Typography>
                             {rule.subject.attributes.length > 0 && (
-                              <Box sx={{ mt: 1.5 }}>
-                                <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 500 }}>
+                              <Box sx={{ mt: 1 }}>
+                                <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 500, fontSize: '0.65rem' }}>
                                   Attributes:
                                 </Typography>
                                 {rule.subject.attributes.map((attr, i) => (
-                                  <Box key={i} sx={{ mt: 0.5 }}>
+                                  <Box key={i} sx={{ mt: 0.3 }}>
                                     <Chip 
                                       label={`${getAttributeDisplayName(attr.name)}: ${Array.isArray(attr.value) ? attr.value.join(', ') : attr.value}`}
                                       size="small"
                                       variant="outlined"
-                                      sx={{ fontSize: '0.7rem' }}
+                                      sx={{ fontSize: '0.65rem', height: '20px' }}
                                     />
                                   </Box>
                                 ))}
@@ -550,52 +549,49 @@ export default function PolicyViewPage() {
                         
                         <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                           <Box sx={{ 
-                            p: 2, 
+                            p: 1.5, 
                             bgcolor: 'white', 
                             borderRadius: 1, 
                             border: '1px solid', 
                             borderColor: 'grey.200',
                             height: '100%'
                           }}>
-                            <Typography variant="overline" sx={{ color: 'warning.main', fontWeight: 600, fontSize: '0.75rem' }}>
+                            <Typography variant="overline" sx={{ color: 'warning.main', fontWeight: 600, fontSize: '0.7rem' }}>
                               Action
                             </Typography>
-                            <Typography variant="body1" fontWeight="500" sx={{ mt: 1 }}>
+                            <Typography variant="body2" fontWeight="500" sx={{ mt: 0.5 }}>
                               {getActionDisplayName(rule.action.name)}
-                            </Typography>
-                            <Typography variant="caption" color="text.secondary">
-                              ({rule.action.name})
                             </Typography>
                           </Box>
                         </Grid>
                         
                         <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                           <Box sx={{ 
-                            p: 2, 
+                            p: 1.5, 
                             bgcolor: 'white', 
                             borderRadius: 1, 
                             border: '1px solid', 
                             borderColor: 'grey.200',
                             height: '100%'
                           }}>
-                            <Typography variant="overline" sx={{ color: 'secondary.main', fontWeight: 600, fontSize: '0.75rem' }}>
+                            <Typography variant="overline" sx={{ color: 'secondary.main', fontWeight: 600, fontSize: '0.7rem' }}>
                               Resource
                             </Typography>
-                            <Typography variant="body1" fontWeight="500" sx={{ mt: 1 }}>
+                            <Typography variant="body2" fontWeight="500" sx={{ mt: 0.5 }}>
                               {getResourceDisplayName(rule.object.type)}
                             </Typography>
                             {rule.object.attributes.length > 0 && (
-                              <Box sx={{ mt: 1.5 }}>
-                                <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 500 }}>
+                              <Box sx={{ mt: 1 }}>
+                                <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 500, fontSize: '0.65rem' }}>
                                   Attributes:
                                 </Typography>
                                 {rule.object.attributes.map((attr, i) => (
-                                  <Box key={i} sx={{ mt: 0.5 }}>
+                                  <Box key={i} sx={{ mt: 0.3 }}>
                                     <Chip 
                                       label={`${getAttributeDisplayName(attr.name)}: ${Array.isArray(attr.value) ? attr.value.join(', ') : attr.value}`}
                                       size="small"
                                       variant="outlined"
-                                      sx={{ fontSize: '0.7rem' }}
+                                      sx={{ fontSize: '0.65rem', height: '20px' }}
                                     />
                                   </Box>
                                 ))}
@@ -606,31 +602,31 @@ export default function PolicyViewPage() {
                         
                         <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                           <Box sx={{ 
-                            p: 2, 
+                            p: 1.5, 
                             bgcolor: 'white', 
                             borderRadius: 1, 
                             border: '1px solid', 
                             borderColor: 'grey.200',
                             height: '100%'
                           }}>
-                            <Typography variant="overline" sx={{ color: 'success.main', fontWeight: 600, fontSize: '0.75rem' }}>
+                            <Typography variant="overline" sx={{ color: 'success.main', fontWeight: 600, fontSize: '0.7rem' }}>
                               Effect
                             </Typography>
-                            <Box sx={{ mt: 1 }}>
+                            <Box sx={{ mt: 0.5 }}>
                               <Chip 
                                 label={policy.effect}
                                 size="small"
                                 color={policy.effect === 'Allow' ? 'success' : 'error'}
-                                sx={{ fontWeight: 600 }}
+                                sx={{ fontWeight: 600, fontSize: '0.7rem', height: '22px' }}
                               />
                             </Box>
                             {rule.conditions.length > 0 && (
-                              <Box sx={{ mt: 1.5 }}>
-                                <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 500 }}>
+                              <Box sx={{ mt: 1 }}>
+                                <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 500, fontSize: '0.65rem' }}>
                                   Conditions:
                                 </Typography>
                                 {rule.conditions.map((condition, i) => (
-                                  <Typography key={i} variant="caption" display="block" sx={{ mt: 0.5 }}>
+                                  <Typography key={i} variant="caption" display="block" sx={{ mt: 0.3, fontSize: '0.65rem' }}>
                                     {condition.field} {condition.operator} {Array.isArray(condition.value) ? condition.value.join(', ') : condition.value}
                                   </Typography>
                                 ))}
@@ -723,15 +719,6 @@ export default function PolicyViewPage() {
                   </Typography>
                   
                   <Box sx={{ mt: 2, display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-                    <Box>
-                      <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 500 }}>
-                        Priority
-                      </Typography>
-                      <Typography variant="body2" fontWeight="500">
-                        {policy.priority}
-                      </Typography>
-                    </Box>
-                    
                     <Box>
                       <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 500 }}>
                         Version

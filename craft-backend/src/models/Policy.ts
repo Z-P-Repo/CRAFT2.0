@@ -37,7 +37,6 @@ export interface IPolicy extends Document {
   description: string;
   effect: 'Allow' | 'Deny';
   status: 'Active' | 'Inactive' | 'Draft';
-  priority: number;
   rules: IPolicyRule[];
   subjects: string[]; // Subject IDs this policy applies to
   resources: string[]; // Resource/Object IDs this policy applies to
@@ -168,13 +167,6 @@ const PolicySchema = new Schema<IPolicy>({
     default: 'Draft',
     index: true,
   },
-  priority: {
-    type: Number,
-    default: 1,
-    min: 1,
-    max: 100,
-    index: true,
-  },
   rules: [PolicyRuleSchema],
   subjects: [{
     type: String,
@@ -221,7 +213,7 @@ const PolicySchema = new Schema<IPolicy>({
 
 // Indexes for better query performance
 PolicySchema.index({ name: 1, effect: 1 });
-PolicySchema.index({ status: 1, priority: 1 });
+PolicySchema.index({ status: 1 });
 PolicySchema.index({ effect: 1, status: 1 });
 PolicySchema.index({ 'metadata.tags': 1 });
 PolicySchema.index({ subjects: 1 });

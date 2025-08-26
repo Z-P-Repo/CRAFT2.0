@@ -126,7 +126,6 @@ export interface Policy {
   effect: 'allow' | 'deny';
   conditions?: PolicyRule[];
   rules?: PolicyRule[];
-  priority: number;
   active: boolean;
   createdBy: string;
   createdAt?: string;

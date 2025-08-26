@@ -75,7 +75,6 @@ export interface IPolicy {
   effect: 'allow' | 'deny';
   conditions?: IPolicyRule[];
   rules?: IPolicyRule[];
-  priority: number;
   active: boolean;
   createdBy: string;
   createdAt?: Date;

@@ -31,6 +31,11 @@ import {
   Container,
   IconButton,
   Autocomplete,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Checkbox,
 } from '@mui/material';
 import {
   Security as SecurityIcon,
@@ -174,18 +179,26 @@ export default function CreatePolicyPage() {
   const [attributes, setAttributes] = useState<Attribute[]>([]);
   const [loadingDropdownData, setLoadingDropdownData] = useState(false);
 
-  // Create attribute/value modals
-  const [showCreateAttribute, setShowCreateAttribute] = useState(false);
+  // Create attribute modal states (original modal)
+  const [open, setOpen] = useState(false);
+  const [selectedAttribute, setSelectedAttribute] = useState<any | null>(null);
+  const [attributeDisplayName, setAttributeDisplayName] = useState('');
+  const [attributeDisplayNameError, setAttributeDisplayNameError] = useState('');
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  const [selectedDataType, setSelectedDataType] = useState('');
+  const [permittedValues, setPermittedValues] = useState('');
+  const [parsedValues, setParsedValues] = useState<any[]>([]);
+  const [booleanValues, setBooleanValues] = useState<string[]>([]);
+  const [numberValues, setNumberValues] = useState<string[]>([]);
+  const [stringValues, setStringValues] = useState<string[]>([]);
+  const [dateValues, setDateValues] = useState<string[]>([]);
+  const [dateInputType, setDateInputType] = useState<'single' | 'range' | 'period'>('single');
+  const [attributeDescription, setAttributeDescription] = useState('');
+  const [isAttributeUsedInPolicies, setIsAttributeUsedInPolicies] = useState(false);
+  const [existingValues, setExistingValues] = useState<any[]>([]);
+  
+  // Create value modal (keep existing)
   const [showCreateValue, setShowCreateValue] = useState<string | null>(null);
-  const [newAttributeData, setNewAttributeData] = useState({
-    name: '',
-    displayName: '',
-    description: '',
-    dataType: 'string' as 'string' | 'number' | 'boolean' | 'date',
-    isRequired: false,
-    isMultiValue: false,
-    enumValues: [] as string[]
-  });
   const [newValueData, setNewValueData] = useState('');
 
   // Fetch dropdown data
@@ -290,18 +303,145 @@ export default function CreatePolicyPage() {
   };
 
   // Create new attribute
-  const handleCreateAttribute = async () => {
+  // Helper functions for original modal
+  const canOnlyAddValues = () => {
+    return isAttributeUsedInPolicies && (selectedDataType === 'array' || selectedDataType === 'object');
+  };
+  
+  const isFieldDisabled = () => {
+    return isAttributeUsedInPolicies && selectedDataType !== 'array' && selectedDataType !== 'object';
+  };
+
+  // Original modal functions
+  const handleClickOpen = async () => {
+    setSelectedAttribute(null);
+    setAttributeDisplayName('');
+    setAttributeDisplayNameError('');
+    setSelectedCategories([]);
+    setSelectedDataType('');
+    setAttributeDescription('');
+    setPermittedValues('');
+    setParsedValues([]);
+    setBooleanValues([]);
+    setNumberValues([]);
+    setStringValues([]);
+    setDateValues([]);
+    setDateInputType('single');
+    setExistingValues([]);
+    setIsAttributeUsedInPolicies(false);
+    setOpen(true);
+  };
+
+  const handleClose = () => {
+    setOpen(false);
+    setSelectedAttribute(null);
+    setAttributeDisplayName('');
+    setAttributeDisplayNameError('');
+    setSelectedCategories([]);
+    setSelectedDataType('');
+    setAttributeDescription('');
+    setPermittedValues('');
+    setParsedValues([]);
+    setBooleanValues([]);
+    setNumberValues([]);
+    setStringValues([]);
+    setDateValues([]);
+    setDateInputType('single');
+    setExistingValues([]);
+    setIsAttributeUsedInPolicies(false);
+  };
+
+  const validateAttributeDisplayName = (value: string) => {
+    if (!value) {
+      return 'Display name is required';
+    }
+    if (value.includes(' ')) {
+      return 'Display name cannot contain spaces';
+    }
+    if (!/^[a-zA-Z][a-zA-Z0-9_]*$/.test(value)) {
+      return 'Display name must start with a letter and contain only letters, numbers, and underscores';
+    }
+    return '';
+  };
+
+  const handleAttributeDisplayNameChange = (value: string) => {
+    setAttributeDisplayName(value);
+    setAttributeDisplayNameError(validateAttributeDisplayName(value));
+  };
+
+  const handleDataTypeChange = (dataType: string) => {
+    setSelectedDataType(dataType);
+    setPermittedValues('');
+    setParsedValues([]);
+    setBooleanValues([]);
+    setNumberValues([]);
+    setStringValues([]);
+    setDateValues([]);
+    setDateInputType('single');
+  };
+
+  const handleBooleanValuesChange = (values: string[]) => {
+    setBooleanValues(values);
+    const boolValues = values.map(v => v === 'true');
+    setParsedValues(boolValues);
+    setPermittedValues(values.join(', '));
+  };
+
+  const handleStringValuesAdd = (value: string) => {
+    if (value.trim() && !stringValues.includes(value.trim())) {
+      const newValues = [...stringValues, value.trim()];
+      setStringValues(newValues);
+      setParsedValues(newValues);
+      setPermittedValues(newValues.join(', '));
+    }
+  };
+
+  const handleStringValuesRemove = (index: number) => {
+    const newValues = stringValues.filter((_, i) => i !== index);
+    setStringValues(newValues);
+    setParsedValues(newValues);
+    setPermittedValues(newValues.join(', '));
+  };
+
+  const handleNumberValuesAdd = (value: string) => {
+    const numValue = parseFloat(value);
+    if (!isNaN(numValue) && !numberValues.includes(value.trim())) {
+      const newValues = [...numberValues, value.trim()];
+      setNumberValues(newValues);
+      setParsedValues(newValues.map(v => parseFloat(v)));
+      setPermittedValues(newValues.join(', '));
+    }
+  };
+
+  const handleNumberValuesRemove = (index: number) => {
+    const newValues = numberValues.filter((_, i) => i !== index);
+    setNumberValues(newValues);
+    setParsedValues(newValues.map(v => parseFloat(v)));
+    setPermittedValues(newValues.join(', '));
+  };
+
+  const handleAttributeSubmit = async () => {
+    if (!attributeDisplayName || attributeDisplayNameError) return;
+
     try {
-      const attributeData = {
-        name: newAttributeData.name,
-        displayName: newAttributeData.displayName,
-        description: newAttributeData.description,
-        category: 'subject',
-        dataType: newAttributeData.dataType,
-        isRequired: newAttributeData.isRequired,
-        isMultiValue: newAttributeData.isMultiValue,
+      setIsSubmitting(true);
+      
+      const apiData = {
+        id: attributeDisplayName.toLowerCase().replace(/[^a-zA-Z0-9_]/g, '_'),
+        name: attributeDisplayName.toLowerCase().replace(/[^a-zA-Z0-9_]/g, '_'),
+        displayName: attributeDisplayName,
+        description: attributeDescription,
+        category: selectedCategories[0] || 'subject',
+        dataType: selectedDataType,
+        isRequired: false,
+        isMultiValue: false,
         constraints: {
-          enumValues: newAttributeData.enumValues.length > 0 ? newAttributeData.enumValues : undefined
+          enumValues: parsedValues.length > 0 ? parsedValues : (
+            selectedDataType === 'string' ? stringValues.filter(v => v.trim() !== '') :
+            selectedDataType === 'number' ? numberValues.map(v => parseFloat(v)).filter(v => !isNaN(v)) :
+            selectedDataType === 'boolean' ? booleanValues.map(v => v === 'true') :
+            []
+          )
         },
         validation: {},
         metadata: {
@@ -315,23 +455,16 @@ export default function CreatePolicyPage() {
         active: true
       };
 
-      const response = await apiClient.post('/attributes', attributeData);
+      const response = await apiClient.post('/attributes', apiData);
       if (response.success) {
         await fetchDropdownData();
-        setShowCreateAttribute(false);
-        setNewAttributeData({
-          name: '',
-          displayName: '',
-          description: '',
-          dataType: 'string',
-          isRequired: false,
-          isMultiValue: false,
-          enumValues: []
-        });
+        handleClose();
       }
     } catch (error) {
       console.error('Error creating attribute:', error);
       setError('Failed to create attribute. Please try again.');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -432,7 +565,6 @@ export default function CreatePolicyPage() {
         description: description?.trim() || '',
         effect: 'Allow' as const,
         status: 'Draft' as const,
-        priority: 100,
         rules,
         subjects: [selectedSubject],
         resources: selectedResources,
@@ -589,7 +721,10 @@ export default function CreatePolicyPage() {
                             size="small" 
                             variant="outlined"
                             startIcon={<AddIcon />}
-                            onClick={() => setShowCreateAttribute(true)}
+                            onClick={() => {
+                              console.log('Policy Creation - Add Attribute clicked');
+                              handleClickOpen();
+                            }}
                             sx={{ fontSize: '0.75rem' }}
                           >
                             Add Attribute
@@ -1048,76 +1183,68 @@ export default function CreatePolicyPage() {
             <Grid container spacing={3}>
               <Grid size={{ xs: 12 }}>
                 {/* Human-Readable Policy Statement */}
-                <Paper sx={{ p: 4, bgcolor: 'primary.50', border: '2px solid', borderColor: 'primary.200', mb: 3 }}>
-                  <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2, mb: 2 }}>
-                    <SecurityIcon sx={{ color: 'primary.main', fontSize: 28, mt: 0.5 }} />
-                    <Box>
-                      <Typography variant="h6" color="primary.main" fontWeight="700" gutterBottom>
-                        "{displayName}" Policy
-                      </Typography>
-                      {description && (
-                        <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic', mb: 2 }}>
-                          {description}
-                        </Typography>
+                <Card sx={{ 
+                  mb: 3, 
+                  borderRadius: 2,
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+                  border: '1px solid',
+                  borderColor: 'grey.200'
+                }}>
+                  <Box sx={{ 
+                    p: 4,
+                    bgcolor: 'grey.50', 
+                    borderRadius: 1,
+                    border: '1px solid',
+                    borderColor: 'grey.200'
+                  }}>
+                    <Typography component="div" variant="body1" sx={{ lineHeight: 1.8, fontSize: '1.1rem' }}>
+                      This policy <strong style={{ color: '#2e7d32' }}>
+                        ALLOWS
+                      </strong>{' '}
+                      <strong style={{ color: '#1976d2' }}>
+                        {subjects.find(s => s.id === selectedSubject)?.displayName}
+                      </strong>
+                      {Object.keys(selectedSubjectAttributes).length > 0 && (
+                        <span>
+                          {' '}(when{' '}
+                          {Object.entries(selectedSubjectAttributes)
+                            .filter(([_, value]) => value !== '' && value !== null && value !== undefined)
+                            .map(([attrId, value], index, array) => {
+                              const attr = attributes.find(a => a.id === attrId);
+                              if (!attr) return '';
+                              const formattedValue = Array.isArray(value) ? value.join(' or ') : value;
+                              const condition = `${attr.displayName.toLowerCase()} is ${formattedValue}`;
+                              if (index === array.length - 1 && array.length > 1) {
+                                return `and ${condition}`;
+                              }
+                              return condition;
+                            })
+                            .filter(Boolean)
+                            .join(', ')}
+                          )
+                        </span>
                       )}
-                      
-                      {/* Main Policy Statement */}
-                      <Box sx={{ 
-                        bgcolor: 'white', 
-                        p: 3, 
-                        borderRadius: 2, 
-                        border: '1px solid', 
-                        borderColor: 'primary.100',
-                        boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
-                      }}>
-                        <Typography component="div" variant="body1" sx={{ lineHeight: 1.8, fontSize: '1.1rem' }}>
-                          This policy <strong style={{ color: '#2e7d32' }}>ALLOWS</strong>{' '}
-                          <strong style={{ color: '#1976d2' }}>
-                            {subjects.find(s => s.id === selectedSubject)?.displayName}
-                          </strong>
-                          {Object.keys(selectedSubjectAttributes).length > 0 && (
-                            <span>
-                              {' '}(when{' '}
-                              {Object.entries(selectedSubjectAttributes)
-                                .filter(([_, value]) => value !== '' && value !== null && value !== undefined)
-                                .map(([attrId, value], index, array) => {
-                                  const attr = attributes.find(a => a.id === attrId);
-                                  if (!attr) return '';
-                                  const formattedValue = Array.isArray(value) ? value.join(' or ') : value;
-                                  const condition = `${attr.displayName.toLowerCase()} is ${formattedValue}`;
-                                  if (index === array.length - 1 && array.length > 1) {
-                                    return `and ${condition}`;
-                                  }
-                                  return condition;
-                                })
-                                .filter(Boolean)
-                                .join(', ')}
-                              )
-                            </span>
-                          )}
-                          {' '}to perform{' '}
-                          <strong style={{ color: '#ed6c02' }}>
-                            {selectedActions.length === 1 
-                              ? actions.find(a => a.id === selectedActions[0])?.displayName?.toLowerCase()
-                              : selectedActions.length === 2
-                                ? `${actions.find(a => a.id === selectedActions[0])?.displayName?.toLowerCase()} and ${actions.find(a => a.id === selectedActions[1])?.displayName?.toLowerCase()}`
-                                : `${selectedActions.slice(0, -1).map(id => actions.find(a => a.id === id)?.displayName?.toLowerCase()).join(', ')}, and ${actions.find(a => a.id === selectedActions[selectedActions.length - 1])?.displayName?.toLowerCase()}`
-                            }
-                          </strong>
-                          {' '}actions on{' '}
-                          <strong style={{ color: '#9c27b0' }}>
-                            {selectedResources.length === 1
-                              ? resources.find(r => r.id === selectedResources[0])?.displayName
-                              : selectedResources.length === 2
-                                ? `${resources.find(r => r.id === selectedResources[0])?.displayName} and ${resources.find(r => r.id === selectedResources[1])?.displayName}`
-                                : `${selectedResources.slice(0, -1).map(id => resources.find(r => r.id === id)?.displayName).join(', ')}, and ${resources.find(r => r.id === selectedResources[selectedResources.length - 1])?.displayName}`
-                            }
-                          </strong>.
-                        </Typography>
-                      </Box>
-                    </Box>
+                      {' '}to perform{' '}
+                      <strong style={{ color: '#f57c00' }}>
+                        {selectedActions.length === 1 
+                          ? actions.find(a => a.id === selectedActions[0])?.displayName?.toLowerCase()
+                          : selectedActions.length === 2
+                            ? `${actions.find(a => a.id === selectedActions[0])?.displayName?.toLowerCase()} and ${actions.find(a => a.id === selectedActions[1])?.displayName?.toLowerCase()}`
+                            : `${selectedActions.slice(0, -1).map(id => actions.find(a => a.id === id)?.displayName?.toLowerCase()).join(', ')}, and ${actions.find(a => a.id === selectedActions[selectedActions.length - 1])?.displayName?.toLowerCase()}`
+                        }
+                      </strong>
+                      {' '}actions on{' '}
+                      <strong style={{ color: '#7b1fa2' }}>
+                        {selectedResources.length === 1
+                          ? resources.find(r => r.id === selectedResources[0])?.displayName
+                          : selectedResources.length === 2
+                            ? `${resources.find(r => r.id === selectedResources[0])?.displayName} and ${resources.find(r => r.id === selectedResources[1])?.displayName}`
+                            : `${selectedResources.slice(0, -1).map(id => resources.find(r => r.id === id)?.displayName).join(', ')}, and ${resources.find(r => r.id === selectedResources[selectedResources.length - 1])?.displayName}`
+                        }
+                      </strong>.
+                    </Typography>
                   </Box>
-                </Paper>
+                </Card>
 
                 {/* Technical Details */}
                 <Paper sx={{ p: 3, bgcolor: 'grey.50' }}>
@@ -1351,6 +1478,301 @@ export default function CreatePolicyPage() {
             </Box>
           </Box>
         </Paper>
+
+        {/* Create Attribute Dialog (Original Modal) */}
+        <Dialog
+          open={open}
+          onClose={handleClose}
+          maxWidth="sm"
+          fullWidth
+          PaperProps={{
+            sx: {
+              borderRadius: 2,
+              boxShadow: '0 8px 32px rgba(0,0,0,0.12)'
+            }
+          }}
+        >
+          <DialogTitle sx={{
+            pb: 1,
+            pt: 2.5,
+            px: 3,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between'
+          }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <AttributeIcon color="primary" />
+              <Typography variant="h6" fontWeight="600" color="text.primary">
+                New Attribute
+              </Typography>
+            </Box>
+            <IconButton
+              onClick={handleClose}
+              size="small"
+              sx={{
+                color: 'grey.500',
+                '&:hover': {
+                  bgcolor: 'grey.100'
+                }
+              }}
+            >
+              <CloseIcon fontSize="small" />
+            </IconButton>
+          </DialogTitle>
+
+          <DialogContent sx={{ px: 3, pt: 2, pb: 2 }}>
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5, mt: 1 }}>
+              <TextField
+                fullWidth
+                label="Display Name"
+                value={attributeDisplayName}
+                onChange={(e) => handleAttributeDisplayNameChange(e.target.value)}
+                variant="outlined"
+                placeholder="e.g., department"
+                error={!!attributeDisplayNameError}
+                helperText={attributeDisplayNameError || 'No spaces allowed, use camelCase or snake_case'}
+              />
+
+              <TextField
+                fullWidth
+                label="Description"
+                value={attributeDescription}
+                onChange={(e) => setAttributeDescription(e.target.value)}
+                variant="outlined"
+                placeholder="Brief description of the attribute"
+              />
+
+              <Box sx={{ display: 'flex', gap: 2 }}>
+                <FormControl fullWidth>
+                  <InputLabel>Category</InputLabel>
+                  <Select
+                    multiple
+                    value={selectedCategories}
+                    onChange={(e) => setSelectedCategories(typeof e.target.value === 'string' ? e.target.value.split(',') : e.target.value)}
+                    label="Category"
+                    renderValue={(selected) => (
+                      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                        {selected.map((value) => (
+                          <Chip key={value} label={value} size="small" />
+                        ))}
+                      </Box>
+                    )}
+                  >
+                    <MenuItem value="subject">
+                      <Checkbox checked={selectedCategories.indexOf('subject') > -1} />
+                      <Typography>Subject</Typography>
+                    </MenuItem>
+                    <MenuItem value="resource">
+                      <Checkbox checked={selectedCategories.indexOf('resource') > -1} />
+                      <Typography>Resource</Typography>
+                    </MenuItem>
+                    <MenuItem value="action">
+                      <Checkbox checked={selectedCategories.indexOf('action') > -1} />
+                      <Typography>Action</Typography>
+                    </MenuItem>
+                    <MenuItem value="environment">
+                      <Checkbox checked={selectedCategories.indexOf('environment') > -1} />
+                      <Typography>Environment</Typography>
+                    </MenuItem>
+                  </Select>
+                </FormControl>
+
+                <FormControl fullWidth>
+                  <InputLabel>Data Type</InputLabel>
+                  <Select
+                    value={selectedDataType}
+                    onChange={(e) => handleDataTypeChange(e.target.value)}
+                    label="Data Type"
+                  >
+                    <MenuItem value="string">String</MenuItem>
+                    <MenuItem value="number">Number</MenuItem>
+                    <MenuItem value="boolean">Boolean</MenuItem>
+                    <MenuItem value="date">Date</MenuItem>
+                    <MenuItem value="array">Array</MenuItem>
+                    <MenuItem value="object">Object</MenuItem>
+                  </Select>
+                </FormControl>
+              </Box>
+
+              {selectedDataType && (
+                <Box>
+                  <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600 }}>
+                    Permitted Values
+                  </Typography>
+                  
+                  {/* String Values */}
+                  {selectedDataType === 'string' && (
+                    <Box>
+                      <Box sx={{ display: 'flex', gap: 1, mb: 1 }}>
+                        <TextField
+                          fullWidth
+                          size="small"
+                          placeholder="Enter a string value"
+                          onKeyPress={(e) => {
+                            if (e.key === 'Enter') {
+                              const target = e.target as HTMLInputElement;
+                              handleStringValuesAdd(target.value);
+                              target.value = '';
+                            }
+                          }}
+                        />
+                        <Button
+                          variant="outlined"
+                          size="small"
+                          onClick={(e) => {
+                            const input = (e.target as HTMLElement).parentElement?.querySelector('input') as HTMLInputElement;
+                            if (input) {
+                              handleStringValuesAdd(input.value);
+                              input.value = '';
+                            }
+                          }}
+                        >
+                          Add
+                        </Button>
+                      </Box>
+                      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, minHeight: '32px' }}>
+                        {stringValues.map((value, index) => (
+                          <Chip
+                            key={index}
+                            label={value}
+                            size="small"
+                            color="primary"
+                            onDelete={() => handleStringValuesRemove(index)}
+                          />
+                        ))}
+                      </Box>
+                      <Typography variant="caption" color="text.secondary">
+                        Press Enter or click Add to add values
+                      </Typography>
+                    </Box>
+                  )}
+
+                  {/* Boolean Values */}
+                  {selectedDataType === 'boolean' && (
+                    <FormControl fullWidth>
+                      <InputLabel>Select Boolean Values</InputLabel>
+                      <Select
+                        multiple
+                        value={booleanValues}
+                        onChange={(e) => handleBooleanValuesChange(typeof e.target.value === 'string' ? e.target.value.split(',') : e.target.value)}
+                        label="Select Boolean Values"
+                        renderValue={(selected) => (
+                          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                            {selected.map((value) => (
+                              <Chip key={value} label={value} size="small" color="primary" />
+                            ))}
+                          </Box>
+                        )}
+                      >
+                        <MenuItem value="true">true</MenuItem>
+                        <MenuItem value="false">false</MenuItem>
+                      </Select>
+                      <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5 }}>
+                        Select which boolean values are allowed
+                      </Typography>
+                    </FormControl>
+                  )}
+
+                  {/* Number Values */}
+                  {selectedDataType === 'number' && (
+                    <Box>
+                      <Box sx={{ display: 'flex', gap: 1, mb: 1 }}>
+                        <TextField
+                          fullWidth
+                          size="small"
+                          type="number"
+                          placeholder="Enter a number value"
+                          onKeyPress={(e) => {
+                            if (e.key === 'Enter') {
+                              const target = e.target as HTMLInputElement;
+                              handleNumberValuesAdd(target.value);
+                              target.value = '';
+                            }
+                          }}
+                        />
+                        <Button
+                          variant="outlined"
+                          size="small"
+                          onClick={(e) => {
+                            const input = (e.target as HTMLElement).parentElement?.querySelector('input') as HTMLInputElement;
+                            if (input) {
+                              handleNumberValuesAdd(input.value);
+                              input.value = '';
+                            }
+                          }}
+                        >
+                          Add
+                        </Button>
+                      </Box>
+                      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, minHeight: '32px' }}>
+                        {numberValues.map((value, index) => (
+                          <Chip
+                            key={index}
+                            label={value}
+                            size="small"
+                            color="secondary"
+                            onDelete={() => handleNumberValuesRemove(index)}
+                          />
+                        ))}
+                      </Box>
+                      <Typography variant="caption" color="text.secondary">
+                        Enter numeric values only
+                      </Typography>
+                    </Box>
+                  )}
+
+                  {/* Simplified input for other data types */}
+                  {(selectedDataType === 'date' || selectedDataType === 'array' || selectedDataType === 'object') && (
+                    <TextField
+                      fullWidth
+                      size="small"
+                      placeholder={`Enter ${selectedDataType} values (comma-separated)`}
+                      value={permittedValues}
+                      onChange={(e) => setPermittedValues(e.target.value)}
+                    />
+                  )}
+                </Box>
+              )}
+            </Box>
+          </DialogContent>
+
+          <DialogActions sx={{
+            px: 3,
+            pb: 3,
+            pt: 1,
+            gap: 1.5
+          }}>
+            <Button
+              onClick={handleClose}
+              variant="outlined"
+              disabled={isSubmitting}
+              sx={{
+                borderColor: 'grey.300',
+                color: 'text.secondary',
+                '&:hover': {
+                  borderColor: 'grey.400',
+                  bgcolor: 'grey.50'
+                }
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleAttributeSubmit}
+              variant="contained"
+              disabled={!attributeDisplayName || !!attributeDisplayNameError || isSubmitting}
+              sx={{
+                bgcolor: 'primary.main',
+                '&:hover': {
+                  bgcolor: 'primary.dark'
+                }
+              }}
+            >
+              {isSubmitting ? 'Creating...' : 'Create Attribute'}
+            </Button>
+          </DialogActions>
+        </Dialog>
+
     </DashboardLayout>
   );
 }

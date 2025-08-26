@@ -247,6 +247,7 @@ export default function AttributesPage() {
     setViewAttribute(null);
   };
 
+
   const handleDeleteOpen = (attribute: Attribute) => {
     setDeleteAttribute(attribute);
     setDeleteOpen(true);
@@ -798,13 +799,26 @@ export default function AttributesPage() {
               Attributes
             </Typography>
           </Box>
-          <Box sx={{ textAlign: 'right' }}>
-            <Typography variant="h6" color="primary.main" fontWeight="600">
-              {loading ? '...' : total}
-            </Typography>
-            <Typography variant="caption" color="text.secondary">
-              Total Attributes
-            </Typography>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+            <Button
+              variant="contained"
+              startIcon={<AddIcon />}
+              onClick={() => {
+                console.log('Attributes - Create Attribute clicked');
+                handleClickOpen();
+              }}
+              sx={{ textTransform: 'none' }}
+            >
+              Create Attribute
+            </Button>
+            <Box sx={{ textAlign: 'right' }}>
+              <Typography variant="h6" color="primary.main" fontWeight="600">
+                {loading ? '...' : total}
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                Total Attributes
+              </Typography>
+            </Box>
           </Box>
         </Box>
         <Typography variant="body2" color="text.secondary">
@@ -2500,6 +2514,7 @@ export default function AttributesPage() {
           </Button>
         </DialogActions>
       </Dialog>
+
     </DashboardLayout>
   );
 }
