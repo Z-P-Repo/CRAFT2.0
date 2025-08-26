@@ -210,28 +210,29 @@ export default function PolicyViewPage() {
     return effect === 'Allow' ? 'success' : 'error';
   };
 
+  // Lookup functions for human-readable names
+  const getSubjectDisplayName = (subjectId: string) => {
+    const subject = subjects.find(s => s.id === subjectId);
+    return subject ? subject.displayName : `Subject (${subjectId})`;
+  };
+
+  const getActionDisplayName = (actionId: string) => {
+    const action = actions.find(a => a.id === actionId);
+    return action ? action.displayName : `Action (${actionId})`;
+  };
+
+  const getResourceDisplayName = (resourceId: string) => {
+    const resource = resources.find(r => r.id === resourceId);
+    return resource ? resource.displayName : `Resource (${resourceId})`;
+  };
+
+  const getAttributeDisplayName = (attrName: string) => {
+    const attribute = attributes.find(a => a.name === attrName || a.id === attrName);
+    return attribute ? attribute.displayName : attrName;
+  };
+
   const renderHumanReadablePolicy = () => {
     if (!policy || !policy.rules.length) return null;
-
-    const getSubjectDisplayName = (subjectId: string) => {
-      const subject = subjects.find(s => s.id === subjectId);
-      return subject ? subject.displayName : `Subject (${subjectId})`;
-    };
-
-    const getActionDisplayName = (actionId: string) => {
-      const action = actions.find(a => a.id === actionId);
-      return action ? action.displayName : `Action (${actionId})`;
-    };
-
-    const getResourceDisplayName = (resourceId: string) => {
-      const resource = resources.find(r => r.id === resourceId);
-      return resource ? resource.displayName : `Resource (${resourceId})`;
-    };
-
-    const getAttributeDisplayName = (attrName: string) => {
-      const attribute = attributes.find(a => a.name === attrName || a.id === attrName);
-      return attribute ? attribute.displayName : attrName;
-    };
 
     // Debug logging (can be removed later)
     console.log('Rendering policy with data:', {
@@ -484,246 +485,355 @@ export default function PolicyViewPage() {
         {/* Human-Readable Policy Statement */}
         {renderHumanReadablePolicy()}
 
-        {/* Policy Details Grid */}
-        <Grid container spacing={3}>
-          {/* Basic Information */}
-          <Grid size={{ xs: 12, md: 4 }}>
-            <Card sx={{ height: '100%' }}>
-              <Box sx={{ p: 3 }}>
-                <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <InfoIcon color="primary" />
-                  Basic Information
-                </Typography>
-                <Divider sx={{ mb: 2 }} />
-                
-                <Box sx={{ mb: 2 }}>
-                  <Typography variant="caption" color="text.secondary">
-                    Priority
-                  </Typography>
-                  <Typography variant="body1" fontWeight="500">
-                    {policy.priority}
-                  </Typography>
-                </Box>
-                
-                <Box sx={{ mb: 2 }}>
-                  <Typography variant="caption" color="text.secondary">
-                    Rules Count
-                  </Typography>
-                  <Typography variant="body1" fontWeight="500">
-                    {policy.rules.length}
-                  </Typography>
-                </Box>
-                
-                <Box sx={{ mb: 2 }}>
-                  <Typography variant="caption" color="text.secondary">
-                    Version
-                  </Typography>
-                  <Typography variant="body1" fontWeight="500">
-                    {policy.metadata.version}
-                  </Typography>
-                </Box>
-                
-                <Box sx={{ mb: 2 }}>
-                  <Typography variant="caption" color="text.secondary">
-                    System Policy
-                  </Typography>
-                  <Typography variant="body1" fontWeight="500">
-                    {policy.metadata.isSystem ? (
-                      <Chip label="Yes" size="small" color="warning" />
-                    ) : (
-                      <Chip label="No" size="small" color="default" />
-                    )}
-                  </Typography>
-                </Box>
-                
-                {policy.metadata.tags.length > 0 && (
-                  <Box>
-                    <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 1 }}>
-                      Tags
-                    </Typography>
-                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                      {policy.metadata.tags.map((tag, index) => (
-                        <Chip key={index} label={tag} size="small" variant="outlined" />
-                      ))}
-                    </Box>
-                  </Box>
-                )}
-              </Box>
-            </Card>
-          </Grid>
-
-          {/* Timestamps */}
-          <Grid size={{ xs: 12, md: 4 }}>
-            <Card sx={{ height: '100%' }}>
-              <Box sx={{ p: 3 }}>
-                <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <ScheduleIcon color="primary" />
-                  Timeline
-                </Typography>
-                <Divider sx={{ mb: 2 }} />
-                
-                <Box sx={{ mb: 2 }}>
-                  <Typography variant="caption" color="text.secondary">
-                    Created
-                  </Typography>
-                  <Typography variant="body2">
-                    {new Date(policy.createdAt).toLocaleString()}
-                  </Typography>
-                  <Typography variant="caption" color="text.secondary">
-                    by {policy.metadata.createdBy}
-                  </Typography>
-                </Box>
-                
-                <Box>
-                  <Typography variant="caption" color="text.secondary">
-                    Last Modified
-                  </Typography>
-                  <Typography variant="body2">
-                    {new Date(policy.updatedAt).toLocaleString()}
-                  </Typography>
-                  <Typography variant="caption" color="text.secondary">
-                    by {policy.metadata.lastModifiedBy}
-                  </Typography>
-                </Box>
-              </Box>
-            </Card>
-          </Grid>
-
-          {/* Coverage */}
-          <Grid size={{ xs: 12, md: 4 }}>
-            <Card sx={{ height: '100%' }}>
-              <Box sx={{ p: 3 }}>
-                <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <SecurityIcon color="primary" />
-                  Coverage
-                </Typography>
-                <Divider sx={{ mb: 2 }} />
-                
-                <Box sx={{ mb: 2 }}>
-                  <Typography variant="caption" color="text.secondary">
-                    Subjects ({policy.subjects.length})
-                  </Typography>
-                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 0.5 }}>
-                    {policy.subjects.map((subject, index) => (
-                      <Chip key={index} label={subject} size="small" color="primary" variant="outlined" />
-                    ))}
-                  </Box>
-                </Box>
-                
-                <Box sx={{ mb: 2 }}>
-                  <Typography variant="caption" color="text.secondary">
-                    Actions ({policy.actions.length})
-                  </Typography>
-                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 0.5 }}>
-                    {policy.actions.map((action, index) => (
-                      <Chip key={index} label={action} size="small" color="warning" variant="outlined" />
-                    ))}
-                  </Box>
-                </Box>
-                
-                <Box>
-                  <Typography variant="caption" color="text.secondary">
-                    Resources ({policy.resources.length})
-                  </Typography>
-                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 0.5 }}>
-                    {policy.resources.map((resource, index) => (
-                      <Chip key={index} label={resource} size="small" color="secondary" variant="outlined" />
-                    ))}
-                  </Box>
-                </Box>
-              </Box>
-            </Card>
-          </Grid>
-        </Grid>
 
         {/* Detailed Rules */}
         {policy.rules.length > 0 && (
-          <Box sx={{ mt: 3 }}>
-            <Typography variant="h6" gutterBottom>
-              Detailed Rules
+          <Card sx={{ mt: 3, borderRadius: 2, boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }}>
+            <Box sx={{ p: 4 }}>
+              <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 3 }}>
+                <SecurityIcon color="primary" />
+                Policy Rules
+              </Typography>
+              
+              <Grid container spacing={3}>
+                {policy.rules.map((rule, index) => (
+                  <Grid key={rule.id} size={{ xs: 12 }}>
+                    <Paper 
+                      variant="outlined" 
+                      sx={{ 
+                        p: 3, 
+                        borderRadius: 2,
+                        bgcolor: 'grey.50',
+                        border: '1px solid',
+                        borderColor: 'grey.200'
+                      }}
+                    >
+                      <Typography variant="subtitle1" fontWeight="600" gutterBottom sx={{ mb: 2, color: 'primary.main' }}>
+                        Rule {index + 1}
+                      </Typography>
+                      
+                      <Grid container spacing={3}>
+                        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+                          <Box sx={{ 
+                            p: 2, 
+                            bgcolor: 'white', 
+                            borderRadius: 1, 
+                            border: '1px solid', 
+                            borderColor: 'grey.200',
+                            height: '100%'
+                          }}>
+                            <Typography variant="overline" sx={{ color: 'primary.main', fontWeight: 600, fontSize: '0.75rem' }}>
+                              Subject
+                            </Typography>
+                            <Typography variant="body1" fontWeight="500" sx={{ mt: 1 }}>
+                              {getSubjectDisplayName(rule.subject.type)}
+                            </Typography>
+                            {rule.subject.attributes.length > 0 && (
+                              <Box sx={{ mt: 1.5 }}>
+                                <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 500 }}>
+                                  Attributes:
+                                </Typography>
+                                {rule.subject.attributes.map((attr, i) => (
+                                  <Box key={i} sx={{ mt: 0.5 }}>
+                                    <Chip 
+                                      label={`${getAttributeDisplayName(attr.name)}: ${Array.isArray(attr.value) ? attr.value.join(', ') : attr.value}`}
+                                      size="small"
+                                      variant="outlined"
+                                      sx={{ fontSize: '0.7rem' }}
+                                    />
+                                  </Box>
+                                ))}
+                              </Box>
+                            )}
+                          </Box>
+                        </Grid>
+                        
+                        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+                          <Box sx={{ 
+                            p: 2, 
+                            bgcolor: 'white', 
+                            borderRadius: 1, 
+                            border: '1px solid', 
+                            borderColor: 'grey.200',
+                            height: '100%'
+                          }}>
+                            <Typography variant="overline" sx={{ color: 'warning.main', fontWeight: 600, fontSize: '0.75rem' }}>
+                              Action
+                            </Typography>
+                            <Typography variant="body1" fontWeight="500" sx={{ mt: 1 }}>
+                              {getActionDisplayName(rule.action.name)}
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary">
+                              ({rule.action.name})
+                            </Typography>
+                          </Box>
+                        </Grid>
+                        
+                        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+                          <Box sx={{ 
+                            p: 2, 
+                            bgcolor: 'white', 
+                            borderRadius: 1, 
+                            border: '1px solid', 
+                            borderColor: 'grey.200',
+                            height: '100%'
+                          }}>
+                            <Typography variant="overline" sx={{ color: 'secondary.main', fontWeight: 600, fontSize: '0.75rem' }}>
+                              Resource
+                            </Typography>
+                            <Typography variant="body1" fontWeight="500" sx={{ mt: 1 }}>
+                              {getResourceDisplayName(rule.object.type)}
+                            </Typography>
+                            {rule.object.attributes.length > 0 && (
+                              <Box sx={{ mt: 1.5 }}>
+                                <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 500 }}>
+                                  Attributes:
+                                </Typography>
+                                {rule.object.attributes.map((attr, i) => (
+                                  <Box key={i} sx={{ mt: 0.5 }}>
+                                    <Chip 
+                                      label={`${getAttributeDisplayName(attr.name)}: ${Array.isArray(attr.value) ? attr.value.join(', ') : attr.value}`}
+                                      size="small"
+                                      variant="outlined"
+                                      sx={{ fontSize: '0.7rem' }}
+                                    />
+                                  </Box>
+                                ))}
+                              </Box>
+                            )}
+                          </Box>
+                        </Grid>
+                        
+                        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+                          <Box sx={{ 
+                            p: 2, 
+                            bgcolor: 'white', 
+                            borderRadius: 1, 
+                            border: '1px solid', 
+                            borderColor: 'grey.200',
+                            height: '100%'
+                          }}>
+                            <Typography variant="overline" sx={{ color: 'success.main', fontWeight: 600, fontSize: '0.75rem' }}>
+                              Effect
+                            </Typography>
+                            <Box sx={{ mt: 1 }}>
+                              <Chip 
+                                label={policy.effect}
+                                size="small"
+                                color={policy.effect === 'Allow' ? 'success' : 'error'}
+                                sx={{ fontWeight: 600 }}
+                              />
+                            </Box>
+                            {rule.conditions.length > 0 && (
+                              <Box sx={{ mt: 1.5 }}>
+                                <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 500 }}>
+                                  Conditions:
+                                </Typography>
+                                {rule.conditions.map((condition, i) => (
+                                  <Typography key={i} variant="caption" display="block" sx={{ mt: 0.5 }}>
+                                    {condition.field} {condition.operator} {Array.isArray(condition.value) ? condition.value.join(', ') : condition.value}
+                                  </Typography>
+                                ))}
+                              </Box>
+                            )}
+                          </Box>
+                        </Grid>
+                      </Grid>
+                    </Paper>
+                  </Grid>
+                ))}
+              </Grid>
+            </Box>
+          </Card>
+        )}
+
+        {/* Activity Details */}
+        <Card sx={{ mt: 3, borderRadius: 2, boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }}>
+          <Box sx={{ p: 4 }}>
+            <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 3 }}>
+              <ScheduleIcon color="primary" />
+              Activity Details
             </Typography>
             
-            {policy.rules.map((rule, index) => (
-              <Accordion key={rule.id} sx={{ mb: 1 }}>
-                <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                  <Typography variant="subtitle1" fontWeight="500">
-                    Rule {index + 1}: {rule.action.displayName} on {rule.object.type}
+            <Grid container spacing={3}>
+              {/* Timeline */}
+              <Grid size={{ xs: 12, md: 4 }}>
+                <Paper 
+                  variant="outlined" 
+                  sx={{ 
+                    p: 3, 
+                    borderRadius: 2,
+                    bgcolor: 'grey.50',
+                    border: '1px solid',
+                    borderColor: 'grey.200',
+                    height: '100%'
+                  }}
+                >
+                  <Typography variant="overline" sx={{ color: 'primary.main', fontWeight: 600, fontSize: '0.75rem' }}>
+                    Timeline
                   </Typography>
-                </AccordionSummary>
-                <AccordionDetails>
-                  <Grid container spacing={2}>
-                    <Grid size={{ xs: 12, md: 4 }}>
-                      <Typography variant="subtitle2" color="primary" gutterBottom>
-                        Subject
+                  
+                  <Box sx={{ mt: 2, mb: 2 }}>
+                    <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 500 }}>
+                      Created
+                    </Typography>
+                    <Typography variant="body2" fontWeight="500">
+                      {new Date(policy.createdAt).toLocaleDateString()}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      at {new Date(policy.createdAt).toLocaleTimeString()}
+                    </Typography>
+                    <Typography variant="caption" display="block" color="text.secondary">
+                      by {policy.metadata.createdBy}
+                    </Typography>
+                  </Box>
+                  
+                  <Box>
+                    <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 500 }}>
+                      Last Modified
+                    </Typography>
+                    <Typography variant="body2" fontWeight="500">
+                      {new Date(policy.updatedAt).toLocaleDateString()}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      at {new Date(policy.updatedAt).toLocaleTimeString()}
+                    </Typography>
+                    <Typography variant="caption" display="block" color="text.secondary">
+                      by {policy.metadata.lastModifiedBy}
+                    </Typography>
+                  </Box>
+                </Paper>
+              </Grid>
+
+              {/* Metadata */}
+              <Grid size={{ xs: 12, md: 4 }}>
+                <Paper 
+                  variant="outlined" 
+                  sx={{ 
+                    p: 3, 
+                    borderRadius: 2,
+                    bgcolor: 'grey.50',
+                    border: '1px solid',
+                    borderColor: 'grey.200',
+                    height: '100%'
+                  }}
+                >
+                  <Typography variant="overline" sx={{ color: 'secondary.main', fontWeight: 600, fontSize: '0.75rem' }}>
+                    Metadata
+                  </Typography>
+                  
+                  <Box sx={{ mt: 2, display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                    <Box>
+                      <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 500 }}>
+                        Priority
                       </Typography>
                       <Typography variant="body2" fontWeight="500">
-                        {rule.subject.type}
+                        {policy.priority}
                       </Typography>
-                      {rule.subject.attributes.length > 0 && (
-                        <Box sx={{ mt: 1 }}>
-                          <Typography variant="caption" color="text.secondary">
-                            Attributes:
-                          </Typography>
-                          {rule.subject.attributes.map((attr, i) => (
-                            <Typography key={i} variant="caption" display="block">
-                              {attr.name} {attr.operator} {Array.isArray(attr.value) ? attr.value.join(', ') : attr.value}
-                            </Typography>
-                          ))}
-                        </Box>
-                      )}
-                    </Grid>
+                    </Box>
                     
-                    <Grid size={{ xs: 12, md: 4 }}>
-                      <Typography variant="subtitle2" color="primary" gutterBottom>
-                        Action
+                    <Box>
+                      <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 500 }}>
+                        Version
                       </Typography>
                       <Typography variant="body2" fontWeight="500">
-                        {rule.action.displayName}
+                        {policy.metadata.version}
                       </Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        ({rule.action.name})
-                      </Typography>
-                    </Grid>
+                    </Box>
                     
-                    <Grid size={{ xs: 12, md: 4 }}>
-                      <Typography variant="subtitle2" color="primary" gutterBottom>
-                        Resource
+                    <Box>
+                      <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 500 }}>
+                        System Policy
+                      </Typography>
+                      <Box sx={{ mt: 0.5 }}>
+                        <Chip 
+                          label={policy.metadata.isSystem ? "Yes" : "No"}
+                          size="small"
+                          color={policy.metadata.isSystem ? "warning" : "default"}
+                          sx={{ fontSize: '0.7rem' }}
+                        />
+                      </Box>
+                    </Box>
+                    
+                    <Box>
+                      <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 500 }}>
+                        Custom Policy
+                      </Typography>
+                      <Box sx={{ mt: 0.5 }}>
+                        <Chip 
+                          label={policy.metadata.isCustom ? "Yes" : "No"}
+                          size="small"
+                          color={policy.metadata.isCustom ? "info" : "default"}
+                          sx={{ fontSize: '0.7rem' }}
+                        />
+                      </Box>
+                    </Box>
+                  </Box>
+                </Paper>
+              </Grid>
+
+              {/* Coverage & Tags */}
+              <Grid size={{ xs: 12, md: 4 }}>
+                <Paper 
+                  variant="outlined" 
+                  sx={{ 
+                    p: 3, 
+                    borderRadius: 2,
+                    bgcolor: 'grey.50',
+                    border: '1px solid',
+                    borderColor: 'grey.200',
+                    height: '100%'
+                  }}
+                >
+                  <Typography variant="overline" sx={{ color: 'success.main', fontWeight: 600, fontSize: '0.75rem' }}>
+                    Coverage & Tags
+                  </Typography>
+                  
+                  <Box sx={{ mt: 2, display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                    <Box>
+                      <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 500 }}>
+                        Rules Count
                       </Typography>
                       <Typography variant="body2" fontWeight="500">
-                        {rule.object.type}
+                        {policy.rules.length} rule{policy.rules.length !== 1 ? 's' : ''}
                       </Typography>
-                      {rule.object.attributes.length > 0 && (
-                        <Box sx={{ mt: 1 }}>
-                          <Typography variant="caption" color="text.secondary">
-                            Attributes:
-                          </Typography>
-                          {rule.object.attributes.map((attr, i) => (
-                            <Typography key={i} variant="caption" display="block">
-                              {attr.name} {attr.operator} {Array.isArray(attr.value) ? attr.value.join(', ') : attr.value}
-                            </Typography>
-                          ))}
-                        </Box>
-                      )}
-                    </Grid>
+                    </Box>
                     
-                    {rule.conditions.length > 0 && (
-                      <Grid size={{ xs: 12 }}>
-                        <Typography variant="subtitle2" color="primary" gutterBottom>
-                          Conditions
-                        </Typography>
-                        {rule.conditions.map((condition, i) => (
-                          <Typography key={i} variant="body2">
-                            {condition.field} {condition.operator} {Array.isArray(condition.value) ? condition.value.join(', ') : condition.value}
-                          </Typography>
+                    <Box>
+                      <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 500 }}>
+                        Subjects ({policy.subjects.length})
+                      </Typography>
+                      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 0.5 }}>
+                        {policy.subjects.slice(0, 2).map((subject, index) => (
+                          <Chip key={index} label={getSubjectDisplayName(subject)} size="small" color="primary" variant="outlined" sx={{ fontSize: '0.7rem' }} />
                         ))}
-                      </Grid>
+                        {policy.subjects.length > 2 && (
+                          <Chip label={`+${policy.subjects.length - 2} more`} size="small" variant="outlined" sx={{ fontSize: '0.7rem' }} />
+                        )}
+                      </Box>
+                    </Box>
+                    
+                    {policy.metadata.tags.length > 0 && (
+                      <Box>
+                        <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 500 }}>
+                          Tags ({policy.metadata.tags.length})
+                        </Typography>
+                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 0.5 }}>
+                          {policy.metadata.tags.slice(0, 3).map((tag, index) => (
+                            <Chip key={index} label={tag} size="small" variant="outlined" sx={{ fontSize: '0.7rem' }} />
+                          ))}
+                          {policy.metadata.tags.length > 3 && (
+                            <Chip label={`+${policy.metadata.tags.length - 3} more`} size="small" variant="outlined" sx={{ fontSize: '0.7rem' }} />
+                          )}
+                        </Box>
+                      </Box>
                     )}
-                  </Grid>
-                </AccordionDetails>
-              </Accordion>
-            ))}
+                  </Box>
+                </Paper>
+              </Grid>
+            </Grid>
           </Box>
-        )}
+        </Card>
     </DashboardLayout>
   );
 }

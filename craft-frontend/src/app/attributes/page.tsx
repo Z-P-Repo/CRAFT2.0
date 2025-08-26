@@ -166,51 +166,75 @@ export default function AttributesPage() {
   };
 
   const handleClickOpen = async (attribute?: Attribute) => {
+    console.log('🔍 DEBUGGING: Opening modal with attribute:', attribute);
     setSelectedAttribute(attribute || null);
     setDisplayName(attribute?.displayName || '');
     setDisplayNameError('');
     setSelectedCategories(attribute?.category ? [attribute.category] : []);
     setSelectedDataType(attribute?.dataType || '');
     setDescription(attribute?.description || '');
-    setPermittedValues('');
-    setParsedValues([]);
-    setBooleanValues([]);
-    setNumberValues([]);
-    setStringValues([]);
+    
+    // Initialize values immediately if attribute exists
+    if (attribute && attribute.constraints && attribute.constraints.enumValues && attribute.constraints.enumValues.length > 0) {
+      console.log('🔍 DEBUGGING: Found enumValues:', attribute.constraints.enumValues);
+      console.log('🔍 DEBUGGING: DataType:', attribute.dataType);
+      const enumValues = attribute.constraints.enumValues;
+      setExistingValues(enumValues);
+      
+      // Set values immediately based on data type
+      if (attribute.dataType === 'string') {
+        console.log('🔍 DEBUGGING: Setting string values:', enumValues);
+        setStringValues([...enumValues]);
+        setPermittedValues(enumValues.join(', '));
+        console.log('🔍 DEBUGGING: stringValues should be:', [...enumValues]);
+      } else if (attribute.dataType === 'number') {
+        setNumberValues(enumValues.map(String));
+        setPermittedValues(enumValues.join(', '));
+      } else if (attribute.dataType === 'boolean') {
+        setBooleanValues(enumValues.map(String));
+      } else if (attribute.dataType === 'array' || attribute.dataType === 'object') {
+        setParsedValues([...enumValues]);
+        // Format values as proper JSON for display
+        if (attribute.dataType === 'array') {
+          // For arrays, show as JSON array format
+          const jsonString = JSON.stringify(enumValues, null, 2);
+          setPermittedValues(jsonString);
+        } else {
+          // For objects, each value should be a separate JSON object
+          const formattedValues = enumValues.map(value => {
+            return typeof value === 'object' ? JSON.stringify(value, null, 2) : JSON.stringify(value);
+          });
+          setPermittedValues(formattedValues.join('\n'));
+        }
+      }
+    } else {
+      // Reset all values if no enumValues
+      setPermittedValues('');
+      setParsedValues([]);
+      setBooleanValues([]);
+      setNumberValues([]);
+      setStringValues([]);
+      setExistingValues([]);
+    }
+    
     setDateValues([]);
     setDateInputType('single');
     
-    // Check if attribute is used in policies and load existing values
+    // Open modal
+    setOpen(true);
+    
+    // Load usage information asynchronously (for determining if values can be edited)
     if (attribute) {
       try {
         const response = await apiClient.get(`/attributes/${attribute._id}/usage`);
         setIsAttributeUsedInPolicies(response.data.isUsedInPolicies || false);
-        
-        // Load existing permitted values
-        if (attribute.constraints.enumValues) {
-          setExistingValues(attribute.constraints.enumValues);
-          // Initialize the appropriate value arrays based on data type
-          if (attribute.dataType === 'string') {
-            setStringValues(attribute.constraints.enumValues);
-          } else if (attribute.dataType === 'number') {
-            setNumberValues(attribute.constraints.enumValues.map(String));
-          } else if (attribute.dataType === 'boolean') {
-            setBooleanValues(attribute.constraints.enumValues.map(String));
-          } else if (attribute.dataType === 'array' || attribute.dataType === 'object') {
-            setParsedValues(attribute.constraints.enumValues);
-          }
-        }
       } catch (error) {
         console.warn('Failed to check attribute usage:', error);
         setIsAttributeUsedInPolicies(false);
-        setExistingValues([]);
       }
     } else {
       setIsAttributeUsedInPolicies(false);
-      setExistingValues([]);
     }
-    
-    setOpen(true);
   };
 
   const handleViewOpen = (attribute: Attribute) => {
@@ -293,19 +317,28 @@ export default function AttributesPage() {
     try {
       switch (dataType) {
         case 'array':
-          // For arrays, parse each line as a JSON array and flatten
-          const arrayValues = input.split('\n').map(v => v.trim()).filter(v => v);
-          const allArrayValues = [];
-          for (const v of arrayValues) {
-            try {
-              const parsed = JSON.parse(v);
-              if (!Array.isArray(parsed)) throw new Error('Not an array');
-              allArrayValues.push(...parsed); // Flatten the arrays
-            } catch {
-              throw new Error(`"${v}" is not a valid JSON array`);
+          // Try to parse as a single JSON array first
+          try {
+            const parsed = JSON.parse(input);
+            if (Array.isArray(parsed)) {
+              return parsed;
             }
+          } catch {
+            // Fall back to line-by-line parsing for backward compatibility
+            const arrayValues = input.split('\n').map(v => v.trim()).filter(v => v);
+            const allArrayValues = [];
+            for (const v of arrayValues) {
+              try {
+                const parsed = JSON.parse(v);
+                if (!Array.isArray(parsed)) throw new Error('Not an array');
+                allArrayValues.push(...parsed); // Flatten the arrays
+              } catch {
+                throw new Error(`"${v}" is not a valid JSON array`);
+              }
+            }
+            return allArrayValues;
           }
-          return allArrayValues;
+          throw new Error('Invalid array format');
         case 'object':
           // For objects, parse each line as a JSON object
           const objectValues = input.split('\n').map(v => v.trim()).filter(v => v);
@@ -1776,54 +1809,119 @@ export default function AttributesPage() {
                   </Box>
                 )}
 
-                {/* Array/Object Values */}
+                {/* Array/Object Values - Compact Interface */}
                 {(selectedDataType === 'array' || selectedDataType === 'object') && (
                   <Box>
-                    {/* Existing Values Display */}
-                    {canOnlyAddValues() && existingValues.length > 0 && (
-                      <Box sx={{ mb: 2 }}>
-                        <Typography variant="body2" sx={{ mb: 1, fontWeight: 500 }}>
-                          Existing Values (cannot be modified)
-                        </Typography>
-                        <Box sx={{ 
+                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
+                      <Typography variant="body2" sx={{ fontWeight: 500, color: 'text.primary' }}>
+                        {selectedDataType === 'array' ? 'Array Values' : 'Object Values'}
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        {parsedValues.length} value{parsedValues.length !== 1 ? 's' : ''}
+                      </Typography>
+                    </Box>
+
+                    {/* Compact Values Display */}
+                    {parsedValues.length > 0 && (
+                      <Paper 
+                        variant="outlined" 
+                        sx={{ 
                           p: 2, 
-                          bgcolor: 'grey.50', 
-                          borderRadius: 1, 
-                          border: '1px solid', 
-                          borderColor: 'grey.200',
-                          fontFamily: 'monospace',
-                          fontSize: '0.875rem',
-                          maxHeight: '150px',
-                          overflow: 'auto'
-                        }}>
-                          {existingValues.map((value, index) => (
-                            <Typography key={index} variant="body2" sx={{ fontFamily: 'inherit', color: 'text.secondary' }}>
-                              {typeof value === 'object' ? JSON.stringify(value, null, 2) : value}
-                            </Typography>
-                          ))}
+                          mb: 2,
+                          maxHeight: '200px',
+                          overflow: 'auto',
+                          bgcolor: 'grey.50',
+                          border: '1px solid',
+                          borderColor: 'grey.200'
+                        }}
+                      >
+                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                          {parsedValues.map((value, index) => {
+                            const isExistingValue = canOnlyAddValues() && existingValues.includes(value);
+                            const displayValue = typeof value === 'object' ? JSON.stringify(value) : String(value);
+                            const truncatedValue = displayValue.length > 30 ? displayValue.substring(0, 30) + '...' : displayValue;
+                            
+                            return (
+                              <Chip
+                                key={index}
+                                label={truncatedValue}
+                                size="small"
+                                color={isExistingValue ? "default" : "primary"}
+                                variant={isExistingValue ? "outlined" : "filled"}
+                                onDelete={!isExistingValue ? () => {
+                                  const newValues = parsedValues.filter((_, i) => i !== index);
+                                  setParsedValues(newValues);
+                                  setPermittedValues(newValues.map(v => 
+                                    typeof v === 'object' ? JSON.stringify(v, null, 2) : String(v)
+                                  ).join('\n'));
+                                } : undefined}
+                                sx={{ 
+                                  maxWidth: '200px',
+                                  fontSize: '0.75rem',
+                                  '& .MuiChip-label': {
+                                    fontFamily: 'Monaco, "Lucida Console", monospace'
+                                  }
+                                }}
+                              />
+                            );
+                          })}
                         </Box>
-                      </Box>
+                        {parsedValues.some(value => {
+                          const displayValue = typeof value === 'object' ? JSON.stringify(value) : String(value);
+                          return displayValue.length > 30;
+                        }) && (
+                          <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
+                            * Some values are truncated. Full values are preserved when saving.
+                          </Typography>
+                        )}
+                      </Paper>
                     )}
-                    
+
+                    {/* Compact Input Interface */}
                     <TextField
                       fullWidth
-                      label={canOnlyAddValues() ? "Add New Values" : "Permitted Values"}
+                      label={canOnlyAddValues() ? `Add New ${selectedDataType} Values` : `${selectedDataType} Values (JSON)`}
                       value={permittedValues}
                       onChange={(e) => handlePermittedValuesChange(e.target.value)}
-                      placeholder={getPlaceholderForDataType(selectedDataType)}
-                      helperText={canOnlyAddValues() 
-                        ? `Add new ${selectedDataType} values in JSON format. Existing values cannot be changed.`
-                        : `Enter each ${selectedDataType} on a new line in JSON format`
+                      placeholder={selectedDataType === 'array' ? '["item1", "item2", "item3"]' : '{"key": "value", "name": "example"}'}
+                      helperText={
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 1 }}>
+                          <Box
+                            sx={{
+                              width: 8,
+                              height: 8,
+                              borderRadius: '50%',
+                              bgcolor: permittedValues && parsedValues.length === 0 ? 'error.main' : 
+                                      parsedValues.length > 0 ? 'success.main' : 'grey.400'
+                            }}
+                          />
+                          <Typography variant="caption">
+                            {permittedValues && parsedValues.length === 0 ? 
+                              'Invalid JSON format' : 
+                              parsedValues.length > 0 ? 
+                                `Valid JSON - ${parsedValues.length} value${parsedValues.length !== 1 ? 's' : ''} ready` :
+                                `Enter valid ${selectedDataType} JSON`
+                            }
+                          </Typography>
+                        </Box>
                       }
                       multiline
                       rows={3}
                       InputProps={{
                         sx: {
-                          fontFamily: 'monospace',
-                          fontSize: '0.875rem'
+                          fontFamily: 'Monaco, "Lucida Console", monospace',
+                          fontSize: '0.85rem'
                         }
                       }}
                     />
+                      
+                    {canOnlyAddValues() && existingValues.length > 0 && (
+                      <Box sx={{ mt: 1, p: 1.5, bgcolor: 'warning.50', borderRadius: 1, border: '1px solid', borderColor: 'warning.200' }}>
+                        <Typography variant="caption" color="warning.dark" sx={{ fontWeight: 500 }}>
+                          ⚠️ Protected values (outlined chips) cannot be modified
+                        </Typography>
+                      </Box>
+                    )}
                   </Box>
                 )}
               </Box>

@@ -259,13 +259,6 @@ export default function EditPolicyPage() {
           if (policy.rules.length > 0) {
             const firstRule = policy.rules[0];
             setSelectedSubject(firstRule.subject.type);
-            
-            // Extract subject attributes from first rule
-            const subjectAttrs: { [key: string]: any } = {};
-            firstRule.subject.attributes.forEach((attr: any) => {
-              subjectAttrs[attr.name] = attr.value;
-            });
-            setSelectedSubjectAttributes(subjectAttrs);
           }
           
           setSelectedActions(policy.actions);
@@ -283,6 +276,28 @@ export default function EditPolicyPage() {
 
     fetchPolicy();
   }, [policyId]);
+
+  // Initialize attribute values when both policy and attributes are loaded
+  useEffect(() => {
+    if (originalPolicy && attributes.length > 0 && originalPolicy.rules.length > 0) {
+      const firstRule = originalPolicy.rules[0];
+      const subjectAttrs: { [key: string]: any } = {};
+      
+      firstRule.subject.attributes.forEach((attr: any) => {
+        // Try to find the attribute in the loaded attributes list to get the correct ID
+        const attributeObj = attributes.find(a => a.name === attr.name || a.id === attr.name);
+        if (attributeObj) {
+          subjectAttrs[attributeObj.id] = attr.value;
+        } else {
+          // Fallback to using the name if no matching attribute found
+          subjectAttrs[attr.name] = attr.value;
+        }
+      });
+      
+      console.log('Setting selectedSubjectAttributes from policy:', subjectAttrs);
+      setSelectedSubjectAttributes(subjectAttrs);
+    }
+  }, [originalPolicy, attributes]);
 
   // Initialize selectedAttributes when attributes and selectedSubjectAttributes are loaded
   useEffect(() => {

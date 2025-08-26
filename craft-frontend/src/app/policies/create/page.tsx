@@ -748,7 +748,7 @@ export default function CreatePolicyPage() {
                                             multiple
                                             freeSolo
                                             options={attribute.constraints.enumValues || []}
-                                            value={selectedSubjectAttributes[attribute.id] || []}
+                                            value={selectedSubjectAttributes[attribute.id] ?? []}
                                             onChange={(event, newValue) => {
                                               handleSubjectAttributeSelection(attribute.id, newValue);
                                             }}
