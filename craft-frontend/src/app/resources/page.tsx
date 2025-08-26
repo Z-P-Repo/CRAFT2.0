@@ -38,6 +38,7 @@ import {
   Toolbar,
   Tooltip,
   InputAdornment,
+  OutlinedInput,
 } from '@mui/material';
 import {
   Folder as FolderIcon,
@@ -123,6 +124,11 @@ export default function ObjectsPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [sortBy, setSortBy] = useState('displayName');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+  const [filterStatus, setFilterStatus] = useState<string[]>([]);
+  const [filterAnchorEl, setFilterAnchorEl] = useState<null | HTMLElement>(null);
+  const [sortAnchorEl, setSortAnchorEl] = useState<null | HTMLElement>(null);
+  const filterOpen = Boolean(filterAnchorEl);
+  const sortOpen = Boolean(sortAnchorEl);
   const [viewOpen, setViewOpen] = useState(false);
   const [viewObject, setViewObject] = useState<ExtendedResourceObject | null>(null);
   const [deleteOpen, setDeleteOpen] = useState(false);
@@ -363,7 +369,24 @@ export default function ObjectsPage() {
 
   const clearFilters = () => {
     setSearchTerm('');
+    setFilterStatus([]);
     setPage(0);
+  };
+
+  const handleFilterClick = (event: React.MouseEvent<HTMLElement>) => {
+    setFilterAnchorEl(event.currentTarget);
+  };
+
+  const handleFilterClose = () => {
+    setFilterAnchorEl(null);
+  };
+
+  const handleSortClick = (event: React.MouseEvent<HTMLElement>) => {
+    setSortAnchorEl(event.currentTarget);
+  };
+
+  const handleSortClose = () => {
+    setSortAnchorEl(null);
   };
 
   const handleSortChange = (field: string) => {
@@ -529,7 +552,11 @@ export default function ObjectsPage() {
     setPage(0);
   };
 
-  const hasActiveFilters = searchTerm.length > 0;
+  const hasActiveFilters = Boolean(searchTerm || filterStatus.length > 0);
+
+  // Stats calculation
+  const activeCount = filteredObjects.filter(obj => obj.active !== false).length;
+  const inactiveCount = filteredObjects.filter(obj => obj.active === false).length;
 
   return (
     <DashboardLayout>
@@ -542,106 +569,119 @@ export default function ObjectsPage() {
               Resources
             </Typography>
           </Box>
-          <Box sx={{ textAlign: 'right' }}>
-            <Typography variant="h6" color="primary.main" fontWeight="600">
-              {loading ? '...' : total}
-            </Typography>
-            <Typography variant="caption" color="text.secondary">
-              Total Resources
-            </Typography>
+          <Box sx={{ display: 'flex', gap: 3, textAlign: 'center' }}>
+            <Box>
+              <Typography variant="h6" color="primary.main" fontWeight="600">
+                {loading ? '...' : total}
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                Total
+              </Typography>
+            </Box>
+            <Box>
+              <Typography variant="h6" color="success.main" fontWeight="600">
+                {loading ? '...' : activeCount}
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                Active
+              </Typography>
+            </Box>
+            <Box>
+              <Typography variant="h6" color="error.main" fontWeight="600">
+                {loading ? '...' : inactiveCount}
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                Inactive
+              </Typography>
+            </Box>
           </Box>
         </Box>
-        <Typography variant="body2" color="text.secondary">
-          Manage files, folders, databases, and other system objects in your permission system.
-          {hasActiveFilters && (
-            <Typography component="span" variant="body2" color="primary.main" sx={{ ml: 1 }}>
-              (Filtered)
-            </Typography>
-          )}
-        </Typography>
-      </Paper>
-
-      {/* Multi-select Delete */}
-      {selectedObjects.length > 0 && (
-        <Box sx={{ mb: 3, display: 'flex', justifyContent: 'center' }}>
+        
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 2 }}>
+          <Typography variant="body2" color="text.secondary">
+            Manage files, folders, databases, and other system objects in your permission system.
+          </Typography>
           <Button
             variant="contained"
-            color="error"
-            startIcon={<BulkDeleteIcon />}
-            onClick={handleBulkDeleteOpen}
-            disabled={isSubmitting}
-            sx={{ textTransform: 'none' }}
+            startIcon={<AddIcon />}
+            onClick={() => handleClickOpen()}
+            sx={{ px: 3 }}
           >
-            Delete {selectedObjects.length} Selected
+            Create Resource
           </Button>
         </Box>
-      )}
+      </Paper>
 
-      {/* Filter Bar */}
-      {selectedObjects.length === 0 && (
-        <Paper elevation={0} sx={{
-          p: 2,
-          mb: 3,
-          border: '1px solid',
-          borderColor: 'grey.200',
-        }}>
-          <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap' }}>
-            {/* Search */}
-            <TextField
-              placeholder="Search objects..."
-              value={searchTerm}
-              onChange={(e) => handleSearchChange(e.target.value)}
-              size="small"
-              sx={{ minWidth: '250px', flex: 1 }}
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <SearchIcon color="action" fontSize="small" />
-                  </InputAdornment>
-                ),
-              }}
-            />
 
-            {/* Clear & Add buttons */}
-            <Box sx={{ display: 'flex', gap: 1, ml: 'auto' }}>
-              {hasActiveFilters && (
-                <Button
-                  size="small"
-                  onClick={clearFilters}
-                  startIcon={<ClearIcon />}
-                  sx={{ textTransform: 'none' }}
-                >
-                  Clear
-                </Button>
-              )}
-              <Button
-                variant="contained"
-                size="small"
-                startIcon={<AddIcon />}
-                onClick={() => handleClickOpen()}
-                sx={{ textTransform: 'none' }}
+      {/* Toolbar */}
+      <Paper sx={{ mb: 2 }}>
+        <Toolbar sx={{ px: { sm: 2 }, minHeight: '64px !important' }}>
+          {selectedObjects.length > 0 ? (
+            <>
+              <Typography
+                sx={{ flex: '1 1 100%' }}
+                color="inherit"
+                variant="subtitle1"
               >
-                Create Object
-              </Button>
-            </Box>
-          </Box>
-
-          {/* Active Filter Chips */}
-          {hasActiveFilters && searchTerm && (
-            <Box sx={{ mt: 2, display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-              <Chip
-                label={`Search: ${searchTerm}`}
-                onDelete={() => setSearchTerm('')}
-                size="small"
-                color="primary"
-              />
-            </Box>
+                {selectedObjects.length} selected
+              </Typography>
+              <Tooltip title="Delete selected">
+                <IconButton color="error" onClick={handleBulkDeleteOpen}>
+                  <BulkDeleteIcon />
+                </IconButton>
+              </Tooltip>
+            </>
+          ) : (
+            <>
+              <Box sx={{ flex: 1, display: 'flex', gap: 1, alignItems: 'center' }}>
+                <OutlinedInput
+                  size="small"
+                  placeholder="Search resources..."
+                  value={searchTerm}
+                  onChange={(e) => handleSearchChange(e.target.value)}
+                  startAdornment={
+                    <InputAdornment position="start">
+                      <SearchIcon />
+                    </InputAdornment>
+                  }
+                  sx={{ minWidth: 300 }}
+                />
+                
+                {hasActiveFilters && (
+                  <Button
+                    variant="outlined"
+                    startIcon={<ClearIcon />}
+                    onClick={clearFilters}
+                    size="small"
+                  >
+                    Clear
+                  </Button>
+                )}
+              </Box>
+              
+              <Box sx={{ display: 'flex', gap: 1 }}>
+                <Tooltip title="Filter">
+                  <IconButton onClick={handleFilterClick}>
+                    <FilterIcon />
+                  </IconButton>
+                </Tooltip>
+                
+                <Tooltip title="Sort">
+                  <IconButton onClick={handleSortClick}>
+                    <SortIcon />
+                    {sortBy && (
+                      sortOrder === 'asc' ? <ArrowUpIcon fontSize="small" /> : <ArrowDownIcon fontSize="small" />
+                    )}
+                  </IconButton>
+                </Tooltip>
+              </Box>
+            </>
           )}
-        </Paper>
-      )}
+        </Toolbar>
+      </Paper>
 
       {/* Resources Table */}
-      <Card variant="outlined">
+      <Paper elevation={0} sx={{ border: '1px solid', borderColor: 'grey.200' }}>
         {error && (
           <Box sx={{ p: 3, textAlign: 'center' }}>
             <Typography color="error" variant="body1">
@@ -810,7 +850,113 @@ export default function ObjectsPage() {
             />
           </>
         )}
-      </Card>
+      </Paper>
+
+      {/* Filter Popover */}
+      <Popover
+        open={filterOpen}
+        anchorEl={filterAnchorEl}
+        onClose={handleFilterClose}
+        anchorOrigin={{
+          vertical: 'bottom',
+          horizontal: 'left',
+        }}
+        transformOrigin={{
+          vertical: 'top',
+          horizontal: 'left',
+        }}
+        PaperProps={{
+          sx: { p: 2, minWidth: 200 }
+        }}
+      >
+        <Typography variant="subtitle2" sx={{ mb: 2, fontWeight: 600 }}>
+          Filter Resources
+        </Typography>
+        
+        <List dense>
+          <ListItem button onClick={() => {}}>            
+            <Checkbox size="small" />
+            <ListItemText primary="Active Resources" />
+          </ListItem>
+          <ListItem button onClick={() => {}}>            
+            <Checkbox size="small" />
+            <ListItemText primary="Inactive Resources" />
+          </ListItem>
+        </List>
+      </Popover>
+
+      {/* Sort Popover */}
+      <Popover
+        open={sortOpen}
+        anchorEl={sortAnchorEl}
+        onClose={handleSortClose}
+        anchorOrigin={{
+          vertical: 'bottom',
+          horizontal: 'left',
+        }}
+        transformOrigin={{
+          vertical: 'top',
+          horizontal: 'left',
+        }}
+        PaperProps={{
+          sx: { p: 2, minWidth: 200 }
+        }}
+      >
+        <Typography variant="subtitle2" sx={{ mb: 2, fontWeight: 600 }}>
+          Sort Resources
+        </Typography>
+        
+        <List dense>
+          <ListItem 
+            button 
+            onClick={() => {
+              setSortBy('displayName');
+              setSortOrder('asc');
+              handleSortClose();
+            }}
+            selected={sortBy === 'displayName' && sortOrder === 'asc'}
+          >
+            <ListItemText primary="Name (A-Z)" />
+            {sortBy === 'displayName' && sortOrder === 'asc' && <ArrowUpIcon fontSize="small" />}
+          </ListItem>
+          <ListItem 
+            button 
+            onClick={() => {
+              setSortBy('displayName');
+              setSortOrder('desc');
+              handleSortClose();
+            }}
+            selected={sortBy === 'displayName' && sortOrder === 'desc'}
+          >
+            <ListItemText primary="Name (Z-A)" />
+            {sortBy === 'displayName' && sortOrder === 'desc' && <ArrowDownIcon fontSize="small" />}
+          </ListItem>
+          <ListItem 
+            button 
+            onClick={() => {
+              setSortBy('createdAt');
+              setSortOrder('desc');
+              handleSortClose();
+            }}
+            selected={sortBy === 'createdAt' && sortOrder === 'desc'}
+          >
+            <ListItemText primary="Newest First" />
+            {sortBy === 'createdAt' && sortOrder === 'desc' && <ArrowDownIcon fontSize="small" />}
+          </ListItem>
+          <ListItem 
+            button 
+            onClick={() => {
+              setSortBy('createdAt');
+              setSortOrder('asc');
+              handleSortClose();
+            }}
+            selected={sortBy === 'createdAt' && sortOrder === 'asc'}
+          >
+            <ListItemText primary="Oldest First" />
+            {sortBy === 'createdAt' && sortOrder === 'asc' && <ArrowUpIcon fontSize="small" />}
+          </ListItem>
+        </List>
+      </Popover>
 
       <Fab 
         color="primary" 
@@ -844,7 +990,7 @@ export default function ObjectsPage() {
           justifyContent: 'space-between'
         }}>
           <Typography variant="h6" fontWeight="600" color="text.primary">
-            {selectedObject ? 'Edit Object' : 'New Object'}
+            {selectedObject ? 'Edit Resource' : 'New Resource'}
           </Typography>
           <IconButton
             onClick={handleClose}
@@ -870,7 +1016,7 @@ export default function ObjectsPage() {
               variant="outlined"
               placeholder="e.g., Customer Database, User Files, System Config"
               error={!!displayNameError}
-              helperText={displayNameError || 'Enter the object name'}
+              helperText={displayNameError || 'Enter the resource name'}
             />
 
             <TextField
@@ -879,7 +1025,7 @@ export default function ObjectsPage() {
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               variant="outlined"
-              placeholder="Brief description of the object"
+              placeholder="Brief description of the resource"
               multiline
               rows={3}
             />
@@ -922,7 +1068,7 @@ export default function ObjectsPage() {
               }
             }}
           >
-            {isSubmitting ? 'Saving...' : (selectedObject ? 'Update Object' : 'Create Object')}
+            {isSubmitting ? 'Saving...' : (selectedObject ? 'Update Resource' : 'Create Resource')}
           </Button>
         </DialogActions>
       </Dialog>
@@ -950,7 +1096,7 @@ export default function ObjectsPage() {
           justifyContent: 'space-between'
         }}>
           <Typography variant="h6" fontWeight="600" color="text.primary">
-            View Object
+            View Resource
           </Typography>
           <IconButton
             onClick={handleViewClose}
@@ -1074,7 +1220,7 @@ export default function ObjectsPage() {
       >
         <DialogTitle sx={{ pb: 2 }}>
           <Typography variant="h6" fontWeight="600" color="error.main">
-            Delete Object
+            Delete Resource
           </Typography>
         </DialogTitle>
 
@@ -1082,7 +1228,7 @@ export default function ObjectsPage() {
           {deleteObject && (
             <Box>
               <Typography variant="body1" gutterBottom>
-                Are you sure you want to delete this object?
+                Are you sure you want to delete this resource?
               </Typography>
 
               <Box sx={{
@@ -1113,12 +1259,12 @@ export default function ObjectsPage() {
               </Box>
 
               <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
-                This action cannot be undone. The object will be permanently removed from the system.
+                This action cannot be undone. The resource will be permanently removed from the system.
               </Typography>
 
               {deleteObject?.metadata?.isSystem && (
                 <Typography variant="body2" color="error.main" sx={{ mt: 2, fontWeight: 500 }}>
-                  Warning: This is a system object and cannot be deleted.
+                  Warning: This is a system resource and cannot be deleted.
                 </Typography>
               )}
             </Box>
@@ -1178,7 +1324,7 @@ export default function ObjectsPage() {
             </Typography>
 
             <Typography variant="body2" color="text.secondary" sx={{ mt: 2, mb: 2 }}>
-              This action cannot be undone. The following objects will be permanently deleted:
+              This action cannot be undone. The following resources will be permanently deleted:
             </Typography>
 
             <Box sx={{
@@ -1223,7 +1369,7 @@ export default function ObjectsPage() {
             </Box>
 
             <Typography variant="body2" color="warning.dark" sx={{ mt: 2, fontWeight: 500 }}>
-              Warning: Deleting objects may affect existing policies that reference them.
+              Warning: Deleting resources may affect existing policies that reference them.
             </Typography>
           </Box>
         </DialogContent>

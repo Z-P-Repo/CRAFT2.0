@@ -352,9 +352,9 @@ export default function PoliciesPage() {
         </Box>
       </Paper>
 
-        {/* Toolbar */}
-        <Paper sx={{ mb: 2 }}>
-          <Toolbar sx={{ px: { sm: 2 }, minHeight: '64px !important' }}>
+      {/* Toolbar */}
+      <Paper sx={{ mb: 2 }}>
+        <Toolbar sx={{ px: { sm: 2 }, minHeight: '64px !important' }}>
             {selectedPolicies.length > 0 ? (
               <>
                 <Typography
@@ -416,13 +416,13 @@ export default function PoliciesPage() {
                 </Box>
               </>
             )}
-          </Toolbar>
-        </Paper>
+        </Toolbar>
+      </Paper>
 
-        {/* Policies Table */}
-        <Paper>
-          <TableContainer>
-            <Table>
+      {/* Policies Table */}
+      <Paper>
+        <TableContainer>
+          <Table>
               <TableHead>
                 <TableRow sx={{ bgcolor: 'grey.50' }}>
                   <TableCell padding="checkbox">
@@ -560,9 +560,9 @@ export default function PoliciesPage() {
             onPageChange={handleChangePage}
             onRowsPerPageChange={handleChangeRowsPerPage}
           />
-        </Paper>
+      </Paper>
 
-        {/* Filter Popover */}
+      {/* Filter Popover */}
         <Popover
           open={Boolean(filterAnchorEl)}
           anchorEl={filterAnchorEl}

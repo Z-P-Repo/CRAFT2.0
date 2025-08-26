@@ -38,6 +38,7 @@ import {
   Toolbar,
   Tooltip,
   InputAdornment,
+  OutlinedInput,
 } from '@mui/material';
 import {
   PlayArrow as ActionIcon,
@@ -108,6 +109,11 @@ export default function ActionsPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [sortBy, setSortBy] = useState('displayName');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+  const [filterStatus, setFilterStatus] = useState<string[]>([]);
+  const [filterAnchorEl, setFilterAnchorEl] = useState<null | HTMLElement>(null);
+  const [sortAnchorEl, setSortAnchorEl] = useState<null | HTMLElement>(null);
+  const filterOpen = Boolean(filterAnchorEl);
+  const sortOpen = Boolean(sortAnchorEl);
   const [viewOpen, setViewOpen] = useState(false);
   const [viewAction, setViewAction] = useState<ActionObject | null>(null);
   const [deleteOpen, setDeleteOpen] = useState(false);
@@ -206,8 +212,25 @@ export default function ActionsPage() {
 
   const clearFilters = useCallback(() => {
     setSearchTerm('');
+    setFilterStatus([]);
     setPage(0);
   }, []);
+
+  const handleFilterClick = (event: React.MouseEvent<HTMLElement>) => {
+    setFilterAnchorEl(event.currentTarget);
+  };
+
+  const handleFilterClose = () => {
+    setFilterAnchorEl(null);
+  };
+
+  const handleSortClick = (event: React.MouseEvent<HTMLElement>) => {
+    setSortAnchorEl(event.currentTarget);
+  };
+
+  const handleSortClose = () => {
+    setSortAnchorEl(null);
+  };
 
   // Dialog handlers
   const handleClickOpen = useCallback((action?: ActionObject) => {
@@ -382,7 +405,11 @@ export default function ActionsPage() {
     }
   };
 
-  const hasActiveFilters = searchTerm.length > 0;
+  const hasActiveFilters = Boolean(searchTerm || filterStatus.length > 0);
+
+  // Stats calculation
+  const activeCount = actions.filter(action => action.active !== false).length;
+  const inactiveCount = actions.filter(action => action.active === false).length;
 
   const getCategoryIcon = (category: string) => {
     switch (category) {
@@ -427,119 +454,118 @@ export default function ActionsPage() {
               Actions
             </Typography>
           </Box>
-          <Box sx={{ textAlign: 'right' }}>
-            <Typography variant="h6" color="primary.main" fontWeight="600">
-              {loading ? '...' : total}
-            </Typography>
-            <Typography variant="caption" color="text.secondary">
-              Total Actions
-            </Typography>
+          <Box sx={{ display: 'flex', gap: 3, textAlign: 'center' }}>
+            <Box>
+              <Typography variant="h6" color="primary.main" fontWeight="600">
+                {loading ? '...' : total}
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                Total
+              </Typography>
+            </Box>
+            <Box>
+              <Typography variant="h6" color="success.main" fontWeight="600">
+                {loading ? '...' : activeCount}
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                Active
+              </Typography>
+            </Box>
+            <Box>
+              <Typography variant="h6" color="error.main" fontWeight="600">
+                {loading ? '...' : inactiveCount}
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                Inactive
+              </Typography>
+            </Box>
           </Box>
         </Box>
-        <Typography variant="body2" color="text.secondary">
-          Manage system actions and operations in your permission system.
-          {hasActiveFilters && (
-            <Typography component="span" variant="body2" color="primary.main" sx={{ ml: 1 }}>
-              (Filtered)
-            </Typography>
-          )}
-        </Typography>
+        
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 2 }}>
+          <Typography variant="body2" color="text.secondary">
+            Manage system actions and operations in your permission system.
+          </Typography>
+          <Button
+            variant="contained"
+            startIcon={<AddIcon />}
+            onClick={() => handleClickOpen()}
+            sx={{ px: 3 }}
+          >
+            Create Action
+          </Button>
+        </Box>
       </Paper>
 
-      {/* Filter Bar */}
-      {selectedActions.length === 0 && (
-        <Paper elevation={0} sx={{ 
-          p: 2, 
-          mb: 3, 
-          border: '1px solid',
-          borderColor: 'grey.200',
-        }}>
-          <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap' }}>
-            {/* Search */}
-            <TextField
-              placeholder="Search actions..."
-              value={searchTerm}
-              onChange={(e) => handleSearchChange(e.target.value)}
-              size="small"
-              sx={{ minWidth: '250px', flex: 1 }}
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <SearchIcon color="action" fontSize="small" />
-                  </InputAdornment>
-                ),
-              }}
-            />
-
-            {/* Clear & Add buttons */}
-            <Box sx={{ display: 'flex', gap: 1, ml: 'auto' }}>
-              {hasActiveFilters && (
-                <Button
+      {/* Toolbar */}
+      <Paper sx={{ mb: 2 }}>
+        <Toolbar sx={{ px: { sm: 2 }, minHeight: '64px !important' }}>
+          {selectedActions.length > 0 ? (
+            <>
+              <Typography
+                sx={{ flex: '1 1 100%' }}
+                color="inherit"
+                variant="subtitle1"
+              >
+                {selectedActions.length} selected
+              </Typography>
+              <Tooltip title="Delete selected">
+                <IconButton color="error" onClick={handleBulkDeleteOpen}>
+                  <BulkDeleteIcon />
+                </IconButton>
+              </Tooltip>
+            </>
+          ) : (
+            <>
+              <Box sx={{ flex: 1, display: 'flex', gap: 1, alignItems: 'center' }}>
+                <OutlinedInput
                   size="small"
-                  onClick={clearFilters}
-                  startIcon={<ClearIcon />}
-                  sx={{ textTransform: 'none' }}
-                >
-                  Clear
-                </Button>
-              )}
-              <Button
-                variant="contained"
-                size="small"
-                startIcon={<AddIcon />}
-                onClick={() => handleClickOpen()}
-                sx={{ textTransform: 'none' }}
-              >
-                Create Action
-              </Button>
-            </Box>
-          </Box>
-
-          {/* Active Filter Chips */}
-          {hasActiveFilters && searchTerm && (
-            <Box sx={{ mt: 2, display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-              <Chip
-                label={`Search: "${searchTerm}"`}
-                onDelete={clearFilters}
-                size="small"
-                color="primary"
-              />
-            </Box>
+                  placeholder="Search actions..."
+                  value={searchTerm}
+                  onChange={(e) => handleSearchChange(e.target.value)}
+                  startAdornment={
+                    <InputAdornment position="start">
+                      <SearchIcon />
+                    </InputAdornment>
+                  }
+                  sx={{ minWidth: 300 }}
+                />
+                
+                {hasActiveFilters && (
+                  <Button
+                    variant="outlined"
+                    startIcon={<ClearIcon />}
+                    onClick={clearFilters}
+                    size="small"
+                  >
+                    Clear
+                  </Button>
+                )}
+              </Box>
+              
+              <Box sx={{ display: 'flex', gap: 1 }}>
+                <Tooltip title="Filter">
+                  <IconButton onClick={handleFilterClick}>
+                    <FilterIcon />
+                  </IconButton>
+                </Tooltip>
+                
+                <Tooltip title="Sort">
+                  <IconButton onClick={handleSortClick}>
+                    <SortIcon />
+                    {sortBy && (
+                      sortOrder === 'asc' ? <ArrowUpIcon fontSize="small" /> : <ArrowDownIcon fontSize="small" />
+                    )}
+                  </IconButton>
+                </Tooltip>
+              </Box>
+            </>
           )}
-        </Paper>
-      )}
-
-      {/* Selected Actions Toolbar */}
-      {selectedActions.length > 0 && (
-        <Paper elevation={0} sx={{ p: 2, mb: 3, bgcolor: 'primary.50', border: '1px solid', borderColor: 'primary.200' }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <Typography variant="body1" fontWeight="500" color="primary.main">
-              {selectedActions.length} action{selectedActions.length === 1 ? '' : 's'} selected
-            </Typography>
-            <Box sx={{ display: 'flex', gap: 1 }}>
-              <Button
-                size="small"
-                onClick={() => setSelectedActions([])}
-                sx={{ color: 'text.secondary' }}
-              >
-                Clear selection
-              </Button>
-              <Button
-                variant="contained"
-                color="error"
-                size="small"
-                startIcon={<BulkDeleteIcon />}
-                onClick={handleBulkDeleteOpen}
-              >
-                Delete Selected
-              </Button>
-            </Box>
-          </Box>
-        </Paper>
-      )}
+        </Toolbar>
+      </Paper>
 
       {/* Actions Table */}
-      <Card variant="outlined">
+      <Paper elevation={0} sx={{ border: '1px solid', borderColor: 'grey.200' }}>
         <TableContainer>
           <Table>
             <TableHead>
@@ -711,7 +737,113 @@ export default function ActionsPage() {
             },
           }}
         />
-      </Card>
+      </Paper>
+
+      {/* Filter Popover */}
+      <Popover
+        open={filterOpen}
+        anchorEl={filterAnchorEl}
+        onClose={handleFilterClose}
+        anchorOrigin={{
+          vertical: 'bottom',
+          horizontal: 'left',
+        }}
+        transformOrigin={{
+          vertical: 'top',
+          horizontal: 'left',
+        }}
+        PaperProps={{
+          sx: { p: 2, minWidth: 200 }
+        }}
+      >
+        <Typography variant="subtitle2" sx={{ mb: 2, fontWeight: 600 }}>
+          Filter Actions
+        </Typography>
+        
+        <List dense>
+          <ListItem button onClick={() => {}}>            
+            <Checkbox size="small" />
+            <ListItemText primary="Active Actions" />
+          </ListItem>
+          <ListItem button onClick={() => {}}>            
+            <Checkbox size="small" />
+            <ListItemText primary="Inactive Actions" />
+          </ListItem>
+        </List>
+      </Popover>
+
+      {/* Sort Popover */}
+      <Popover
+        open={sortOpen}
+        anchorEl={sortAnchorEl}
+        onClose={handleSortClose}
+        anchorOrigin={{
+          vertical: 'bottom',
+          horizontal: 'left',
+        }}
+        transformOrigin={{
+          vertical: 'top',
+          horizontal: 'left',
+        }}
+        PaperProps={{
+          sx: { p: 2, minWidth: 200 }
+        }}
+      >
+        <Typography variant="subtitle2" sx={{ mb: 2, fontWeight: 600 }}>
+          Sort Actions
+        </Typography>
+        
+        <List dense>
+          <ListItem 
+            button 
+            onClick={() => {
+              setSortBy('displayName');
+              setSortOrder('asc');
+              handleSortClose();
+            }}
+            selected={sortBy === 'displayName' && sortOrder === 'asc'}
+          >
+            <ListItemText primary="Name (A-Z)" />
+            {sortBy === 'displayName' && sortOrder === 'asc' && <ArrowUpIcon fontSize="small" />}
+          </ListItem>
+          <ListItem 
+            button 
+            onClick={() => {
+              setSortBy('displayName');
+              setSortOrder('desc');
+              handleSortClose();
+            }}
+            selected={sortBy === 'displayName' && sortOrder === 'desc'}
+          >
+            <ListItemText primary="Name (Z-A)" />
+            {sortBy === 'displayName' && sortOrder === 'desc' && <ArrowDownIcon fontSize="small" />}
+          </ListItem>
+          <ListItem 
+            button 
+            onClick={() => {
+              setSortBy('createdAt');
+              setSortOrder('desc');
+              handleSortClose();
+            }}
+            selected={sortBy === 'createdAt' && sortOrder === 'desc'}
+          >
+            <ListItemText primary="Newest First" />
+            {sortBy === 'createdAt' && sortOrder === 'desc' && <ArrowDownIcon fontSize="small" />}
+          </ListItem>
+          <ListItem 
+            button 
+            onClick={() => {
+              setSortBy('createdAt');
+              setSortOrder('asc');
+              handleSortClose();
+            }}
+            selected={sortBy === 'createdAt' && sortOrder === 'asc'}
+          >
+            <ListItemText primary="Oldest First" />
+            {sortBy === 'createdAt' && sortOrder === 'asc' && <ArrowUpIcon fontSize="small" />}
+          </ListItem>
+        </List>
+      </Popover>
 
       {/* Floating Action Button */}
       <Fab

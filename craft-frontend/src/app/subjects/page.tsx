@@ -38,6 +38,9 @@ import {
   Toolbar,
   Tooltip,
   InputAdornment,
+  OutlinedInput,
+  ListItemIcon,
+  CircularProgress,
 } from '@mui/material';
 import {
   People as PeopleIcon,
@@ -118,10 +121,14 @@ export default function SubjectsPage() {
   
   // Search, Filter, Sort states
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterType, setFilterType] = useState('');
-  const [filterStatus, setFilterStatus] = useState('');
+  const [filterType, setFilterType] = useState<string[]>([]);
+  const [filterStatus, setFilterStatus] = useState<string[]>([]);
   const [sortBy, setSortBy] = useState('displayName');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+  
+  // Filter popover
+  const [filterAnchorEl, setFilterAnchorEl] = useState<HTMLElement | null>(null);
+  const [sortAnchorEl, setSortAnchorEl] = useState<HTMLElement | null>(null);
   const [viewOpen, setViewOpen] = useState(false);
   const [viewSubject, setViewSubject] = useState<Subject | null>(null);
   const [deleteOpen, setDeleteOpen] = useState(false);
@@ -311,10 +318,34 @@ export default function SubjectsPage() {
 
   const clearFilters = () => {
     setSearchTerm('');
+    setFilterType([]);
+    setFilterStatus([]);
     setPage(0);
   };
 
-  const hasActiveFilters = Boolean(searchTerm);
+  const hasActiveFilters = Boolean(searchTerm || filterType.length > 0 || filterStatus.length > 0);
+
+  // Filter and sort handlers
+  const handleFilterClick = (event: React.MouseEvent<HTMLElement>) => {
+    setFilterAnchorEl(event.currentTarget);
+  };
+
+  const handleFilterClose = () => {
+    setFilterAnchorEl(null);
+  };
+
+  const handleSortClick = (event: React.MouseEvent<HTMLElement>) => {
+    setSortAnchorEl(event.currentTarget);
+  };
+
+  const handleSortClose = () => {
+    setSortAnchorEl(null);
+  };
+
+  const handleSearch = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchTerm(event.target.value);
+    setPage(0);
+  };
 
   // Use subjects directly since pagination, filtering, and sorting are handled server-side
   const paginatedSubjects = subjects;
@@ -452,106 +483,118 @@ export default function SubjectsPage() {
               Subjects
             </Typography>
           </Box>
-          <Box sx={{ textAlign: 'right' }}>
-            <Typography variant="h6" color="primary.main" fontWeight="600">
-              {loading ? '...' : total}
-            </Typography>
-            <Typography variant="caption" color="text.secondary">
-              Total Subjects
-            </Typography>
+          <Box sx={{ display: 'flex', gap: 3, textAlign: 'center' }}>
+            <Box>
+              <Typography variant="h6" color="primary.main" fontWeight="600">
+                {loading ? '...' : total}
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                Total
+              </Typography>
+            </Box>
+            <Box>
+              <Typography variant="h6" color="success.main" fontWeight="600">
+                {loading ? '...' : subjects?.filter(s => s.status === 'active').length || 0}
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                Active
+              </Typography>
+            </Box>
+            <Box>
+              <Typography variant="h6" color="warning.main" fontWeight="600">
+                {loading ? '...' : subjects?.filter(s => s.status === 'inactive').length || 0}
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                Inactive
+              </Typography>
+            </Box>
           </Box>
         </Box>
-        <Typography variant="body2" color="text.secondary">
-          Manage users, groups, and roles in your permission system.
-          {hasActiveFilters && (
-            <Typography component="span" variant="body2" color="primary.main" sx={{ ml: 1 }}>
-              (Filtered)
-            </Typography>
-          )}
-        </Typography>
-      </Paper>
-
-      {/* Multi-select Delete */}
-      {selectedSubjects.length > 0 && (
-        <Box sx={{ mb: 3, display: 'flex', justifyContent: 'center' }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 2 }}>
+          <Typography variant="body2" color="text.secondary">
+            Manage users, groups, and roles in your permission system
+          </Typography>
           <Button
             variant="contained"
-            color="error"
-            startIcon={<BulkDeleteIcon />}
-            onClick={handleBulkDeleteOpen}
-            disabled={isSubmitting}
-            sx={{ textTransform: 'none' }}
+            startIcon={<AddIcon />}
+            onClick={handleClickOpen}
+            sx={{ px: 3 }}
           >
-            Delete {selectedSubjects.length} Selected
+            Create Subject
           </Button>
         </Box>
-      )}
-      
-      {/* Filter Bar */}
-      {selectedSubjects.length === 0 && (
-        <Paper elevation={0} sx={{ 
-          p: 2, 
-          mb: 3, 
-          border: '1px solid',
-          borderColor: 'grey.200',
-        }}>
-          <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap' }}>
-            {/* Search */}
-            <TextField
-              placeholder="Search subjects..."
-              value={searchTerm}
-              onChange={(e) => handleSearchChange(e.target.value)}
-              size="small"
-              sx={{ minWidth: '250px', flex: 1 }}
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <SearchIcon color="action" fontSize="small" />
-                  </InputAdornment>
-                ),
-              }}
-            />
+      </Paper>
 
-            {/* Clear & Add buttons */}
-            <Box sx={{ display: 'flex', gap: 1, ml: 'auto' }}>
-              {hasActiveFilters && (
-                <Button
-                  size="small"
-                  onClick={clearFilters}
-                  startIcon={<ClearIcon />}
-                  sx={{ textTransform: 'none' }}
-                >
-                  Clear
-                </Button>
-              )}
-              <Button
-                variant="contained"
-                size="small"
-                startIcon={<AddIcon />}
-                onClick={() => handleClickOpen()}
-                sx={{ textTransform: 'none' }}
+      {/* Toolbar */}
+      <Paper sx={{ mb: 2 }}>
+        <Toolbar sx={{ px: { sm: 2 }, minHeight: '64px !important' }}>
+          {selectedSubjects.length > 0 ? (
+            <>
+              <Typography
+                sx={{ flex: '1 1 100%' }}
+                color="inherit"
+                variant="subtitle1"
               >
-                Create Subject
-              </Button>
-            </Box>
-          </Box>
-
-          {/* Active Filter Chips */}
-          {hasActiveFilters && searchTerm && (
-            <Box sx={{ mt: 2, display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-              <Chip
-                label={`Search: ${searchTerm}`}
-                onDelete={() => setSearchTerm('')}
-                size="small"
-                color="primary"
-              />
-            </Box>
+                {selectedSubjects.length} selected
+              </Typography>
+              <Tooltip title="Delete selected">
+                <IconButton color="error" onClick={handleBulkDeleteOpen}>
+                  <BulkDeleteIcon />
+                </IconButton>
+              </Tooltip>
+            </>
+          ) : (
+            <>
+              <Box sx={{ flex: 1, display: 'flex', gap: 1, alignItems: 'center' }}>
+                <OutlinedInput
+                  size="small"
+                  placeholder="Search subjects..."
+                  value={searchTerm}
+                  onChange={handleSearch}
+                  startAdornment={
+                    <InputAdornment position="start">
+                      <SearchIcon />
+                    </InputAdornment>
+                  }
+                  sx={{ minWidth: 300 }}
+                />
+                
+                {hasActiveFilters && (
+                  <Button
+                    variant="outlined"
+                    startIcon={<ClearIcon />}
+                    onClick={clearFilters}
+                    size="small"
+                  >
+                    Clear
+                  </Button>
+                )}
+              </Box>
+              
+              <Box sx={{ display: 'flex', gap: 1 }}>
+                <Tooltip title="Filter">
+                  <IconButton onClick={handleFilterClick}>
+                    <FilterIcon />
+                  </IconButton>
+                </Tooltip>
+                
+                <Tooltip title="Sort">
+                  <IconButton onClick={handleSortClick}>
+                    <SortIcon />
+                    {sortBy && (
+                      sortOrder === 'asc' ? <ArrowUpIcon fontSize="small" /> : <ArrowDownIcon fontSize="small" />
+                    )}
+                  </IconButton>
+                </Tooltip>
+              </Box>
+            </>
           )}
-        </Paper>
-      )}
+        </Toolbar>
+      </Paper>
+
 
       {/* Subjects Table */}
-      <Card variant="outlined">
+      <Paper>
         {error && (
           <Box sx={{ p: 3, textAlign: 'center' }}>
             <Typography color="error" variant="body1">
@@ -720,17 +763,7 @@ export default function SubjectsPage() {
             />
           </>
         )}
-      </Card>
-
-      {/* Floating Action Button */}
-      <Fab
-        color="primary"
-        aria-label="add"
-        sx={{ position: 'fixed', bottom: 24, right: 24 }}
-        onClick={() => handleClickOpen()}
-      >
-        <AddIcon />
-      </Fab>
+      </Paper>
 
       {/* Subject Dialog */}
       <Dialog
@@ -1165,6 +1198,130 @@ export default function SubjectsPage() {
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* Filter Popover */}
+      <Popover
+        open={Boolean(filterAnchorEl)}
+        anchorEl={filterAnchorEl}
+        onClose={handleFilterClose}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+      >
+        <Box sx={{ p: 2, width: 280 }}>
+          <Typography variant="subtitle2" gutterBottom>
+            Filter Subjects
+          </Typography>
+          
+          <Box sx={{ mb: 3 }}>
+            <Typography variant="caption" color="text.secondary" gutterBottom>
+              Type (Multi-select)
+            </Typography>
+            <Box sx={{ mt: 1 }}>
+              {['user', 'group', 'role'].map((type) => (
+                <Chip
+                  key={type}
+                  label={type.charAt(0).toUpperCase() + type.slice(1)}
+                  variant={filterType.includes(type) ? 'filled' : 'outlined'}
+                  size="small"
+                  onClick={() => {
+                    setFilterType(prev => 
+                      prev.includes(type) 
+                        ? prev.filter(t => t !== type)
+                        : [...prev, type]
+                    );
+                  }}
+                  sx={{ mr: 0.5, mb: 0.5 }}
+                  color={filterType.includes(type) ? 'primary' : 'default'}
+                />
+              ))}
+            </Box>
+            {filterType.length > 0 && (
+              <Button 
+                size="small" 
+                onClick={() => setFilterType([])}
+                sx={{ mt: 1, fontSize: '0.75rem' }}
+              >
+                Clear Type
+              </Button>
+            )}
+          </Box>
+          
+          <Box sx={{ mb: 2 }}>
+            <Typography variant="caption" color="text.secondary" gutterBottom>
+              Status (Multi-select)
+            </Typography>
+            <Box sx={{ mt: 1 }}>
+              {['active', 'inactive'].map((status) => (
+                <Chip
+                  key={status}
+                  label={status.charAt(0).toUpperCase() + status.slice(1)}
+                  variant={filterStatus.includes(status) ? 'filled' : 'outlined'}
+                  size="small"
+                  onClick={() => {
+                    setFilterStatus(prev => 
+                      prev.includes(status) 
+                        ? prev.filter(s => s !== status)
+                        : [...prev, status]
+                    );
+                  }}
+                  sx={{ mr: 0.5, mb: 0.5 }}
+                  color={filterStatus.includes(status) ? 'primary' : 'default'}
+                />
+              ))}
+            </Box>
+            {filterStatus.length > 0 && (
+              <Button 
+                size="small" 
+                onClick={() => setFilterStatus([])}
+                sx={{ mt: 1, fontSize: '0.75rem' }}
+              >
+                Clear Status
+              </Button>
+            )}
+          </Box>
+
+          {(filterType.length > 0 || filterStatus.length > 0) && (
+            <Box sx={{ mt: 2, pt: 2, borderTop: '1px solid', borderColor: 'divider' }}>
+              <Button 
+                variant="outlined" 
+                size="small" 
+                fullWidth
+                onClick={() => {
+                  setFilterType([]);
+                  setFilterStatus([]);
+                }}
+              >
+                Clear All Filters
+              </Button>
+            </Box>
+          )}
+        </Box>
+      </Popover>
+
+      {/* Sort Popover */}
+      <Popover
+        open={Boolean(sortAnchorEl)}
+        anchorEl={sortAnchorEl}
+        onClose={handleSortClose}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+      >
+        <List>
+          {[
+            { field: 'displayName', label: 'Name' },
+            { field: 'type', label: 'Type' },
+            { field: 'status', label: 'Status' },
+            { field: 'createdAt', label: 'Created At' },
+          ].map(({ field, label }) => (
+            <ListItem key={field} onClick={() => handleSortChange(field)} sx={{ cursor: 'pointer' }}>
+              <ListItemText primary={label} />
+              {sortBy === field && (
+                <ListItemIcon sx={{ minWidth: 'auto', ml: 1 }}>
+                  {sortOrder === 'asc' ? <ArrowUpIcon fontSize="small" /> : <ArrowDownIcon fontSize="small" />}
+                </ListItemIcon>
+              )}
+            </ListItem>
+          ))}
+        </List>
+      </Popover>
     </DashboardLayout>
   );
 }
