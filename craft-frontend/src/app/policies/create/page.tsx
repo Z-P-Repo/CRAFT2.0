@@ -185,6 +185,7 @@ export default function CreatePolicyPage() {
   const [selectedResources, setSelectedResources] = useState<string[]>([]);
   const [selectedAttributes, setSelectedAttributes] = useState<Attribute[]>([]);
   const [selectedSubjectAttributes, setSelectedSubjectAttributes] = useState<{ [key: string]: any }>({});
+  const [selectedAction, setSelectedAction] = useState<'draft' | 'publish' | null>(null);
 
   // Dropdown data
   const [subjects, setSubjects] = useState<Subject[]>([]);
@@ -523,8 +524,8 @@ export default function CreatePolicyPage() {
     }
   };
 
-  // Submit form
-  const handleSubmit = async () => {
+  // Submit form (common logic)
+  const submitPolicy = async (status: 'Draft' | 'Active') => {
     if (!isStepValid(0) || !isStepValid(1) || !isStepValid(2)) {
       setError('Please complete all required fields');
       return;
@@ -578,7 +579,7 @@ export default function CreatePolicyPage() {
         name: displayName.trim(),
         description: description?.trim() || '',
         effect: 'Allow' as const,
-        status: 'Draft' as const,
+        status,
         rules,
         subjects: [selectedSubject],
         resources: selectedResources,
@@ -600,6 +601,18 @@ export default function CreatePolicyPage() {
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  // Handle saving as draft
+  const handleSaveDraft = () => {
+    setSelectedAction('draft');
+    submitPolicy('Draft');
+  };
+
+  // Handle publishing immediately  
+  const handlePublish = () => {
+    setSelectedAction('publish');
+    submitPolicy('Active');
   };
 
   const renderStepContent = (step: number) => {
@@ -1353,6 +1366,39 @@ export default function CreatePolicyPage() {
               </Grid>
             </Grid>
 
+            {/* Action Options */}
+            <Card sx={{ mt: 3, p: 3, bgcolor: 'grey.50', border: '1px solid', borderColor: 'grey.200' }}>
+              <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Box sx={{ width: 4, height: 24, bgcolor: 'primary.main', borderRadius: 1 }} />
+                Next Steps
+              </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                Choose how you want to proceed with your policy:
+              </Typography>
+              <Grid container spacing={2}>
+                <Grid size={{ xs: 12, md: 6 }}>
+                  <Card variant="outlined" sx={{ p: 2, height: '100%' }}>
+                    <Typography variant="subtitle2" color="warning.main" gutterBottom sx={{ fontWeight: 600 }}>
+                      💾 Save as Draft
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.875rem' }}>
+                      Save the policy for review and testing. You can publish it later from the policies list.
+                    </Typography>
+                  </Card>
+                </Grid>
+                <Grid size={{ xs: 12, md: 6 }}>
+                  <Card variant="outlined" sx={{ p: 2, height: '100%' }}>
+                    <Typography variant="subtitle2" color="success.main" gutterBottom sx={{ fontWeight: 600 }}>
+                      🚀 Publish Immediately
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.875rem' }}>
+                      Create and activate the policy immediately. It will be enforced across your system right away.
+                    </Typography>
+                  </Card>
+                </Grid>
+              </Grid>
+            </Card>
+
             {error && (
               <Alert severity="error" sx={{ mt: 2 }}>
                 {error}
@@ -1361,7 +1407,10 @@ export default function CreatePolicyPage() {
 
             {success && (
               <Alert severity="success" sx={{ mt: 2 }}>
-                Policy created successfully! Redirecting to policies list...
+                {selectedAction === 'publish'
+                  ? 'Policy created and published successfully! It is now active and enforced. Redirecting to policies list...'
+                  : 'Policy created successfully as draft! You can publish it later from the policies list. Redirecting...'
+                }
               </Alert>
             )}
           </Card>
@@ -1470,14 +1519,25 @@ export default function CreatePolicyPage() {
               </Button>
               
               {activeStep === steps.length - 1 ? (
-                <Button
-                  variant="contained"
-                  onClick={handleSubmit}
-                  disabled={isSubmitting || !isCurrentStepValid}
-                  startIcon={isSubmitting ? <CircularProgress size={20} /> : <CheckIcon />}
-                >
-                  {isSubmitting ? 'Creating...' : 'Create Policy'}
-                </Button>
+                <>
+                  <Button
+                    variant="outlined"
+                    onClick={handleSaveDraft}
+                    disabled={isSubmitting || !isCurrentStepValid}
+                    startIcon={isSubmitting && selectedAction === 'draft' ? <CircularProgress size={20} /> : null}
+                    sx={{ mr: 2 }}
+                  >
+                    {isSubmitting && selectedAction === 'draft' ? 'Saving Draft...' : 'Save as Draft'}
+                  </Button>
+                  <Button
+                    variant="contained"
+                    onClick={handlePublish}
+                    disabled={isSubmitting || !isCurrentStepValid}
+                    startIcon={isSubmitting && selectedAction === 'publish' ? <CircularProgress size={20} /> : <CheckIcon />}
+                  >
+                    {isSubmitting && selectedAction === 'publish' ? 'Publishing...' : 'Publish Policy'}
+                  </Button>
+                </>
               ) : (
                 <Button
                   variant="contained"

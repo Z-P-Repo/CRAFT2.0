@@ -87,6 +87,7 @@ export class PolicyController {
       name,
       description,
       effect,
+      status,
       rules,
       subjects,
       resources,
@@ -99,6 +100,8 @@ export class PolicyController {
     if (!name || !effect) {
       throw new ValidationError('Name and effect are required');
     }
+
+    logger.info(`Creating policy: ${name} with status: ${status || 'Draft'} by ${req.user?.email || 'system'}`);
 
     // Check if policy already exists (if id provided)
     if (id) {
@@ -114,7 +117,7 @@ export class PolicyController {
       name: name.trim(),
       description: description?.trim(),
       effect,
-      status: 'Draft',
+      status: status || 'Draft',
       rules: rules || [],
       subjects: subjects || [],
       resources: resources || [],
