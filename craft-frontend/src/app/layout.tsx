@@ -8,6 +8,16 @@ export const metadata: Metadata = {
   description: 'Attribute-Based Access Control (ABAC) System',
   keywords: ['ABAC', 'Permission System', 'Access Control', 'Security'],
   authors: [{ name: 'Zero Pixels Technologies Private Limited' }],
+  icons: {
+    icon: [
+      { url: '/favicon.ico', sizes: '16x16', type: 'image/x-icon' },
+      { url: '/favicon.svg', type: 'image/svg+xml' }
+    ],
+    apple: [
+      { url: '/apple-touch-icon.png', sizes: '180x180', type: 'image/png' }
+    ],
+  },
+  manifest: '/site.webmanifest',
 };
 
 export const viewport: Viewport = {
