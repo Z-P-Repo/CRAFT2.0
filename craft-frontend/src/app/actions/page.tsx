@@ -1121,6 +1121,22 @@ export default function ActionsPage() {
           >
             Close
           </Button>
+          {canEdit(currentUser) && (
+            <Button
+              onClick={() => {
+                handleViewClose();
+                handleClickOpen(viewAction!);
+              }}
+              variant="contained"
+              sx={{
+                textTransform: 'none',
+                fontWeight: 600,
+                px: 3
+              }}
+            >
+              Edit Action
+            </Button>
+          )}
         </DialogActions>
       </Dialog>
 
