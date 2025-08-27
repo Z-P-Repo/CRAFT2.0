@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { 
   Container, 
@@ -23,27 +23,20 @@ import { useAuth } from '@/contexts/AuthContext';
 export default function HomePage() {
   const { isAuthenticated, isLoading, user } = useAuth();
   const router = useRouter();
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    if (isAuthenticated && user) {
-      router.push('/dashboard');
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (mounted && isAuthenticated && user) {
+      router.replace('/dashboard');
     }
-  }, [isAuthenticated, user]); // router is stable, safe to omit
+  }, [mounted, isAuthenticated, user, router]);
 
-  if (isLoading) {
-    return (
-      <Box 
-        display="flex" 
-        justifyContent="center" 
-        alignItems="center" 
-        minHeight="100vh"
-      >
-        <CircularProgress />
-      </Box>
-    );
-  }
-
-  if (isAuthenticated) {
+  // Show loading while checking auth or during redirect
+  if (!mounted || isLoading || (mounted && isAuthenticated)) {
     return (
       <Box 
         display="flex" 

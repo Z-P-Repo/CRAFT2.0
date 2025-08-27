@@ -21,19 +21,26 @@ export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const { login, isAuthenticated, isLoading, error, clearError } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
-    if (isAuthenticated) {
-      router.push('/dashboard');
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (mounted && isAuthenticated) {
+      router.replace('/dashboard');
     }
-  }, [isAuthenticated]); // router is stable, safe to omit
+  }, [mounted, isAuthenticated, router]);
 
   useEffect(() => {
     // Clear any previous errors when component mounts
-    clearError();
-  }, []); // clearError is stable, only run on mount
+    if (mounted) {
+      clearError();
+    }
+  }, [mounted, clearError]);
 
   const handleSubmit = async () => {
     if (!email || !password) {
@@ -53,7 +60,8 @@ export default function LoginPage() {
     }
   };
 
-  if (isLoading) {
+  // Show loading while checking auth or during redirect
+  if (!mounted || isLoading || (mounted && isAuthenticated)) {
     return (
       <Box 
         display="flex" 

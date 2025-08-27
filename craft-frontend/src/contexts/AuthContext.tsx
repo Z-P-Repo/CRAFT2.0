@@ -66,6 +66,7 @@ function authReducer(
     case 'AUTH_LOGOUT':
       return {
         ...initialState,
+        isLoading: false, // We know user is not authenticated after logout
       };
     case 'CLEAR_ERROR':
       return {
@@ -88,7 +89,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Define checkAuth first before useEffect
   const checkAuth = useCallback(async (): Promise<void> => {
     try {
-      const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+      // Ensure we're on the client side
+      if (typeof window === 'undefined') {
+        dispatch({ type: 'SET_LOADING', payload: false });
+        return;
+      }
+      
+      const token = localStorage.getItem('token');
       
       if (!token) {
         dispatch({ type: 'SET_LOADING', payload: false });
@@ -103,48 +110,58 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           payload: {
             user: response.data,
             token,
-            ...(typeof window !== 'undefined' && localStorage.getItem('refreshToken') && {
+            ...(localStorage.getItem('refreshToken') && {
               refreshToken: localStorage.getItem('refreshToken')!
             }),
           },
         });
       } else {
         // Invalid token, clear it
-        if (typeof window !== 'undefined') {
-          localStorage.removeItem('token');
-          localStorage.removeItem('refreshToken');
-        }
+        localStorage.removeItem('token');
+        localStorage.removeItem('refreshToken');
         dispatch({ type: 'SET_LOADING', payload: false });
       }
     } catch (error) {
       // Token validation failed, clear it
-      if (typeof window !== 'undefined') {
-        localStorage.removeItem('token');
-        localStorage.removeItem('refreshToken');
-      }
+      localStorage.removeItem('token');
+      localStorage.removeItem('refreshToken');
       dispatch({ type: 'SET_LOADING', payload: false });
     }
   }, []);
 
   // Check for existing auth on mount
   useEffect(() => {
-    checkAuth();
+    // Only check auth once on initial mount
+    let mounted = true;
+    
+    const initAuth = async () => {
+      if (mounted) {
+        await checkAuth();
+      }
+    };
+    
+    initAuth();
     
     // Listen for auth errors from API client
     const handleAuthError = () => {
-      dispatch({ type: 'AUTH_LOGOUT' });
+      if (mounted) {
+        dispatch({ type: 'AUTH_LOGOUT' });
+      }
     };
 
     if (typeof window !== 'undefined') {
       window.addEventListener('auth:error', handleAuthError);
       
       return () => {
+        mounted = false;
         window.removeEventListener('auth:error', handleAuthError);
       };
     } else {
-      return () => {}; // Empty cleanup function for consistency
+      return () => {
+        mounted = false;
+      };
     }
-  }, [checkAuth]);
+  }, []); // Empty dependency to run only once
 
   const login = async (credentials: LoginCredentials): Promise<void> => {
     try {

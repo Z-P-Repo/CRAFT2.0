@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect } from 'react';
+import React from 'react';
 import { useRouter } from 'next/navigation';
 import {
   Typography,
@@ -10,7 +10,6 @@ import {
   CardContent,
   Button,
   Paper,
-  CircularProgress,
   Chip,
 } from '@mui/material';
 import {
@@ -22,29 +21,11 @@ import {
 } from '@mui/icons-material';
 import { useAuth } from '@/contexts/AuthContext';
 import DashboardLayout from '@/components/layout/DashboardLayout';
+import ProtectedRoute from '@/components/auth/ProtectedRoute';
 
 export default function DashboardPage() {
-  const { user, isAuthenticated, isLoading } = useAuth();
+  const { user } = useAuth();
   const router = useRouter();
-
-  useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
-      router.push('/login');
-    }
-  }, [isAuthenticated, isLoading]);
-
-  if (isLoading || !isAuthenticated) {
-    return (
-      <Box 
-        display="flex" 
-        justifyContent="center" 
-        alignItems="center" 
-        minHeight="100vh"
-      >
-        <CircularProgress />
-      </Box>
-    );
-  }
 
   const stats = [
     { label: 'Active Policies', value: '24', icon: Security, color: 'primary' },
@@ -54,7 +35,8 @@ export default function DashboardPage() {
   ];
 
   return (
-    <DashboardLayout>
+    <ProtectedRoute>
+      <DashboardLayout>
       {/* Welcome Header */}
       <Paper elevation={1} sx={{ p: 3, mb: 4 }}>
         <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
@@ -207,6 +189,7 @@ export default function DashboardPage() {
           </Card>
         </Grid>
       </Grid>
-    </DashboardLayout>
+      </DashboardLayout>
+    </ProtectedRoute>
   );
 }
