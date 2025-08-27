@@ -136,7 +136,7 @@ export default function AttributesPage() {
   const [selectedAttributes, setSelectedAttributes] = useState<string[]>([]);
   const [displayName, setDisplayName] = useState('');
   const [displayNameError, setDisplayNameError] = useState('');
-  const [selectedCategories, setSelectedCategories] = useState<string[]>(['subject']);
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [selectedDataType, setSelectedDataType] = useState('');
   const [permittedValues, setPermittedValues] = useState('');
   const [parsedValues, setParsedValues] = useState<any[]>([]);
@@ -180,7 +180,7 @@ export default function AttributesPage() {
     setSelectedAttribute(attribute || null);
     setDisplayName(attribute?.displayName || '');
     setDisplayNameError('');
-    setSelectedCategories(attribute?.categories ? attribute.categories : ['subject']);
+    setSelectedCategories(attribute?.categories ? attribute.categories : []);
     setSelectedDataType(attribute?.dataType || '');
     setDescription(attribute?.description || '');
     
@@ -312,7 +312,7 @@ export default function AttributesPage() {
     setSelectedAttribute(null);
     setDisplayName('');
     setDisplayNameError('');
-    setSelectedCategories(['subject']);
+    setSelectedCategories([]);
     setSelectedDataType('');
     setDescription('');
     setPermittedValues('');
