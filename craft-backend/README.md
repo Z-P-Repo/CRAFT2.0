@@ -13,7 +13,9 @@ A robust, scalable Node.js backend API for the CRAFT (Attribute-Based Access Con
 
 - **🔐 JWT Authentication** with refresh tokens and secure password hashing
 - **📋 ABAC Policy Engine** - Comprehensive Attribute-Based Access Control
-- **👥 User Management** - Complete user, role, and permission system
+- **👥 User Management** - Complete user, role, and permission system with three-tier roles (Super Admin, Admin, Basic)
+- **🔑 User Registration** - Public registration endpoint with default Basic role assignment
+- **🛡️ Role Management** - Hierarchical role change functionality with permission validation
 - **📁 Resource Management** - Handle files, databases, APIs, and system resources
 - **⚡ Action Framework** - Categorized system actions with risk assessment
 - **🏷️ Attribute System** - Flexible attribute management for ABAC
@@ -100,27 +102,33 @@ src/
 ├── controllers/      # Route controllers
 │   ├── ActionController.ts    # Actions CRUD operations
 │   ├── AttributeController.ts # Attributes management
+│   ├── AuthController.ts      # Authentication operations
 │   ├── PolicyController.ts    # Policy management
 │   ├── ResourceController.ts  # Resources CRUD
-│   └── SubjectController.ts   # Subjects management
+│   ├── SubjectController.ts   # Subjects management
+│   └── UserController.ts      # User management and role changes
 ├── models/          # MongoDB models
 │   ├── Action.ts    # Action data model
 │   ├── Attribute.ts # Attribute data model
 │   ├── Policy.ts    # Policy data model
 │   ├── Resource.ts  # Resource data model
-│   └── Subject.ts   # Subject data model
+│   ├── Subject.ts   # Subject data model
+│   └── User.ts      # User data model with role management
 ├── routes/          # API routes
 │   ├── actionRoutes.ts    # Action endpoints
 │   ├── attributeRoutes.ts # Attribute endpoints
+│   ├── auth.ts           # Authentication endpoints
 │   ├── policyRoutes.ts    # Policy endpoints
 │   ├── resourceRoutes.ts  # Resource endpoints
-│   └── subjectRoutes.ts   # Subject endpoints
+│   ├── subjectRoutes.ts   # Subject endpoints
+│   └── userRoutes.ts     # User management endpoints
 ├── middleware/      # Express middleware
 │   ├── auth.ts      # Authentication middleware
 │   └── security.ts  # Security middleware
 ├── scripts/         # Database scripts
 │   ├── seed.ts      # Seed sample data
 │   └── seeds/       # Seed data files
+│       └── userSeed.ts  # User seed data with all roles
 ├── config/          # Configuration files
 ├── utils/           # Utility functions
 └── types/           # TypeScript type definitions
@@ -139,10 +147,20 @@ src/
 
 ### Authentication
 - `POST /api/v1/auth/login` - User login
-- `POST /api/v1/auth/register` - User registration
+- `POST /api/v1/auth/register` - User registration (creates Basic role user by default)
 - `POST /api/v1/auth/refresh-token` - Refresh JWT token
 - `GET /api/v1/auth/profile` - Get user profile
 - `POST /api/v1/auth/logout` - User logout
+- `POST /api/v1/auth/validate-token` - Validate JWT token
+- `POST /api/v1/auth/change-password` - Change user password
+
+### Users
+- `GET /api/v1/users` - List users with pagination and role filtering
+- `POST /api/v1/users` - Create new user (Admin/Super Admin only)
+- `GET /api/v1/users/:id` - Get specific user
+- `PUT /api/v1/users/:id` - Update user
+- `DELETE /api/v1/users/:id` - Delete user
+- `PATCH /api/v1/users/:id/role` - Change user role (Admin/Super Admin only)
 
 ### Policies
 - `GET /api/v1/policies` - List policies with pagination, filtering, and sorting

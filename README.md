@@ -92,7 +92,9 @@ CRAFT2.0/
 
 ### 🔐 Authentication & Authorization
 - JWT-based authentication with refresh tokens
-- Role-based access control (Admin, Manager, User)
+- Role-based access control (Super Admin, Admin, Basic)
+- User registration with default Basic role assignment
+- Role management with hierarchical permissions
 - Secure password hashing with bcrypt
 - Token validation and automatic refresh
 
@@ -108,6 +110,7 @@ CRAFT2.0/
 - **Resources**: Protected resources and assets with attribute support
 - **Actions**: Operations that can be performed with categorization
 - **Attributes**: Contextual information for policy decisions with full CRUD
+- **Users**: Complete user management with three roles (Super Admin, Admin, Basic) and role change functionality
 
 ### 📋 Policy Management
 - **Step-by-step Creation**: 4-step wizard for policy creation

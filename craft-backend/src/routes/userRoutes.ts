@@ -1,28 +1,25 @@
 import express from 'express';
 import { UserController } from '@/controllers/UserController';
-import { auth } from '@/middleware/auth';
+import { auth, requireAdminOrSuperAdmin } from '@/middleware/auth';
 import { asyncHandler } from '@/middleware/errorHandler';
 
 const router = express.Router();
 
-// Apply authentication middleware to all routes
-router.use(auth);
+// User management routes - view access for all, edit/delete for admins only
+router.get('/', auth, UserController.getUsers);
+router.get('/stats', auth, UserController.getUserStats);
+router.get('/:id', auth, UserController.getUserById);
+router.post('/', auth, requireAdminOrSuperAdmin, UserController.createUser);
+router.put('/:id', auth, requireAdminOrSuperAdmin, UserController.updateUser);
+router.delete('/:id', auth, requireAdminOrSuperAdmin, UserController.deleteUser);
 
-// User management routes
-router.get('/', UserController.getUsers);
-router.get('/stats', UserController.getUserStats);
-router.get('/:id', UserController.getUserById);
-router.post('/', UserController.createUser);
-router.put('/:id', UserController.updateUser);
-router.delete('/:id', UserController.deleteUser);
+// Password management - admins only
+router.put('/:id/change-password', auth, requireAdminOrSuperAdmin, UserController.changePassword);
+router.put('/:id/toggle-status', auth, requireAdminOrSuperAdmin, UserController.toggleUserStatus);
+router.put('/:id/change-role', auth, requireAdminOrSuperAdmin, UserController.changeUserRole);
 
-// Password management
-router.put('/:id/change-password', UserController.changePassword);
-router.put('/:id/toggle-status', UserController.toggleUserStatus);
-router.put('/:id/change-role', UserController.changeUserRole);
-
-// Bulk operations
-router.put('/bulk/update', UserController.bulkUpdateUsers);
-router.delete('/bulk/delete', UserController.bulkDeleteUsers);
+// Bulk operations - admins only
+router.put('/bulk/update', auth, requireAdminOrSuperAdmin, UserController.bulkUpdateUsers);
+router.delete('/bulk/delete', auth, requireAdminOrSuperAdmin, UserController.bulkDeleteUsers);
 
 export default router;

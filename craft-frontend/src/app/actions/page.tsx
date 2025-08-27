@@ -66,6 +66,8 @@ import {
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import { apiClient } from '@/lib/api';
 import { ApiResponse } from '@/types';
+import { useAuth } from '@/contexts/AuthContext';
+import { canManage, canEdit, canDelete, canCreate } from '@/utils/permissions';
 
 interface ActionObject {
   _id: string;
@@ -92,6 +94,7 @@ interface ActionObject {
 }
 
 export default function ActionsPage() {
+  const { user: currentUser } = useAuth();
   const [actions, setActions] = useState<ActionObject[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -492,14 +495,16 @@ export default function ActionsPage() {
           <Typography variant="body2" color="text.secondary">
             Manage system actions and operations in your permission system.
           </Typography>
-          <Button
-            variant="contained"
-            startIcon={<AddIcon />}
-            onClick={() => handleClickOpen()}
-            sx={{ px: 3 }}
-          >
-            Create Action
-          </Button>
+          {canCreate(currentUser) && (
+            <Button
+              variant="contained"
+              startIcon={<AddIcon />}
+              onClick={() => handleClickOpen()}
+              sx={{ px: 3 }}
+            >
+              Create Action
+            </Button>
+          )}
         </Box>
       </Paper>
 
@@ -515,11 +520,13 @@ export default function ActionsPage() {
               >
                 {selectedActions.length} selected
               </Typography>
-              <Tooltip title="Delete selected">
-                <IconButton color="error" onClick={handleBulkDeleteOpen}>
-                  <BulkDeleteIcon />
-                </IconButton>
-              </Tooltip>
+              {canDelete(currentUser) && (
+                <Tooltip title="Delete selected">
+                  <IconButton color="error" onClick={handleBulkDeleteOpen}>
+                    <BulkDeleteIcon />
+                  </IconButton>
+                </Tooltip>
+              )}
             </>
           ) : (
             <>
@@ -698,24 +705,28 @@ export default function ActionsPage() {
                               <ViewIcon fontSize="small" />
                             </IconButton>
                           </Tooltip>
-                          <Tooltip title="Edit">
-                            <IconButton
-                              size="small"
-                              color="primary"
-                              onClick={() => handleClickOpen(action)}
-                            >
-                              <EditIcon fontSize="small" />
-                            </IconButton>
-                          </Tooltip>
-                          <Tooltip title="Delete">
-                            <IconButton
-                              size="small"
-                              color="error"
-                              onClick={() => handleDeleteOpen(action)}
-                            >
-                              <DeleteIcon fontSize="small" />
-                            </IconButton>
-                          </Tooltip>
+                          {canEdit(currentUser) && (
+                            <Tooltip title="Edit">
+                              <IconButton
+                                size="small"
+                                color="primary"
+                                onClick={() => handleClickOpen(action)}
+                              >
+                                <EditIcon fontSize="small" />
+                              </IconButton>
+                            </Tooltip>
+                          )}
+                          {canDelete(currentUser) && (
+                            <Tooltip title="Delete">
+                              <IconButton
+                                size="small"
+                                color="error"
+                                onClick={() => handleDeleteOpen(action)}
+                              >
+                                <DeleteIcon fontSize="small" />
+                              </IconButton>
+                            </Tooltip>
+                          )}
                         </Box>
                       </TableCell>
                     </TableRow>
@@ -848,18 +859,20 @@ export default function ActionsPage() {
       </Popover>
 
       {/* Floating Action Button */}
-      <Fab
-        color="primary"
-        aria-label="add"
-        onClick={() => handleClickOpen()}
-        sx={{
-          position: 'fixed',
-          bottom: 24,
-          right: 24,
-        }}
-      >
-        <AddIcon />
-      </Fab>
+      {canCreate(currentUser) && (
+        <Fab
+          color="primary"
+          aria-label="add"
+          onClick={() => handleClickOpen()}
+          sx={{
+            position: 'fixed',
+            bottom: 24,
+            right: 24,
+          }}
+        >
+          <AddIcon />
+        </Fab>
+      )}
 
       {/* Create/Edit Action Dialog */}
       <Dialog

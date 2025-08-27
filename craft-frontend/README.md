@@ -12,6 +12,8 @@ A modern, responsive React-based dashboard for managing the CRAFT (Attribute-Bas
 
 - **📱 Responsive Dashboard Layout** with collapsible sidebar navigation
 - **🔐 JWT Authentication** with automatic token refresh and secure routing
+- **👥 User Registration** - Public registration with default Basic role assignment
+- **🛡️ User Management** - Complete user management system with role hierarchy (Super Admin, Admin, Basic)
 - **📋 Policy Management** - Create, edit, and manage ABAC policies with 4-step wizard and dedicated view/edit pages
 - **👥 Subject Management** - Handle users, groups, and roles with detailed profiles
 - **📁 Resource Management** - Manage system resources, files, databases, and APIs
@@ -99,7 +101,9 @@ npm run analyze
 src/
 ├── app/                 # Next.js App Router pages
 │   ├── login/          # Login page
+│   ├── register/       # User registration page
 │   ├── dashboard/      # Dashboard page
+│   ├── users/          # User management page
 │   ├── policies/       # Policy management pages
 │   │   ├── create/     # Policy creation wizard
 │   │   ├── [id]/       # Policy view/edit pages
@@ -141,6 +145,7 @@ src/
 
 ### Protected Routes
 - **Dashboard** (`/dashboard`): Main application dashboard
+- **Users** (`/users`): Complete user management with role changes (Admin/Super Admin only)
 - **Subjects** (`/subjects`): User and role management
 - **Resources** (`/resources`): Resource management
 - **Actions** (`/actions`): Action definitions
@@ -180,14 +185,16 @@ src/
 ```typescript
 // Authentication
 apiClient.login(credentials)
-apiClient.register(userData)
+apiClient.register(userData)  // Creates Basic role user by default
 apiClient.logout()
 apiClient.getProfile()
+apiClient.validateToken()
 
 // Generic CRUD
 apiClient.get(url, params)
 apiClient.post(url, data)
 apiClient.put(url, data)
+apiClient.patch(url, data)  // For role changes
 apiClient.delete(url)
 ```
 

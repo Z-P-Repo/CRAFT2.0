@@ -70,6 +70,8 @@ import {
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import { apiClient } from '@/lib/api';
 import { ApiResponse } from '@/types';
+import { useAuth } from '@/contexts/AuthContext';
+import { canManage, canEdit, canDelete, canCreate } from '@/utils/permissions';
 
 interface Subject {
   _id: string;
@@ -99,6 +101,7 @@ interface Subject {
 }
 
 export default function SubjectsPage() {
+  const { user: currentUser } = useAuth();
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -517,14 +520,16 @@ export default function SubjectsPage() {
           <Typography variant="body2" color="text.secondary">
             Manage users, groups, and roles in your permission system
           </Typography>
-          <Button
-            variant="contained"
-            startIcon={<AddIcon />}
-            onClick={() => handleClickOpen()}
-            sx={{ px: 3 }}
-          >
-            Create Subject
-          </Button>
+          {canCreate(currentUser) && (
+            <Button
+              variant="contained"
+              startIcon={<AddIcon />}
+              onClick={() => handleClickOpen()}
+              sx={{ px: 3 }}
+            >
+              Create Subject
+            </Button>
+          )}
         </Box>
       </Paper>
 
@@ -540,11 +545,13 @@ export default function SubjectsPage() {
               >
                 {selectedSubjects.length} selected
               </Typography>
-              <Tooltip title="Delete selected">
-                <IconButton color="error" onClick={handleBulkDeleteOpen}>
-                  <BulkDeleteIcon />
-                </IconButton>
-              </Tooltip>
+              {canDelete(currentUser) && (
+                <Tooltip title="Delete selected">
+                  <IconButton color="error" onClick={handleBulkDeleteOpen}>
+                    <BulkDeleteIcon />
+                  </IconButton>
+                </Tooltip>
+              )}
             </>
           ) : (
             <>
@@ -714,7 +721,7 @@ export default function SubjectsPage() {
                             </Box>
                           </TableCell>
                           <TableCell align="center" sx={{ width: '120px', minWidth: '120px' }}>
-                            <Box sx={{ display: 'flex', gap: 1 }}>
+                            <Box sx={{ display: 'flex', gap: 1, justifyContent: 'center' }}>
                               <IconButton
                                 size="small"
                                 color="primary"
@@ -725,26 +732,30 @@ export default function SubjectsPage() {
                               >
                                 <ViewIcon fontSize="small" />
                               </IconButton>
-                              <IconButton
-                                size="small"
-                                color="primary"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleClickOpen(subject);
-                                }}
-                              >
-                                <EditIcon fontSize="small" />
-                              </IconButton>
-                              <IconButton
-                                size="small"
-                                color="error"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleDeleteOpen(subject);
-                                }}
-                              >
-                                <DeleteIcon fontSize="small" />
-                              </IconButton>
+                              {canEdit(currentUser) && (
+                                <IconButton
+                                  size="small"
+                                  color="primary"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleClickOpen(subject);
+                                  }}
+                                >
+                                  <EditIcon fontSize="small" />
+                                </IconButton>
+                              )}
+                              {canDelete(currentUser) && (
+                                <IconButton
+                                  size="small"
+                                  color="error"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleDeleteOpen(subject);
+                                  }}
+                                >
+                                  <DeleteIcon fontSize="small" />
+                                </IconButton>
+                              )}
                             </Box>
                           </TableCell>
                         </TableRow>

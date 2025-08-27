@@ -1,20 +1,20 @@
 import express from 'express';
 import { SubjectController } from '@/controllers/SubjectController';
-import { auth, optionalAuth } from '@/middleware/auth';
+import { auth, requireAdminOrSuperAdmin } from '@/middleware/auth';
 import { asyncHandler } from '@/middleware/errorHandler';
 
 const router = express.Router();
 
-// Subject management routes (public for demo with optional auth for tracking)
-router.get('/', optionalAuth, SubjectController.getSubjects);
-router.get('/:id', optionalAuth, SubjectController.getSubjectById);
-router.post('/', optionalAuth, SubjectController.createSubject);
-router.put('/:id', optionalAuth, SubjectController.updateSubject);
-router.delete('/:id', optionalAuth, SubjectController.deleteSubject);
+// Subject management routes - view access for all, edit/delete for admins only
+router.get('/', auth, SubjectController.getSubjects);
+router.get('/:id', auth, SubjectController.getSubjectById);
+router.post('/', auth, requireAdminOrSuperAdmin, SubjectController.createSubject);
+router.put('/:id', auth, requireAdminOrSuperAdmin, SubjectController.updateSubject);
+router.delete('/:id', auth, requireAdminOrSuperAdmin, SubjectController.deleteSubject);
 
-// Bulk operations (public for demo with optional auth for tracking)
-router.put('/bulk/update', optionalAuth, SubjectController.bulkUpdateSubjects);
-router.delete('/bulk/delete', optionalAuth, SubjectController.bulkDeleteSubjects);
+// Bulk operations - admins only
+router.put('/bulk/update', auth, requireAdminOrSuperAdmin, SubjectController.bulkUpdateSubjects);
+router.delete('/bulk/delete', auth, requireAdminOrSuperAdmin, SubjectController.bulkDeleteSubjects);
 
 // Apply authentication middleware to remaining routes
 router.use(auth);

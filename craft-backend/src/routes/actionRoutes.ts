@@ -1,19 +1,19 @@
 import express from 'express';
 import { ActionController } from '@/controllers/ActionController';
-import { auth, optionalAuth } from '@/middleware/auth';
+import { auth, requireAdminOrSuperAdmin } from '@/middleware/auth';
 
 const router = express.Router();
 
-// Action management routes (public for demo with optional auth for tracking)
-router.get('/', optionalAuth, ActionController.getActions);
-router.get('/:id', optionalAuth, ActionController.getActionById);
-router.post('/', optionalAuth, ActionController.createAction);
-router.put('/:id', optionalAuth, ActionController.updateAction);
-router.delete('/:id', optionalAuth, ActionController.deleteAction);
+// Action management routes - view access for all, edit/delete for admins only
+router.get('/', auth, ActionController.getActions);
+router.get('/:id', auth, ActionController.getActionById);
+router.post('/', auth, requireAdminOrSuperAdmin, ActionController.createAction);
+router.put('/:id', auth, requireAdminOrSuperAdmin, ActionController.updateAction);
+router.delete('/:id', auth, requireAdminOrSuperAdmin, ActionController.deleteAction);
 
-// Bulk operations (public for demo with optional auth for tracking)
-router.put('/bulk/update', optionalAuth, ActionController.bulkUpdateActions);
-router.delete('/bulk/delete', optionalAuth, ActionController.bulkDeleteActions);
+// Bulk operations - admins only
+router.put('/bulk/update', auth, requireAdminOrSuperAdmin, ActionController.bulkUpdateActions);
+router.delete('/bulk/delete', auth, requireAdminOrSuperAdmin, ActionController.bulkDeleteActions);
 
 // Apply authentication middleware to remaining routes
 router.use(auth);

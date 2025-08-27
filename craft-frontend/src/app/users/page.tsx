@@ -52,6 +52,7 @@ import {
   ArrowUpward as ArrowUpIcon,
   ArrowDownward as ArrowDownIcon,
   MoreVert as MoreVertIcon,
+  Clear as ClearIcon,
   AdminPanelSettings as SuperAdminIcon,
   Security as AdminIcon,
   AccountCircle as BasicIcon,
@@ -60,30 +61,24 @@ import { useRouter } from 'next/navigation';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import { apiClient } from '@/lib/api';
 import { User, ApiResponse } from '@/types';
+import { useAuth } from '@/contexts/AuthContext';
+import { canManage, canEdit, canDelete, canCreate } from '@/utils/permissions';
 
 interface ExtendedUser extends User {
   id?: string;
   displayName?: string;
 }
 
-interface UserStats {
-  total: number;
-  active: number;
-  inactive: number;
-  super_admins: number;
-  admins: number;
-  basic_users: number;
-}
 
 export default function UsersPage() {
   const router = useRouter();
+  const { user: currentUser } = useAuth();
   const [users, setUsers] = useState<ExtendedUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [total, setTotal] = useState(0);
   const [activeCount, setActiveCount] = useState(0);
   const [inactiveCount, setInactiveCount] = useState(0);
-  const [userStats, setUserStats] = useState<UserStats | null>(null);
 
   const [open, setOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
@@ -160,21 +155,10 @@ export default function UsersPage() {
     }
   }, [page, rowsPerPage, sortBy, sortOrder, searchTerm, filterRole, filterStatus]);
 
-  const fetchUserStats = useCallback(async () => {
-    try {
-      const response = await apiClient.get('/users/stats');
-      if (response.success && response.data) {
-        setUserStats(response.data.overview);
-      }
-    } catch (err) {
-      console.error('Failed to fetch user stats:', err);
-    }
-  }, []);
 
   useEffect(() => {
     fetchUsers();
-    fetchUserStats();
-  }, [fetchUsers, fetchUserStats]);
+  }, [fetchUsers]);
 
   const handleSubmit = async () => {
     // Reset errors
@@ -224,7 +208,6 @@ export default function UsersPage() {
 
       if (response.success) {
         await fetchUsers();
-        await fetchUserStats();
         handleClose();
       } else {
         throw new Error(response.error || 'Failed to save user');
@@ -252,7 +235,6 @@ export default function UsersPage() {
 
       if (response.success) {
         await fetchUsers();
-        await fetchUserStats();
         setRoleChangeOpen(false);
         setRoleChangeUser(null);
       } else {
@@ -280,7 +262,6 @@ export default function UsersPage() {
         const usersWithId = updatedUsers.filter(user => user.id);
         setTotal(usersWithId.length);
         handleDeleteClose();
-        await fetchUserStats();
       } else {
         throw new Error(response.error || 'Failed to delete user');
       }
@@ -449,151 +430,129 @@ export default function UsersPage() {
     <DashboardLayout>
       {/* Header */}
       <Paper elevation={0} sx={{ p: 3, mb: 3, border: '1px solid', borderColor: 'grey.200' }}>
-        <Box sx={{ mb: 1 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+            <PersonIcon sx={{ mr: 2, color: 'text.secondary' }} />
             <Typography variant="h5" component="h1" fontWeight="600">
               Users
             </Typography>
+          </Box>
+          <Box sx={{ display: 'flex', gap: 3, textAlign: 'center' }}>
+            <Box>
+              <Typography variant="h6" color="primary.main" fontWeight="600">
+                {loading ? '...' : total}
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                Total
+              </Typography>
+            </Box>
+            <Box>
+              <Typography variant="h6" color="success.main" fontWeight="600">
+                {loading ? '...' : activeCount}
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                Active
+              </Typography>
+            </Box>
+            <Box>
+              <Typography variant="h6" color="error.main" fontWeight="600">
+                {loading ? '...' : inactiveCount}
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                Inactive
+              </Typography>
+            </Box>
           </Box>
         </Box>
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 2 }}>
           <Typography variant="body2" color="text.secondary">
             Manage user accounts and roles in your system
           </Typography>
-          <Button
-            variant="contained"
-            startIcon={<AddIcon />}
-            onClick={() => handleClickOpen()}
-            sx={{ px: 3 }}
-          >
-            Create User
-          </Button>
+          {canCreate(currentUser) && (
+            <Button
+              variant="contained"
+              startIcon={<AddIcon />}
+              onClick={() => handleClickOpen()}
+              sx={{ px: 3 }}
+            >
+              Create User
+            </Button>
+          )}
         </Box>
       </Paper>
 
-      {/* Stats Cards */}
-      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', md: 'repeat(4, 1fr)' }, gap: 2, mb: 3 }}>
-        <Card>
-          <CardContent sx={{ textAlign: 'center', py: 2 }}>
-            <Box sx={{ display: 'flex', gap: 3, textAlign: 'center' }}>
-              <Box>
-                <Typography variant="h6" color="primary.main" fontWeight="600">
-                  {loading ? '...' : total}
-                </Typography>
-                <Typography variant="caption" color="text.secondary">
-                  Total
-                </Typography>
-              </Box>
-              <Box>
-                <Typography variant="h6" color="success.main" fontWeight="600">
-                  {loading ? '...' : activeCount}
-                </Typography>
-                <Typography variant="caption" color="text.secondary">
-                  Active
-                </Typography>
-              </Box>
-              <Box>
-                <Typography variant="h6" color="error.main" fontWeight="600">
-                  {loading ? '...' : inactiveCount}
-                </Typography>
-                <Typography variant="caption" color="text.secondary">
-                  Inactive
-                </Typography>
-              </Box>
-            </Box>
-          </CardContent>
-        </Card>
-        
-        {userStats && (
-          <>
-            <Card>
-              <CardContent sx={{ textAlign: 'center', py: 2 }}>
-                <Typography variant="h6" color="error.main" fontWeight="600">
-                  {userStats.super_admins}
-                </Typography>
-                <Typography variant="caption" color="text.secondary">
-                  Super Admins
-                </Typography>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent sx={{ textAlign: 'center', py: 2 }}>
-                <Typography variant="h6" color="warning.main" fontWeight="600">
-                  {userStats.admins}
-                </Typography>
-                <Typography variant="caption" color="text.secondary">
-                  Admins
-                </Typography>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent sx={{ textAlign: 'center', py: 2 }}>
-                <Typography variant="h6" color="info.main" fontWeight="600">
-                  {userStats.basic_users}
-                </Typography>
-                <Typography variant="caption" color="text.secondary">
-                  Basic Users
-                </Typography>
-              </CardContent>
-            </Card>
-          </>
-        )}
-      </Box>
 
-      {/* Search and Filter Controls */}
-      <Card sx={{ mb: 3 }}>
-        <CardContent>
-          <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap' }}>
-            <OutlinedInput
-              placeholder="Search users..."
-              size="small"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              startAdornment={
-                <InputAdornment position="start">
-                  <SearchIcon color="action" />
-                </InputAdornment>
-              }
-              sx={{ minWidth: 200 }}
-            />
-            
-            <Button
-              variant="outlined"
-              startIcon={<FilterIcon />}
-              onClick={handleFilterClick}
-              size="small"
-            >
-              Filter
-            </Button>
-            
-            <Button
-              variant="outlined"
-              startIcon={<SortIcon />}
-              onClick={handleSortClick}
-              size="small"
-            >
-              Sort
-            </Button>
-
-            {(filterRole.length > 0 || filterStatus.length > 0 || searchTerm) && (
-              <Button
-                variant="text"
-                size="small"
-                onClick={() => {
-                  setFilterRole([]);
-                  setFilterStatus([]);
-                  setSearchTerm('');
-                }}
+      {/* Toolbar */}
+      <Paper sx={{ mb: 2 }}>
+        <Toolbar sx={{ px: { sm: 2 }, minHeight: '64px !important' }}>
+          {selectedUsers.length > 0 ? (
+            <>
+              <Typography
+                sx={{ flex: '1 1 100%' }}
+                color="inherit"
+                variant="subtitle1"
               >
-                Clear Filters
-              </Button>
-            )}
-          </Box>
-        </CardContent>
-      </Card>
+                {selectedUsers.length} selected
+              </Typography>
+              {canDelete(currentUser) && (
+                <Tooltip title="Delete selected">
+                  <IconButton color="error" onClick={() => console.log('Bulk delete')}>
+                    <DeleteIcon />
+                  </IconButton>
+                </Tooltip>
+              )}
+            </>
+          ) : (
+            <>
+              <Box sx={{ flex: 1, display: 'flex', gap: 1, alignItems: 'center' }}>
+                <OutlinedInput
+                  size="small"
+                  placeholder="Search users..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  startAdornment={
+                    <InputAdornment position="start">
+                      <SearchIcon />
+                    </InputAdornment>
+                  }
+                  sx={{ minWidth: 300 }}
+                />
+                
+                {(searchTerm || filterRole.length > 0 || filterStatus.length > 0) && (
+                  <Button
+                    variant="outlined"
+                    startIcon={<ClearIcon />}
+                    onClick={() => {
+                      setFilterRole([]);
+                      setFilterStatus([]);
+                      setSearchTerm('');
+                    }}
+                    size="small"
+                  >
+                    Clear
+                  </Button>
+                )}
+              </Box>
+
+              <Box sx={{ display: 'flex', gap: 1 }}>
+                <Tooltip title="Filter">
+                  <IconButton onClick={handleFilterClick}>
+                    <FilterIcon />
+                  </IconButton>
+                </Tooltip>
+                <Tooltip title="Sort">
+                  <IconButton onClick={handleSortClick}>
+                    <SortIcon />
+                  </IconButton>
+                </Tooltip>
+              </Box>
+            </>
+          )}
+        </Toolbar>
+      </Paper>
 
       {/* Users Table */}
-      <Card>
+      <Paper>
         {error && (
           <Box sx={{ p: 3, textAlign: 'center' }}>
             <Typography color="error" variant="body1">
@@ -698,27 +657,33 @@ export default function UsersPage() {
                             >
                               <ViewIcon fontSize="small" />
                             </IconButton>
-                            <IconButton
-                              size="small"
-                              color="primary"
-                              onClick={() => handleClickOpen(user)}
-                            >
-                              <EditIcon fontSize="small" />
-                            </IconButton>
-                            <IconButton
-                              size="small"
-                              color="warning"
-                              onClick={() => handleRoleChangeOpen(user)}
-                            >
-                              <AdminIcon fontSize="small" />
-                            </IconButton>
-                            <IconButton
-                              size="small"
-                              color="error"
-                              onClick={() => handleDeleteOpen(user)}
-                            >
-                              <DeleteIcon fontSize="small" />
-                            </IconButton>
+                            {canEdit(currentUser) && (
+                              <IconButton
+                                size="small"
+                                color="primary"
+                                onClick={() => handleClickOpen(user)}
+                              >
+                                <EditIcon fontSize="small" />
+                              </IconButton>
+                            )}
+                            {canManage(currentUser) && (
+                              <IconButton
+                                size="small"
+                                color="warning"
+                                onClick={() => handleRoleChangeOpen(user)}
+                              >
+                                <AdminIcon fontSize="small" />
+                              </IconButton>
+                            )}
+                            {canDelete(currentUser) && (
+                              <IconButton
+                                size="small"
+                                color="error"
+                                onClick={() => handleDeleteOpen(user)}
+                              >
+                                <DeleteIcon fontSize="small" />
+                              </IconButton>
+                            )}
                           </Box>
                         </TableCell>
                       </TableRow>
@@ -739,7 +704,7 @@ export default function UsersPage() {
             />
           </>
         )}
-      </Card>
+      </Paper>
 
       {/* Create/Edit User Dialog */}
       <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>

@@ -103,6 +103,8 @@ export const requireRole = (roles: string | string[]) => {
 
 export const requireAdmin = requireRole('admin');
 
+export const requireAdminOrSuperAdmin = requireRole(['admin', 'super_admin']);
+
 export const requireManagerOrAbove = requireRole(['manager', 'senior_manager', 'admin']);
 
 export const requireSelfOrAdmin = (userIdParam: string = 'id') => {

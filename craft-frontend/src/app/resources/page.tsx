@@ -66,6 +66,8 @@ import {
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import { apiClient } from '@/lib/api';
 import { ApiResponse, ResourceObject } from '@/types';
+import { useAuth } from '@/contexts/AuthContext';
+import { canManage, canEdit, canDelete, canCreate } from '@/utils/permissions';
 
 interface ExtendedResourceObject extends ResourceObject {
   id?: string;
@@ -107,6 +109,7 @@ interface ExtendedResourceObject extends ResourceObject {
 
 
 export default function ObjectsPage() {
+  const { user: currentUser } = useAuth();
   const [objects, setObjects] = useState<ExtendedResourceObject[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -618,14 +621,16 @@ export default function ObjectsPage() {
           <Typography variant="body2" color="text.secondary">
             Manage files, folders, databases, and other system objects in your permission system.
           </Typography>
-          <Button
-            variant="contained"
-            startIcon={<AddIcon />}
-            onClick={() => handleClickOpen()}
-            sx={{ px: 3 }}
-          >
-            Create Resource
-          </Button>
+          {canCreate(currentUser) && (
+            <Button
+              variant="contained"
+              startIcon={<AddIcon />}
+              onClick={() => handleClickOpen()}
+              sx={{ px: 3 }}
+            >
+              Create Resource
+            </Button>
+          )}
         </Box>
       </Paper>
 
@@ -642,11 +647,13 @@ export default function ObjectsPage() {
               >
                 {selectedObjects.length} selected
               </Typography>
-              <Tooltip title="Delete selected">
-                <IconButton color="error" onClick={handleBulkDeleteOpen}>
-                  <BulkDeleteIcon />
-                </IconButton>
-              </Tooltip>
+              {canDelete(currentUser) && (
+                <Tooltip title="Delete selected">
+                  <IconButton color="error" onClick={handleBulkDeleteOpen}>
+                    <BulkDeleteIcon />
+                  </IconButton>
+                </Tooltip>
+              )}
             </>
           ) : (
             <>
@@ -815,7 +822,7 @@ export default function ObjectsPage() {
                             </Box>
                           </TableCell>
                           <TableCell align="center" sx={{ width: '120px', minWidth: '120px' }}>
-                            <Box sx={{ display: 'flex', gap: 1 }}>
+                            <Box sx={{ display: 'flex', gap: 1, justifyContent: 'center' }}>
                               <IconButton
                                 size="small"
                                 color="primary"
@@ -826,26 +833,30 @@ export default function ObjectsPage() {
                               >
                                 <ViewIcon fontSize="small" />
                               </IconButton>
-                              <IconButton
-                                size="small"
-                                color="primary"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleClickOpen(object);
-                                }}
-                              >
-                                <EditIcon fontSize="small" />
-                              </IconButton>
-                              <IconButton
-                                size="small"
-                                color="error"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleDeleteOpen(object);
-                                }}
-                              >
-                                <DeleteIcon fontSize="small" />
-                              </IconButton>
+                              {canEdit(currentUser) && (
+                                <IconButton
+                                  size="small"
+                                  color="primary"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleClickOpen(object);
+                                  }}
+                                >
+                                  <EditIcon fontSize="small" />
+                                </IconButton>
+                              )}
+                              {canDelete(currentUser) && (
+                                <IconButton
+                                  size="small"
+                                  color="error"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleDeleteOpen(object);
+                                  }}
+                                >
+                                  <DeleteIcon fontSize="small" />
+                                </IconButton>
+                              )}
                             </Box>
                           </TableCell>
                         </TableRow>
@@ -971,14 +982,16 @@ export default function ObjectsPage() {
         </List>
       </Popover>
 
-      <Fab 
-        color="primary" 
-        aria-label="add" 
-        sx={{ position: 'fixed', bottom: 24, right: 24 }} 
-        onClick={() => handleClickOpen()}
-      >
-        <AddIcon />
-      </Fab>
+      {canCreate(currentUser) && (
+        <Fab 
+          color="primary" 
+          aria-label="add" 
+          sx={{ position: 'fixed', bottom: 24, right: 24 }} 
+          onClick={() => handleClickOpen()}
+        >
+          <AddIcon />
+        </Fab>
+      )}
 
       {/* Resource Dialog */}
       <Dialog

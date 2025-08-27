@@ -70,6 +70,8 @@ import {
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import { apiClient } from '@/lib/api';
 import { ApiResponse } from '@/types';
+import { useAuth } from '@/contexts/AuthContext';
+import { canManage, canEdit, canDelete, canCreate } from '@/utils/permissions';
 
 interface Attribute {
   _id: string;
@@ -117,6 +119,7 @@ interface Attribute {
 }
 
 export default function AttributesPage() {
+  const { user: currentUser } = useAuth();
   const [attributes, setAttributes] = useState<Attribute[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -861,23 +864,25 @@ export default function AttributesPage() {
           <Typography variant="body2" color="text.secondary">
             Manage system attributes for subjects, resources, actions, and environment
           </Typography>
-          <Button
-            variant="contained"
-            startIcon={<AddIcon />}
-            onClick={() => {
-              console.log('Attributes - Create Attribute clicked');
-              handleClickOpen();
-            }}
-            sx={{ px: 3 }}
-          >
-            Create Attribute
-          </Button>
+          {canCreate(currentUser) && (
+            <Button
+              variant="contained"
+              startIcon={<AddIcon />}
+              onClick={() => {
+                console.log('Attributes - Create Attribute clicked');
+                handleClickOpen();
+              }}
+              sx={{ px: 3 }}
+            >
+              Create Attribute
+            </Button>
+          )}
         </Box>
       </Paper>
 
 
       {/* Multi-select Delete */}
-      {selectedAttributes.length > 0 && (
+      {selectedAttributes.length > 0 && canDelete(currentUser) && (
         <Box sx={{ mb: 3, display: 'flex', justifyContent: 'center' }}>
           <Button
             variant="contained"
@@ -903,11 +908,13 @@ export default function AttributesPage() {
               >
                 {selectedAttributes.length} selected
               </Typography>
-              <Tooltip title="Delete selected">
-                <IconButton color="error" onClick={() => {/* TODO: implement bulk delete */}}>
-                  <DeleteIcon />
-                </IconButton>
-              </Tooltip>
+              {canDelete(currentUser) && (
+                <Tooltip title="Delete selected">
+                  <IconButton color="error" onClick={() => {/* TODO: implement bulk delete */}}>
+                    <DeleteIcon />
+                  </IconButton>
+                </Tooltip>
+              )}
             </>
           ) : (
             <>
@@ -1168,7 +1175,7 @@ export default function AttributesPage() {
                             )}
                           </TableCell>
                           <TableCell align="center" sx={{ width: '120px', minWidth: '120px' }}>
-                            <Box sx={{ display: 'flex', gap: 1 }}>
+                            <Box sx={{ display: 'flex', gap: 1, justifyContent: 'center' }}>
                               <IconButton
                                 size="small"
                                 color="primary"
@@ -1179,26 +1186,30 @@ export default function AttributesPage() {
                               >
                                 <ViewIcon fontSize="small" />
                               </IconButton>
-                              <IconButton
-                                size="small"
-                                color="primary"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleClickOpen(attribute);
-                                }}
-                              >
-                                <EditIcon fontSize="small" />
-                              </IconButton>
-                              <IconButton
-                                size="small"
-                                color="error"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleDeleteOpen(attribute);
-                                }}
-                              >
-                                <DeleteIcon fontSize="small" />
-                              </IconButton>
+                              {canEdit(currentUser) && (
+                                <IconButton
+                                  size="small"
+                                  color="primary"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleClickOpen(attribute);
+                                  }}
+                                >
+                                  <EditIcon fontSize="small" />
+                                </IconButton>
+                              )}
+                              {canDelete(currentUser) && (
+                                <IconButton
+                                  size="small"
+                                  color="error"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleDeleteOpen(attribute);
+                                  }}
+                                >
+                                  <DeleteIcon fontSize="small" />
+                                </IconButton>
+                              )}
                             </Box>
                           </TableCell>
                         </TableRow>
@@ -1437,14 +1448,16 @@ export default function AttributesPage() {
 
 
       {/* Floating Action Button */}
-      <Fab
-        color="primary"
-        aria-label="add"
-        sx={{ position: 'fixed', bottom: 24, right: 24 }}
-        onClick={() => handleClickOpen()}
-      >
-        <AddIcon />
-      </Fab>
+      {canCreate(currentUser) && (
+        <Fab
+          color="primary"
+          aria-label="add"
+          sx={{ position: 'fixed', bottom: 24, right: 24 }}
+          onClick={() => handleClickOpen()}
+        >
+          <AddIcon />
+        </Fab>
+      )}
 
       {/* Attribute Dialog */}
       <Dialog

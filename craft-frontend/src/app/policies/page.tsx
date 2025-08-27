@@ -57,6 +57,8 @@ import { useRouter } from 'next/navigation';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import { apiClient } from '@/lib/api';
 import { ApiResponse } from '@/types';
+import { useAuth } from '@/contexts/AuthContext';
+import { canManage, canEdit, canDelete, canCreate } from '@/utils/permissions';
 
 interface Policy {
   _id: string;
@@ -81,6 +83,7 @@ interface Policy {
 
 export default function PoliciesPage() {
   const router = useRouter();
+  const { user: currentUser } = useAuth();
   
   // State for policies
   const [policies, setPolicies] = useState<Policy[]>([]);
@@ -341,14 +344,16 @@ export default function PoliciesPage() {
           <Typography variant="body2" color="text.secondary">
             Manage and monitor your organization's access control policies
           </Typography>
-          <Button
-            variant="contained"
-            startIcon={<AddIcon />}
-            onClick={() => router.push('/policies/create')}
-            sx={{ px: 3 }}
-          >
-            Create Policy
-          </Button>
+          {canCreate(currentUser) && (
+            <Button
+              variant="contained"
+              startIcon={<AddIcon />}
+              onClick={() => router.push('/policies/create')}
+              sx={{ px: 3 }}
+            >
+              Create Policy
+            </Button>
+          )}
         </Box>
       </Paper>
 
@@ -743,14 +748,16 @@ export default function PoliciesPage() {
         </Dialog>
 
         {/* Create Policy FAB */}
-        <Fab
-          color="primary"
-          aria-label="add"
-          onClick={() => router.push('/policies/create')}
-          sx={{ position: 'fixed', bottom: 24, right: 24 }}
-        >
-          <AddIcon />
-        </Fab>
+        {canCreate(currentUser) && (
+          <Fab
+            color="primary"
+            aria-label="add"
+            onClick={() => router.push('/policies/create')}
+            sx={{ position: 'fixed', bottom: 24, right: 24 }}
+          >
+            <AddIcon />
+          </Fab>
+        )}
     </DashboardLayout>
   );
 }
