@@ -5,6 +5,7 @@ import { asyncHandler } from '@/middleware/errorHandler';
 import { PaginationHelper } from '@/utils/pagination';
 import { logger } from '@/utils/logger';
 import { Attribute, IAttribute } from '@/models/Attribute';
+import { Policy } from '@/models/Policy';
 
 
 export class AttributeController {
@@ -245,6 +246,15 @@ export class AttributeController {
       throw new ValidationError('Cannot delete system attributes');
     }
 
+    // Check if attribute is used in any policies
+    const policiesUsingAttribute = await AttributeController.checkAttributeUsageInPolicies(attribute.name);
+    if (policiesUsingAttribute.length > 0) {
+      const policyNames = policiesUsingAttribute.map(p => p.name).join(', ');
+      throw new ValidationError(
+        `Cannot delete attribute "${attribute.displayName}" because it is being used in the following policies: ${policyNames}. Please remove the attribute from these policies before deletion.`
+      );
+    }
+
     await Attribute.findByIdAndDelete(attribute._id);
 
     logger.info(`Attribute deleted: ${attribute.id} (MongoDB ID: ${attribute._id}) by ${req.user?.email || 'anonymous'}`);
@@ -471,14 +481,35 @@ export class AttributeController {
       throw new ValidationError('Attribute IDs array is required');
     }
 
-    // Prevent deletion of system attributes
-    const systemAttributes = await Attribute.find({
-      id: { $in: attributeIds },
-      'metadata.isSystem': true
-    });
+    // Get attributes to be deleted
+    const attributesToDelete = await Attribute.find({ id: { $in: attributeIds } });
 
+    // Prevent deletion of system attributes
+    const systemAttributes = attributesToDelete.filter(attr => attr.metadata.isSystem);
     if (systemAttributes.length > 0) {
-      throw new ValidationError('Cannot delete system attributes');
+      const systemAttrNames = systemAttributes.map(attr => attr.displayName).join(', ');
+      throw new ValidationError(`Cannot delete system attributes: ${systemAttrNames}`);
+    }
+
+    // Check if any attributes are used in policies
+    const attributesInUse: { attribute: string; policies: string[] }[] = [];
+    for (const attribute of attributesToDelete) {
+      const policiesUsingAttribute = await AttributeController.checkAttributeUsageInPolicies(attribute.name);
+      if (policiesUsingAttribute.length > 0) {
+        attributesInUse.push({
+          attribute: attribute.displayName,
+          policies: policiesUsingAttribute.map(p => p.name)
+        });
+      }
+    }
+
+    if (attributesInUse.length > 0) {
+      const errorMessages = attributesInUse.map(usage => 
+        `"${usage.attribute}" is used in policies: ${usage.policies.join(', ')}`
+      );
+      throw new ValidationError(
+        `Cannot delete the following attributes because they are being used in policies:\n${errorMessages.join('\n')}\n\nPlease remove these attributes from their respective policies before deletion.`
+      );
     }
 
     const result = await Attribute.deleteMany({ id: { $in: attributeIds } });
@@ -495,6 +526,20 @@ export class AttributeController {
   });
 
   // Helper methods
+  private static async checkAttributeUsageInPolicies(attributeName: string): Promise<any[]> {
+    // Search for policies that use this attribute in their rules
+    // We need to check both subject.attributes and object.attributes in rules
+    const policies = await Policy.find({
+      $or: [
+        { 'rules.subject.attributes.name': attributeName },
+        { 'rules.object.attributes.name': attributeName },
+        { 'conditions.field': attributeName }
+      ]
+    }, 'id name displayName').lean();
+
+    return policies;
+  }
+
   private static validateConstraints(dataType: string, constraints: any): { valid: boolean; error?: string } {
     switch (dataType) {
       case 'string':

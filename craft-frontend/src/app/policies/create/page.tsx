@@ -55,6 +55,7 @@ import {
 import { useRouter } from 'next/navigation';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import { apiClient } from '@/lib/api';
+import { useApiSnackbar } from '@/contexts/SnackbarContext';
 
 interface Subject {
   _id: string;
@@ -168,10 +169,9 @@ const attributeHasCategory = (attribute: Attribute, categoryToCheck: string): bo
 
 export default function CreatePolicyPage() {
   const router = useRouter();
+  const snackbar = useApiSnackbar();
   const [activeStep, setActiveStep] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState(false);
   const [isCurrentStepValid, setIsCurrentStepValid] = useState(false);
 
   // Form data
@@ -241,14 +241,15 @@ export default function CreatePolicyPage() {
       }
     } catch (error) {
       console.error('Error fetching dropdown data:', error);
+      snackbar.handleApiError(error, 'Failed to load form data. Please refresh the page.');
     } finally {
       setLoadingDropdownData(false);
     }
-  }, []);
+  }, []); // Remove snackbar dependency to prevent infinite loop
 
   useEffect(() => {
     fetchDropdownData();
-  }, [fetchDropdownData]);
+  }, []); // Remove fetchDropdownData dependency - only run once on mount
 
   // Form validation
   const isStepValid = useCallback((step: number) => {
@@ -472,12 +473,15 @@ export default function CreatePolicyPage() {
 
       const response = await apiClient.post('/attributes', apiData);
       if (response.success) {
+        snackbar.showSuccess('Attribute created successfully');
         await fetchDropdownData();
         handleClose();
+      } else {
+        snackbar.handleApiResponse(response, undefined, 'Failed to create attribute');
       }
     } catch (error) {
       console.error('Error creating attribute:', error);
-      setError('Failed to create attribute. Please try again.');
+      snackbar.handleApiError(error, 'Failed to create attribute. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
@@ -501,13 +505,16 @@ export default function CreatePolicyPage() {
 
       const response = await apiClient.put(`/attributes/${attributeId}`, updatedAttribute);
       if (response.success) {
+        snackbar.showSuccess('Value added successfully');
         await fetchDropdownData();
         setShowCreateValue(null);
         setNewValueData('');
+      } else {
+        snackbar.handleApiResponse(response, undefined, 'Failed to create value');
       }
     } catch (error) {
       console.error('Error creating value:', error);
-      setError('Failed to create value. Please try again.');
+      snackbar.handleApiError(error, 'Failed to create value. Please try again.');
     }
   };
 
@@ -527,7 +534,7 @@ export default function CreatePolicyPage() {
   // Submit form (common logic)
   const submitPolicy = async (status: 'Draft' | 'Active') => {
     if (!isStepValid(0) || !isStepValid(1) || !isStepValid(2)) {
-      setError('Please complete all required fields');
+      snackbar.showError('Please complete all required fields');
       return;
     }
 
@@ -590,14 +597,21 @@ export default function CreatePolicyPage() {
       const response = await apiClient.post('/policies', policyData);
       
       if (response.success) {
-        setSuccess(true);
+        const message = status === 'Active' 
+          ? 'Policy created and published successfully! It is now active and enforced.'
+          : 'Policy created successfully as draft! You can publish it later from the policies list.';
+        
+        snackbar.showSuccess(message);
+        
         setTimeout(() => {
           router.push('/policies');
-        }, 2000);
+        }, 1500);
+      } else {
+        snackbar.handleApiResponse(response, undefined, 'Failed to create policy');
       }
     } catch (error: any) {
       console.error('Failed to create policy:', error);
-      setError('Failed to create policy. Please try again.');
+      snackbar.handleApiError(error, 'Failed to create policy. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
@@ -1398,21 +1412,6 @@ export default function CreatePolicyPage() {
                 </Grid>
               </Grid>
             </Card>
-
-            {error && (
-              <Alert severity="error" sx={{ mt: 2 }}>
-                {error}
-              </Alert>
-            )}
-
-            {success && (
-              <Alert severity="success" sx={{ mt: 2 }}>
-                {selectedAction === 'publish'
-                  ? 'Policy created and published successfully! It is now active and enforced. Redirecting to policies list...'
-                  : 'Policy created successfully as draft! You can publish it later from the policies list. Redirecting...'
-                }
-              </Alert>
-            )}
           </Card>
         );
 

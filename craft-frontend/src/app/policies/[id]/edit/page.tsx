@@ -352,7 +352,7 @@ export default function EditPolicyPage() {
 
   useEffect(() => {
     fetchDropdownData();
-  }, [fetchDropdownData]);
+  }, []); // Remove fetchDropdownData dependency - only run once on mount
 
   // Form validation
   const isStepValid = useCallback((step: number) => {

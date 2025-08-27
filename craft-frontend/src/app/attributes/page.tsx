@@ -71,6 +71,7 @@ import DashboardLayout from '@/components/layout/DashboardLayout';
 import { apiClient } from '@/lib/api';
 import { ApiResponse } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
+import { useApiSnackbar } from '@/contexts/SnackbarContext';
 import { canManage, canEdit, canDelete, canCreate } from '@/utils/permissions';
 
 interface Attribute {
@@ -121,9 +122,9 @@ interface Attribute {
 
 export default function AttributesPage() {
   const { user: currentUser } = useAuth();
+  const snackbar = useApiSnackbar();
   const [attributes, setAttributes] = useState<Attribute[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [total, setTotal] = useState(0);
 
   const [open, setOpen] = useState(false);
@@ -275,25 +276,31 @@ export default function AttributesPage() {
         setAttributes(prev => prev.filter(attr => attr._id !== deleteAttribute._id));
         setTotal(prev => prev - 1);
         handleDeleteClose();
-        // Show success message if you have a toast system
+        snackbar.showSuccess(`Attribute "${deleteAttribute.displayName}" deleted successfully`);
       } else {
-        throw new Error(response.error || 'Failed to delete attribute');
+        snackbar.handleApiResponse(response, undefined, 'Failed to delete attribute');
+        handleDeleteClose();
       }
     } catch (error: any) {
       console.error('Delete error:', error);
-
-      // Handle specific error cases
+      
+      // Handle specific error cases with better messages
       if (error.message?.includes('404') || error.message?.includes('not found')) {
-        alert('This attribute no longer exists. Refreshing the list...');
+        snackbar.showInfo('Attribute no longer exists. Refreshing the list...');
         await fetchAttributes(); // Refresh the data
         handleDeleteClose();
       } else if (error.message?.includes('Cannot delete system attributes') ||
         error.message?.includes('system attribute')) {
-        alert('System attributes cannot be deleted. They are protected and required for the system to function properly.');
+        snackbar.showWarning('System attributes cannot be deleted as they are required for the system to function properly.');
+        handleDeleteClose();
+      } else if (error.message?.includes('being used in the following policies')) {
+        // Handle policy dependency error with detailed message
+        snackbar.showError(error.message, 8000); // Longer duration for detailed message
         handleDeleteClose();
       } else {
-        // Show error message for other errors
-        alert('Failed to delete attribute: ' + (error.message || 'Unknown error'));
+        // Handle other API errors
+        snackbar.handleApiError(error, 'Failed to delete attribute');
+        handleDeleteClose();
       }
     } finally {
       setIsDeleting(false);
@@ -570,27 +577,36 @@ export default function AttributesPage() {
     setBulkDeleteOpen(false);
     
     try {
-      // Delete each selected attribute
-      const deletePromises = selectedAttributes.map(attributeId => {
-        const attribute = attributes.find(attr => attr.id === attributeId);
-        if (attribute) {
-          return apiClient.delete(`/attributes/${attribute._id}`);
-        }
-        return Promise.resolve();
+      // Use the bulk delete API endpoint
+      const response = await apiClient.delete('/attributes/bulk/delete', {
+        attributeIds: selectedAttributes
       });
       
-      await Promise.all(deletePromises);
+      if (response.success) {
+        // Update local state by filtering out deleted attributes
+        setAttributes(prev => prev.filter(attr => !selectedAttributes.includes(attr.id)));
+        setTotal(prev => prev - selectedAttributes.length);
+        
+        // Clear selection
+        setSelectedAttributes([]);
+        
+        snackbar.showSuccess(`${selectedAttributes.length} attributes deleted successfully`);
+      } else {
+        snackbar.handleApiResponse(response, undefined, 'Failed to delete attributes');
+      }
       
-      // Update local state by filtering out deleted attributes
-      setAttributes(prev => prev.filter(attr => !selectedAttributes.includes(attr.id)));
-      setTotal(prev => prev - selectedAttributes.length);
-      
-      // Clear selection
-      setSelectedAttributes([]);
-      
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to delete attributes:', error);
-      setError('Failed to delete some attributes. Please try again.');
+      
+      // Handle specific error cases
+      if (error.message?.includes('Cannot delete system attributes')) {
+        snackbar.showWarning('Some attributes could not be deleted because they are system attributes required for the system to function.');
+      } else if (error.message?.includes('being used in policies')) {
+        // Handle policy dependency error with detailed message
+        snackbar.showError(error.message, 10000); // Extra long duration for detailed message
+      } else {
+        snackbar.handleApiError(error, 'Failed to delete attributes');
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -732,7 +748,6 @@ export default function AttributesPage() {
   const fetchAttributes = async () => {
     try {
       setLoading(true);
-      setError(null);
 
       const response: ApiResponse<Attribute[]> = await apiClient.get('/attributes', {
         page: page + 1, // API uses 1-based pagination
@@ -748,11 +763,13 @@ export default function AttributesPage() {
         setAttributes(response.data);
         setTotal(response.pagination?.total || 0);
       } else {
-        throw new Error(response.error || 'Failed to fetch attributes');
+        snackbar.handleApiResponse(response, undefined, 'Failed to load attributes');
+        setAttributes([]);
+        setTotal(0);
       }
     } catch (err: any) {
       console.error('Error fetching attributes:', err);
-      setError(err.message || 'Failed to load attributes');
+      snackbar.handleApiError(err, 'Failed to load attributes');
       // Fallback to empty array
       setAttributes([]);
       setTotal(0);
@@ -874,21 +891,6 @@ export default function AttributesPage() {
       </Paper>
 
 
-      {/* Multi-select Delete */}
-      {selectedAttributes.length > 0 && canDelete(currentUser) && (
-        <Box sx={{ mb: 3, display: 'flex', justifyContent: 'center' }}>
-          <Button
-            variant="contained"
-            color="error"
-            startIcon={<BulkDeleteIcon />}
-            onClick={handleBulkDeleteOpen}
-            disabled={isSubmitting}
-            sx={{ textTransform: 'none' }}
-          >
-            Delete {selectedAttributes.length} Selected
-          </Button>
-        </Box>
-      )}
       {/* Toolbar */}
       <Paper sx={{ mb: 2 }}>
         <Toolbar sx={{ px: { sm: 2 }, minHeight: '64px !important' }}>
@@ -903,8 +905,8 @@ export default function AttributesPage() {
               </Typography>
               {canDelete(currentUser) && (
                 <Tooltip title="Delete selected">
-                  <IconButton color="error" onClick={() => {/* TODO: implement bulk delete */}}>
-                    <DeleteIcon />
+                  <IconButton color="error" onClick={handleBulkDeleteOpen}>
+                    <BulkDeleteIcon />
                   </IconButton>
                 </Tooltip>
               )}
@@ -960,23 +962,6 @@ export default function AttributesPage() {
 
       {/* Attributes Table */}
       <Paper elevation={0} sx={{ border: '1px solid', borderColor: 'grey.200' }}>
-        {error && (
-          <Box sx={{ p: 3, textAlign: 'center' }}>
-            <Typography color="error" variant="body1">
-              {error}
-            </Typography>
-            <Button
-              variant="outlined"
-              onClick={fetchAttributes}
-              sx={{ mt: 2 }}
-            >
-              Retry
-            </Button>
-          </Box>
-        )}
-
-        {!error && (
-          <>
             <TableContainer>
               <Table>
                 <TableHead>
@@ -1253,8 +1238,6 @@ export default function AttributesPage() {
                 },
               }}
             />
-          </>
-        )}
       </Paper>
 
       {/* Filter Popover */}
@@ -2537,11 +2520,11 @@ export default function AttributesPage() {
               }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                   <Avatar sx={{
-                    bgcolor: `${getCategoryColor(deleteAttribute.categories[0] || 'subject')}.main`,
+                    bgcolor: `${getCategoryColor(deleteAttribute.categories?.[0] || 'subject')}.main`,
                     width: 32,
                     height: 32
                   }}>
-                    {getCategoryIcon(deleteAttribute.categories[0] || 'subject')}
+                    {getCategoryIcon(deleteAttribute.categories?.[0] || 'subject')}
                   </Avatar>
                   <Box>
                     <Typography variant="subtitle2" fontWeight="600">
@@ -2652,11 +2635,11 @@ export default function AttributesPage() {
                 return (
                   <Box key={attributeId} sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1.5 }}>
                     <Avatar sx={{
-                      bgcolor: `${getCategoryColor(attribute.categories[0] || 'subject')}.main`,
+                      bgcolor: `${getCategoryColor(attribute.categories?.[0] || 'subject')}.main`,
                       width: 28,
                       height: 28
                     }}>
-                      {getCategoryIcon(attribute.categories[0] || 'subject')}
+                      {getCategoryIcon(attribute.categories?.[0] || 'subject')}
                     </Avatar>
                     <Box sx={{ flex: 1 }}>
                       <Typography variant="body2" fontWeight="500">
@@ -2667,9 +2650,9 @@ export default function AttributesPage() {
                       </Typography>
                     </Box>
                     <Chip
-                      label={attribute.categories[0] || 'subject'}
+                      label={attribute.categories?.[0] || 'subject'}
                       size="small"
-                      color={getCategoryColor(attribute.categories[0] || 'subject') as any}
+                      color={getCategoryColor(attribute.categories?.[0] || 'subject') as any}
                       variant="outlined"
                     />
                   </Box>

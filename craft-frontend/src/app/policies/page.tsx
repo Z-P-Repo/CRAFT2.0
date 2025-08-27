@@ -58,6 +58,7 @@ import DashboardLayout from '@/components/layout/DashboardLayout';
 import { apiClient } from '@/lib/api';
 import { ApiResponse } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
+import { useApiSnackbar } from '@/contexts/SnackbarContext';
 import { canManage, canEdit, canDelete, canCreate } from '@/utils/permissions';
 
 interface Policy {
@@ -84,11 +85,11 @@ interface Policy {
 export default function PoliciesPage() {
   const router = useRouter();
   const { user: currentUser } = useAuth();
+  const snackbar = useApiSnackbar();
   
   // State for policies
   const [policies, setPolicies] = useState<Policy[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   
   // Pagination state
   const [page, setPage] = useState(0);
@@ -142,7 +143,7 @@ export default function PoliciesPage() {
       }
     } catch (error: any) {
       console.error('Failed to fetch policies:', error);
-      setError('Failed to load policies. Please try again.');
+      snackbar.handleApiError(error, 'Failed to load policies');
     } finally {
       setLoading(false);
     }
@@ -183,11 +184,13 @@ export default function PoliciesPage() {
         setPolicies(policies?.filter(p => p.id !== deletePolicy.id) || []);
         setDeleteOpen(false);
         setDeletePolicy(null);
-        // Show success message
+        snackbar.showSuccess('Policy deleted successfully');
+      } else {
+        snackbar.handleApiResponse(response, undefined, 'Failed to delete policy');
       }
     } catch (error: any) {
       console.error('Failed to delete policy:', error);
-      setError('Failed to delete policy. Please try again.');
+      snackbar.handleApiError(error, 'Failed to delete policy');
     } finally {
       setDeleteLoading(false);
     }
@@ -230,11 +233,13 @@ export default function PoliciesPage() {
         setPolicies(policies?.filter(p => !selectedPolicies.includes(p.id)) || []);
         setSelectedPolicies([]);
         setBulkDeleteOpen(false);
-        // Show success message
+        snackbar.showSuccess(`${selectedPolicies.length} policies deleted successfully`);
+      } else {
+        snackbar.handleApiResponse(response, undefined, 'Failed to delete selected policies');
       }
     } catch (error: any) {
       console.error('Failed to bulk delete policies:', error);
-      setError('Failed to delete policies. Please try again.');
+      snackbar.handleApiError(error, 'Failed to delete selected policies');
     } finally {
       setBulkDeleteLoading(false);
     }

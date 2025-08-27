@@ -16,13 +16,15 @@ import {
 } from '@mui/material';
 import { Login as LoginIcon } from '@mui/icons-material';
 import { useAuth } from '@/contexts/AuthContext';
+import { useApiSnackbar } from '@/contexts/SnackbarContext';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [mounted, setMounted] = useState(false);
-  const { login, isAuthenticated, isLoading, error, clearError } = useAuth();
+  const { login, isAuthenticated, isLoading, clearError } = useAuth();
+  const snackbar = useApiSnackbar();
   const router = useRouter();
 
   useEffect(() => {
@@ -44,6 +46,7 @@ export default function LoginPage() {
 
   const handleSubmit = async () => {
     if (!email || !password) {
+      snackbar.showWarning('Please enter both email and password');
       return;
     }
 
@@ -51,9 +54,12 @@ export default function LoginPage() {
     
     try {
       await login({ email, password });
+      snackbar.showSuccess('Login successful! Welcome back.');
       // Navigation will happen via useEffect when isAuthenticated changes
-    } catch (error) {
-      // Error is handled by the auth context
+    } catch (error: any) {
+      // Error is handled by the auth context, but we can show additional feedback
+      const errorMessage = error?.error || error?.message || 'Login failed. Please check your credentials.';
+      snackbar.showError(errorMessage);
       console.error('Login error:', error);
     } finally {
       setIsSubmitting(false);
@@ -96,11 +102,6 @@ export default function LoginPage() {
             </Typography>
           </Box>
 
-          {error && (
-            <Alert severity="error" sx={{ mb: 3 }} onClose={clearError}>
-              {error}
-            </Alert>
-          )}
 
           <Box sx={{ mt: 1 }}>
             <TextField
