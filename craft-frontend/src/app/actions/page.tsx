@@ -610,6 +610,9 @@ export default function ActionsPage() {
                     )}
                   </Box>
                 </TableCell>
+                <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', color: 'text.primary', width: '140px' }}>
+                  Created By
+                </TableCell>
                 <TableCell align="center" sx={{ fontWeight: 600, fontSize: '0.875rem', color: 'text.primary', width: '120px' }}>
                   Actions
                 </TableCell>
@@ -618,7 +621,7 @@ export default function ActionsPage() {
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={3} sx={{ textAlign: 'center', py: 4 }}>
+                  <TableCell colSpan={4} sx={{ textAlign: 'center', py: 4 }}>
                     <Typography variant="body1" color="text.secondary">
                       Loading actions...
                     </Typography>
@@ -626,7 +629,7 @@ export default function ActionsPage() {
                 </TableRow>
               ) : error ? (
                 <TableRow>
-                  <TableCell colSpan={3} sx={{ textAlign: 'center', py: 4 }}>
+                  <TableCell colSpan={4} sx={{ textAlign: 'center', py: 4 }}>
                     <Typography color="error" variant="body1">
                       {error}
                     </Typography>
@@ -634,7 +637,7 @@ export default function ActionsPage() {
                 </TableRow>
               ) : actions.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={3} sx={{ textAlign: 'center', py: 4 }}>
+                  <TableCell colSpan={4} sx={{ textAlign: 'center', py: 4 }}>
                     <Typography variant="body1" color="text.secondary">
                       No actions found
                     </Typography>
@@ -693,6 +696,11 @@ export default function ActionsPage() {
                             </Typography>
                           </Box>
                         </Box>
+                      </TableCell>
+                      <TableCell>
+                        <Typography variant="body2" color="text.secondary">
+                          {action.metadata?.createdBy || 'System'}
+                        </Typography>
                       </TableCell>
                       <TableCell align="center">
                         <Box sx={{ display: 'flex', gap: 0.5, justifyContent: 'center' }}>

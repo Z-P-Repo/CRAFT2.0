@@ -15,10 +15,11 @@ A robust, scalable Node.js backend API for the CRAFT (Attribute-Based Access Con
 - **📋 ABAC Policy Engine** - Comprehensive Attribute-Based Access Control
 - **👥 User Management** - Complete user, role, and permission system with three-tier roles (Super Admin, Admin, Basic)
 - **🔑 User Registration** - Public registration endpoint with default Basic role assignment
-- **🛡️ Role Management** - Hierarchical role change functionality with permission validation
+- **🛡️ Role Management** - Hierarchical role change functionality with strict permission validation
+- **🔒 Permission Control** - Basic users have view-only access; Admin/Super Admin have full CRUD access
 - **📁 Resource Management** - Handle files, databases, APIs, and system resources
 - **⚡ Action Framework** - Categorized system actions with risk assessment
-- **🏷️ Attribute System** - Flexible attribute management for ABAC
+- **🏷️ Attribute System** - Multi-category attribute management (Subject/Resource) for ABAC
 - **🧪 Policy Evaluation** - Real-time policy testing and validation
 - **📊 Comprehensive Logging** - Structured logging with Winston
 - **🛡️ Security Features** - Rate limiting, CORS, helmet, and input validation

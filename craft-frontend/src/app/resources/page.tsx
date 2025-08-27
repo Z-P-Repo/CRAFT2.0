@@ -755,6 +755,9 @@ export default function ObjectsPage() {
                         )}
                       </Box>
                     </TableCell>
+                    <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', color: 'text.primary', width: '150px', minWidth: '150px' }}>
+                      Created By
+                    </TableCell>
                     <TableCell align="center" sx={{ fontWeight: 600, fontSize: '0.875rem', color: 'text.primary', width: '120px', minWidth: '120px' }}>
                       Actions
                     </TableCell>
@@ -763,7 +766,7 @@ export default function ObjectsPage() {
                 <TableBody>
                   {loading ? (
                     <TableRow>
-                      <TableCell colSpan={3} sx={{ textAlign: 'center', py: 4 }}>
+                      <TableCell colSpan={4} sx={{ textAlign: 'center', py: 4 }}>
                         <Typography variant="body1" color="text.secondary">
                           Loading objects...
                         </Typography>
@@ -771,7 +774,7 @@ export default function ObjectsPage() {
                     </TableRow>
                   ) : paginatedObjects.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={3} sx={{ textAlign: 'center', py: 4 }}>
+                      <TableCell colSpan={4} sx={{ textAlign: 'center', py: 4 }}>
                         <Typography variant="body1" color="text.secondary">
                           No objects found
                         </Typography>
@@ -820,6 +823,13 @@ export default function ObjectsPage() {
                                 </Typography>
                               </Box>
                             </Box>
+                          </TableCell>
+                          <TableCell sx={{ width: '150px', minWidth: '150px' }}>
+                            <Typography variant="body2" color="text.secondary">
+                              {object?.metadata?.createdBy || 
+                               (typeof object?.createdBy === 'string' ? object.createdBy : object?.createdBy?.name) || 
+                               'System'}
+                            </Typography>
                           </TableCell>
                           <TableCell align="center" sx={{ width: '120px', minWidth: '120px' }}>
                             <Box sx={{ display: 'flex', gap: 1, justifyContent: 'center' }}>

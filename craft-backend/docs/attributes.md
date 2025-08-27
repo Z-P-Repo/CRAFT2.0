@@ -4,7 +4,7 @@ The Attribute Management module defines and manages the attributes used in ABAC 
 
 ## Overview
 
-The attribute management system provides comprehensive management of attribute definitions, schemas, validation rules, and value constraints that are used across all ABAC components for policy evaluation.
+The attribute management system provides comprehensive management of attribute definitions, schemas, validation rules, and value constraints that are used across all ABAC components for policy evaluation. Attributes now support multiple categories (Subject and Resource) and have role-based access control with Basic users having view-only access.
 
 ## Data Model
 
@@ -18,7 +18,7 @@ interface IAttribute extends Document {
   name: string;
   displayName: string;
   description?: string;
-  category: 'subject' | 'resource' | 'action' | 'environment';
+  categories: ('subject' | 'resource')[];
   dataType: 'string' | 'number' | 'boolean' | 'date' | 'array' | 'object';
   isRequired: boolean;
   isMultiValue: boolean;
@@ -87,11 +87,19 @@ const AttributeSchema = new Schema<IAttribute>({
     trim: true,
     maxlength: [1000, 'Description cannot exceed 1000 characters'],
   },
-  category: {
-    type: String,
-    required: [true, 'Category is required'],
-    enum: ['subject', 'resource', 'action', 'environment'],
-    index: true,
+  categories: {
+    type: [String],
+    required: [true, 'At least one category is required'],
+    validate: {
+      validator: function(categories: string[]) {
+        return categories && categories.length > 0;
+      },
+      message: 'At least one category must be selected'
+    },
+    enum: {
+      values: ['subject', 'resource'],
+      message: '{VALUE} is not a valid category. Only subject and resource are allowed'
+    }
   },
   dataType: {
     type: String,
@@ -259,7 +267,7 @@ export const SYSTEM_ATTRIBUTES = [
     name: 'subjectId',
     displayName: 'Subject ID',
     description: 'Unique identifier of the subject',
-    category: 'subject',
+    categories: ['subject'],
     dataType: 'string',
     isRequired: true,
     metadata: { isSystem: true, isCustom: false, version: '1.0.0' }
@@ -269,7 +277,7 @@ export const SYSTEM_ATTRIBUTES = [
     name: 'subjectName',
     displayName: 'Subject Name',
     description: 'Display name of the subject',
-    category: 'subject',
+    categories: ['subject'],
     dataType: 'string',
     isRequired: true,
     metadata: { isSystem: true, isCustom: false, version: '1.0.0' }
@@ -279,7 +287,7 @@ export const SYSTEM_ATTRIBUTES = [
     name: 'subjectEmail',
     displayName: 'Subject Email',
     description: 'Email address of the subject',
-    category: 'subject',
+    categories: ['subject'],
     dataType: 'string',
     constraints: { format: 'email' },
     metadata: { isSystem: true, isCustom: false, version: '1.0.0' }
@@ -289,7 +297,7 @@ export const SYSTEM_ATTRIBUTES = [
     name: 'subjectRole',
     displayName: 'Subject Role',
     description: 'Role assigned to the subject',
-    category: 'subject',
+    categories: ['subject'],
     dataType: 'string',
     constraints: { enumValues: ['admin', 'manager', 'user'] },
     metadata: { isSystem: true, isCustom: false, version: '1.0.0' }
@@ -299,7 +307,7 @@ export const SYSTEM_ATTRIBUTES = [
     name: 'subjectDepartment',
     displayName: 'Subject Department',
     description: 'Department of the subject',
-    category: 'subject',
+    categories: ['subject'],
     dataType: 'string',
     metadata: { isSystem: true, isCustom: false, version: '1.0.0' }
   },
@@ -310,7 +318,7 @@ export const SYSTEM_ATTRIBUTES = [
     name: 'resourceId',
     displayName: 'Resource ID',
     description: 'Unique identifier of the resource',
-    category: 'resource',
+    categories: ['resource'],
     dataType: 'string',
     isRequired: true,
     metadata: { isSystem: true, isCustom: false, version: '1.0.0' }
@@ -320,7 +328,7 @@ export const SYSTEM_ATTRIBUTES = [
     name: 'resourceType',
     displayName: 'Resource Type',
     description: 'Type of the resource',
-    category: 'resource',
+    categories: ['resource'],
     dataType: 'string',
     constraints: { enumValues: ['file', 'document', 'api', 'database', 'service', 'folder', 'application'] },
     metadata: { isSystem: true, isCustom: false, version: '1.0.0' }
@@ -330,7 +338,7 @@ export const SYSTEM_ATTRIBUTES = [
     name: 'resourceClassification',
     displayName: 'Resource Classification',
     description: 'Security classification of the resource',
-    category: 'resource',
+    categories: ['resource'],
     dataType: 'string',
     constraints: { enumValues: ['public', 'internal', 'confidential', 'restricted'] },
     metadata: { isSystem: true, isCustom: false, version: '1.0.0' }
@@ -340,7 +348,7 @@ export const SYSTEM_ATTRIBUTES = [
     name: 'resourceOwner',
     displayName: 'Resource Owner',
     description: 'Owner of the resource',
-    category: 'resource',
+    categories: ['resource'],
     dataType: 'string',
     metadata: { isSystem: true, isCustom: false, version: '1.0.0' }
   },
@@ -351,7 +359,7 @@ export const SYSTEM_ATTRIBUTES = [
     name: 'actionId',
     displayName: 'Action ID',
     description: 'Unique identifier of the action',
-    category: 'action',
+    categories: ['action'],
     dataType: 'string',
     isRequired: true,
     metadata: { isSystem: true, isCustom: false, version: '1.0.0' }
@@ -361,7 +369,7 @@ export const SYSTEM_ATTRIBUTES = [
     name: 'actionVerb',
     displayName: 'Action Verb',
     description: 'Verb describing the action',
-    category: 'action',
+    categories: ['action'],
     dataType: 'string',
     metadata: { isSystem: true, isCustom: false, version: '1.0.0' }
   },
@@ -370,7 +378,7 @@ export const SYSTEM_ATTRIBUTES = [
     name: 'actionRiskLevel',
     displayName: 'Action Risk Level',
     description: 'Risk level associated with the action',
-    category: 'action',
+    categories: ['action'],
     dataType: 'string',
     constraints: { enumValues: ['low', 'medium', 'high', 'critical'] },
     metadata: { isSystem: true, isCustom: false, version: '1.0.0' }
@@ -382,7 +390,7 @@ export const SYSTEM_ATTRIBUTES = [
     name: 'currentTime',
     displayName: 'Current Time',
     description: 'Current timestamp of the request',
-    category: 'environment',
+    categories: ['environment'],
     dataType: 'date',
     metadata: { isSystem: true, isCustom: false, version: '1.0.0' }
   },
@@ -391,7 +399,7 @@ export const SYSTEM_ATTRIBUTES = [
     name: 'ipAddress',
     displayName: 'IP Address',
     description: 'IP address of the request',
-    category: 'environment',
+    categories: ['environment'],
     dataType: 'string',
     constraints: { format: 'ipv4' },
     metadata: { isSystem: true, isCustom: false, version: '1.0.0' }
@@ -401,7 +409,7 @@ export const SYSTEM_ATTRIBUTES = [
     name: 'userAgent',
     displayName: 'User Agent',
     description: 'User agent string from the request',
-    category: 'environment',
+    categories: ['environment'],
     dataType: 'string',
     metadata: { isSystem: true, isCustom: false, version: '1.0.0' }
   }
@@ -1065,7 +1073,7 @@ export const createAttributeSchema = Joi.object({
   name: Joi.string().max(100).required(),
   displayName: Joi.string().max(150).required(),
   description: Joi.string().max(1000).optional(),
-  category: Joi.string().valid('subject', 'resource', 'action', 'environment').required(),
+  categories: Joi.array().items(Joi.string().valid('subject', 'resource')).min(1).required(),
   dataType: Joi.string().valid('string', 'number', 'boolean', 'date', 'array', 'object').required(),
   isRequired: Joi.boolean().default(false),
   isMultiValue: Joi.boolean().default(false),
@@ -1130,7 +1138,7 @@ export const updateAttributeSchema = Joi.object({
 export const attributeQuerySchema = Joi.object({
   page: Joi.number().integer().min(1).optional(),
   limit: Joi.number().integer().min(1).max(100).optional(),
-  category: Joi.string().valid('subject', 'resource', 'action', 'environment').optional(),
+  categories: Joi.array().items(Joi.string().valid('subject', 'resource')).min(1).optional(),
   dataType: Joi.string().valid('string', 'number', 'boolean', 'date', 'array', 'object').optional(),
   isRequired: Joi.boolean().optional(),
   active: Joi.boolean().optional(),
@@ -1186,7 +1194,7 @@ describe('Attribute Model', () => {
       name: 'customDepartment',
       displayName: 'Custom Department',
       description: 'Custom department attribute',
-      category: 'subject',
+      categories: ['subject'],
       dataType: 'string',
       isRequired: false,
       constraints: {
@@ -1255,7 +1263,7 @@ describe('Attribute Controller', () => {
       id: 'test.attribute',
       name: 'testAttribute',
       displayName: 'Test Attribute',
-      category: 'subject',
+      categories: ['subject'],
       dataType: 'string',
     };
 

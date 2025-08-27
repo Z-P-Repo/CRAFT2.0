@@ -79,7 +79,7 @@ interface Attribute {
   name: string;
   displayName: string;
   description?: string;
-  category: 'subject' | 'resource' | 'action' | 'environment';
+  categories: ('subject' | 'resource')[];
   dataType: 'string' | 'number' | 'boolean' | 'date' | 'array' | 'object';
   isRequired: boolean;
   isMultiValue: boolean;
@@ -134,7 +134,7 @@ export default function AttributesPage() {
   const [selectedAttributes, setSelectedAttributes] = useState<string[]>([]);
   const [displayName, setDisplayName] = useState('');
   const [displayNameError, setDisplayNameError] = useState('');
-  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  const [selectedCategories, setSelectedCategories] = useState<string[]>(['subject']);
   const [selectedDataType, setSelectedDataType] = useState('');
   const [permittedValues, setPermittedValues] = useState('');
   const [parsedValues, setParsedValues] = useState<any[]>([]);
@@ -179,7 +179,7 @@ export default function AttributesPage() {
     setSelectedAttribute(attribute || null);
     setDisplayName(attribute?.displayName || '');
     setDisplayNameError('');
-    setSelectedCategories(attribute?.category ? [attribute.category] : []);
+    setSelectedCategories(attribute?.categories ? attribute.categories : ['subject']);
     setSelectedDataType(attribute?.dataType || '');
     setDescription(attribute?.description || '');
     
@@ -309,7 +309,7 @@ export default function AttributesPage() {
     setSelectedAttribute(null);
     setDisplayName('');
     setDisplayNameError('');
-    setSelectedCategories([]);
+    setSelectedCategories(['subject']);
     setSelectedDataType('');
     setDescription('');
     setPermittedValues('');
@@ -675,7 +675,7 @@ export default function AttributesPage() {
         name: displayName.trim(),
         displayName: displayName.trim(),
         description: description?.trim() || '',
-        category: selectedCategories.length > 0 ? selectedCategories[0] : 'subject',
+        categories: selectedCategories,
         dataType: selectedDataType || 'string',
         isRequired: false,
         isMultiValue: false,
@@ -683,7 +683,7 @@ export default function AttributesPage() {
           enumValues: parsedValues.length > 0 ? parsedValues : []
         },
         metadata: {
-          createdBy: 'System',
+          createdBy: currentUser?.name || 'System',
           tags: [],
           isSystem: false,
           isCustom: true,
@@ -1053,6 +1053,9 @@ export default function AttributesPage() {
                     <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', color: 'text.primary' }}>
                       Permitted Values
                     </TableCell>
+                    <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', color: 'text.primary' }}>
+                      Created By
+                    </TableCell>
                     <TableCell align="center" sx={{ fontWeight: 600, fontSize: '0.875rem', color: 'text.primary', width: '120px', minWidth: '120px' }}>
                       Actions
                     </TableCell>
@@ -1061,7 +1064,7 @@ export default function AttributesPage() {
                 <TableBody>
                   {loading ? (
                     <TableRow>
-                      <TableCell colSpan={6} sx={{ textAlign: 'center', py: 4 }}>
+                      <TableCell colSpan={7} sx={{ textAlign: 'center', py: 4 }}>
                         <Typography variant="body1" color="text.secondary">
                           Loading attributes...
                         </Typography>
@@ -1069,7 +1072,7 @@ export default function AttributesPage() {
                     </TableRow>
                   ) : paginatedAttributes.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={6} sx={{ textAlign: 'center', py: 4 }}>
+                      <TableCell colSpan={7} sx={{ textAlign: 'center', py: 4 }}>
                         <Typography variant="body1" color="text.secondary">
                           No attributes found
                         </Typography>
@@ -1102,8 +1105,8 @@ export default function AttributesPage() {
                           </TableCell>
                           <TableCell>
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                              <Avatar sx={{ bgcolor: `${getCategoryColor(attribute.category)}.main` }}>
-                                {getCategoryIcon(attribute.category)}
+                              <Avatar sx={{ bgcolor: `${getCategoryColor(attribute.categories?.[0] || 'subject')}.main` }}>
+                                {getCategoryIcon(attribute.categories?.[0] || 'subject')}
                               </Avatar>
                               <Box>
                                 <Typography
@@ -1120,12 +1123,17 @@ export default function AttributesPage() {
                             </Box>
                           </TableCell>
                           <TableCell>
-                            <Chip
-                              label={attribute.category}
-                              size="small"
-                              color={getCategoryColor(attribute.category) as any}
-                              variant="outlined"
-                            />
+                            <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
+                              {attribute.categories?.map((category) => (
+                                <Chip
+                                  key={category}
+                                  label={category}
+                                  size="small"
+                                  color={getCategoryColor(category) as any}
+                                  variant="outlined"
+                                />
+                              ))}
+                            </Box>
                           </TableCell>
                           <TableCell>
                             <Chip
@@ -1173,6 +1181,22 @@ export default function AttributesPage() {
                                 Any value
                               </Typography>
                             )}
+                          </TableCell>
+                          <TableCell>
+                            <Typography variant="body2" color="text.secondary">
+                              {(() => {
+                                if (attribute.createdBy?.name) {
+                                  return attribute.createdBy.name;
+                                } else if (typeof attribute.createdBy === 'string') {
+                                  return attribute.createdBy;
+                                } else if (attribute.metadata?.createdBy) {
+                                  return typeof attribute.metadata.createdBy === 'string' 
+                                    ? attribute.metadata.createdBy 
+                                    : attribute.metadata.createdBy?.name || 'System';
+                                }
+                                return 'System';
+                              })()} 
+                            </Typography>
                           </TableCell>
                           <TableCell align="center" sx={{ width: '120px', minWidth: '120px' }}>
                             <Box sx={{ display: 'flex', gap: 1, justifyContent: 'center' }}>
@@ -1567,14 +1591,6 @@ export default function AttributesPage() {
                   <MenuItem value="resource">
                     <Checkbox checked={selectedCategories.indexOf('resource') > -1} />
                     <Typography>Resource</Typography>
-                  </MenuItem>
-                  <MenuItem value="action">
-                    <Checkbox checked={selectedCategories.indexOf('action') > -1} />
-                    <Typography>Action</Typography>
-                  </MenuItem>
-                  <MenuItem value="environment">
-                    <Checkbox checked={selectedCategories.indexOf('environment') > -1} />
-                    <Typography>Environment</Typography>
                   </MenuItem>
                 </Select>
               </FormControl>

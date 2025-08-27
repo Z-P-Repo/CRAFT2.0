@@ -411,7 +411,7 @@ export class UserController {
 
     // Check if current user has permission to change roles
     if (!currentUser || (currentUser.role !== 'admin' && currentUser.role !== 'super_admin')) {
-      throw new ValidationError('Insufficient permissions to change user roles');
+      throw new ValidationError('Access denied: Only Admin and Super Admin users can change user roles. Your current role does not have sufficient permissions.');
     }
 
     // Validate the new role
@@ -424,7 +424,7 @@ export class UserController {
     if (currentUser.role === 'admin') {
       // Admins can only assign 'admin' and 'basic' roles, not 'super_admin'
       if (role === 'super_admin') {
-        throw new ValidationError('Admins cannot assign super admin role');
+        throw new ValidationError('Access denied: Only Super Admins can assign the Super Admin role. You are currently logged in as an Admin, which allows you to assign Admin and Basic roles only.');
       }
       
       // Admins cannot change the role of super admins
@@ -434,13 +434,13 @@ export class UserController {
       }
       
       if (targetUser.role === 'super_admin') {
-        throw new ValidationError('Admins cannot change the role of super admins');
+        throw new ValidationError('Access denied: Only Super Admins can modify other Super Admin accounts. You are currently logged in as an Admin.');
       }
     }
 
     // Prevent users from changing their own role to avoid privilege escalation
-    if (currentUser._id === id) {
-      throw new ValidationError('Users cannot change their own role');
+    if (currentUser._id.toString() === id) {
+      throw new ValidationError('Security restriction: You cannot change your own role. Please ask another Admin or Super Admin to change your role if needed.');
     }
 
     // Update the user role

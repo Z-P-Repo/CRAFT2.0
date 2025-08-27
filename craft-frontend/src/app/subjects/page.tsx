@@ -654,6 +654,9 @@ export default function SubjectsPage() {
                         )}
                       </Box>
                     </TableCell>
+                    <TableCell align="center" sx={{ fontWeight: 600, fontSize: '0.875rem', color: 'text.primary', width: '140px', minWidth: '140px' }}>
+                      Created By
+                    </TableCell>
                     <TableCell align="center" sx={{ fontWeight: 600, fontSize: '0.875rem', color: 'text.primary', width: '120px', minWidth: '120px' }}>
                       Actions
                     </TableCell>
@@ -662,7 +665,7 @@ export default function SubjectsPage() {
                 <TableBody>
                   {loading ? (
                     <TableRow>
-                      <TableCell colSpan={3} sx={{ textAlign: 'center', py: 4 }}>
+                      <TableCell colSpan={4} sx={{ textAlign: 'center', py: 4 }}>
                         <Typography variant="body1" color="text.secondary">
                           Loading subjects...
                         </Typography>
@@ -670,7 +673,7 @@ export default function SubjectsPage() {
                     </TableRow>
                   ) : paginatedSubjects.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={3} sx={{ textAlign: 'center', py: 4 }}>
+                      <TableCell colSpan={4} sx={{ textAlign: 'center', py: 4 }}>
                         <Typography variant="body1" color="text.secondary">
                           No subjects found
                         </Typography>
@@ -719,6 +722,11 @@ export default function SubjectsPage() {
                                 </Typography>
                               </Box>
                             </Box>
+                          </TableCell>
+                          <TableCell align="center" sx={{ width: '140px', minWidth: '140px' }}>
+                            <Typography variant="body2" color="text.secondary">
+                              {subject.metadata?.createdBy || 'System'}
+                            </Typography>
                           </TableCell>
                           <TableCell align="center" sx={{ width: '120px', minWidth: '120px' }}>
                             <Box sx={{ display: 'flex', gap: 1, justifyContent: 'center' }}>

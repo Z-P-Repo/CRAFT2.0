@@ -13,12 +13,13 @@ A modern, responsive React-based dashboard for managing the CRAFT (Attribute-Bas
 - **📱 Responsive Dashboard Layout** with collapsible sidebar navigation
 - **🔐 JWT Authentication** with automatic token refresh and secure routing
 - **👥 User Registration** - Public registration with default Basic role assignment
-- **🛡️ User Management** - Complete user management system with role hierarchy (Super Admin, Admin, Basic)
-- **📋 Policy Management** - Create, edit, and manage ABAC policies with 4-step wizard and dedicated view/edit pages
-- **👥 Subject Management** - Handle users, groups, and roles with detailed profiles
-- **📁 Resource Management** - Manage system resources, files, databases, and APIs
-- **⚡ Action Management** - Define and categorize system actions with risk levels
-- **🏷️ Attribute Management** - Configure ABAC attributes for subjects, resources, and environment
+- **🛡️ User Management** - Complete user management system with three-tier role hierarchy (Super Admin, Admin, Basic)
+- **🔒 Role-Based Access Control** - Basic users have view-only access; Admin/Super Admin have full CRUD access
+- **📋 Policy Management** - Create, edit, and manage ABAC policies with 4-step wizard and dedicated view/edit pages (Admin/Super Admin only)
+- **👥 Subject Management** - Handle users, groups, and roles with detailed profiles (view-only for Basic users)
+- **📁 Resource Management** - Manage system resources, files, databases, and APIs (view-only for Basic users)
+- **⚡ Action Management** - Define and categorize system actions with risk levels (view-only for Basic users)
+- **🏷️ Attribute Management** - Configure multi-category ABAC attributes (Subject/Resource) for context-aware decisions (view-only for Basic users)
 - **🧪 Policy Tester** - Interactive policy evaluation and testing with detailed results
 - **📊 Real-time Statistics** - Dashboard with live metrics and activity tracking
 - **🎨 Professional UI/UX** - Material-UI components with consistent theming
@@ -144,17 +145,17 @@ src/
 - **Register Page** (`/register`): User registration
 
 ### Protected Routes
-- **Dashboard** (`/dashboard`): Main application dashboard
-- **Users** (`/users`): Complete user management with role changes (Admin/Super Admin only)
-- **Subjects** (`/subjects`): User and role management
-- **Resources** (`/resources`): Resource management
-- **Actions** (`/actions`): Action definitions
-- **Policies** (`/policies`): Access policy management with comprehensive pagination and filtering
-  - **Policy Creation** (`/policies/create`): 4-step wizard for policy creation
-  - **Policy View** (`/policies/[id]`): Dedicated policy viewing page
-  - **Policy Edit** (`/policies/[id]/edit`): Dedicated policy editing page
-- **Attributes** (`/attributes`): System attributes
-- **Tester** (`/tester`): Policy evaluation testing
+- **Dashboard** (`/dashboard`): Main application dashboard (all users)
+- **Users** (`/users`): Complete user management with role changes (Admin/Super Admin only for CUD operations)
+- **Subjects** (`/subjects`): User and role management (view-only for Basic users)
+- **Resources** (`/resources`): Resource management (view-only for Basic users)
+- **Actions** (`/actions`): Action definitions (view-only for Basic users)
+- **Policies** (`/policies`): Access policy management with comprehensive pagination and filtering (view-only for Basic users)
+  - **Policy Creation** (`/policies/create`): 4-step wizard for policy creation (Admin/Super Admin only)
+  - **Policy View** (`/policies/[id]`): Dedicated policy viewing page (all users)
+  - **Policy Edit** (`/policies/[id]/edit`): Dedicated policy editing page (Admin/Super Admin only)
+- **Attributes** (`/attributes`): Multi-category attribute system (view-only for Basic users)
+- **Tester** (`/tester`): Policy evaluation testing (all users)
 
 ## 🎨 UI Components
 

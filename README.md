@@ -92,9 +92,11 @@ CRAFT2.0/
 
 ### 🔐 Authentication & Authorization
 - JWT-based authentication with refresh tokens
-- Role-based access control (Super Admin, Admin, Basic)
-- User registration with default Basic role assignment
-- Role management with hierarchical permissions
+- Three-tier role-based access control (Super Admin, Admin, Basic)
+- User registration with automatic Basic role assignment  
+- Role management with hierarchical permissions (only Admin/Super Admin can change roles)
+- Basic users have view-only access to all system entities
+- Admin/Super Admin have full CRUD access to all entities
 - Secure password hashing with bcrypt
 - Token validation and automatic refresh
 
@@ -105,12 +107,12 @@ CRAFT2.0/
 - Mobile-friendly responsive design
 
 ### 🏗️ ABAC Components
-- **Policies**: Define access control rules with step-by-step wizard
-- **Subjects**: Manage users, groups, roles with comprehensive attributes
-- **Resources**: Protected resources and assets with attribute support
-- **Actions**: Operations that can be performed with categorization
-- **Attributes**: Contextual information for policy decisions with full CRUD
-- **Users**: Complete user management with three roles (Super Admin, Admin, Basic) and role change functionality
+- **Policies**: Define access control rules with step-by-step wizard (view-only access for Basic users)
+- **Subjects**: Manage users, groups, roles with comprehensive attributes (view-only access for Basic users)
+- **Resources**: Protected resources and assets with attribute support (view-only access for Basic users)
+- **Actions**: Operations that can be performed with categorization (view-only access for Basic users)
+- **Attributes**: Contextual information with multi-category support (Subject/Resource) and full CRUD (view-only access for Basic users)
+- **Users**: Complete user management with three-tier role system and role change restrictions
 
 ### 📋 Policy Management
 - **Step-by-step Creation**: 4-step wizard for policy creation

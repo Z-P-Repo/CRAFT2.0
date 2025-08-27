@@ -5,7 +5,7 @@ export interface IAttribute extends Document {
   name: string;
   displayName: string;
   description?: string;
-  category: 'subject' | 'resource' | 'action' | 'environment';
+  categories: ('subject' | 'resource')[];
   dataType: 'string' | 'number' | 'boolean' | 'date' | 'array' | 'object';
   isRequired: boolean;
   isMultiValue: boolean;
@@ -68,12 +68,18 @@ const AttributeSchema = new Schema<IAttribute>({
     trim: true,
     maxlength: [500, 'Description cannot exceed 500 characters']
   },
-  category: {
-    type: String,
-    required: [true, 'Category is required'],
+  categories: {
+    type: [String],
+    required: [true, 'At least one category is required'],
+    validate: {
+      validator: function(categories: string[]) {
+        return categories && categories.length > 0;
+      },
+      message: 'At least one category must be selected'
+    },
     enum: {
-      values: ['subject', 'resource', 'action', 'environment'],
-      message: '{VALUE} is not a valid category'
+      values: ['subject', 'resource'],
+      message: '{VALUE} is not a valid category. Only subject and resource are allowed'
     }
   },
   dataType: {

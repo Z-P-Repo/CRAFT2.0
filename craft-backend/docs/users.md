@@ -4,7 +4,7 @@ The User Management module provides comprehensive user administration capabiliti
 
 ## Overview
 
-The user management system handles user registration, authentication, profile updates, and administrative operations while maintaining security through JWT tokens and password hashing.
+The user management system handles user registration, authentication, profile updates, and administrative operations while maintaining security through JWT tokens and password hashing. The system implements a three-tier role hierarchy: Super Admin, Admin, and Basic users, with strict role-based access control and automatic Basic role assignment for new registrations.
 
 ## Data Model
 
@@ -61,8 +61,8 @@ const UserSchema = new Schema<IUser>({
   role: {
     type: String,
     required: [true, 'Role is required'],
-    enum: ['admin', 'manager', 'user'],
-    default: 'user',
+    enum: ['super_admin', 'admin', 'basic'],
+    default: 'basic',
   },
   department: {
     type: String,

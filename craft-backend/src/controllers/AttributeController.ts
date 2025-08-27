@@ -13,7 +13,7 @@ export class AttributeController {
     const paginationOptions = PaginationHelper.validatePaginationParams(req.query);
     const {
       search,
-      category,
+      categories,
       dataType,
       isRequired,
       active,
@@ -24,7 +24,13 @@ export class AttributeController {
     // Build filter object
     const filter: any = {};
     
-    if (category) filter.category = category;
+    if (categories) {
+      if (typeof categories === 'string') {
+        filter.categories = categories;
+      } else if (Array.isArray(categories)) {
+        filter.categories = { $in: categories };
+      }
+    }
     if (dataType) filter.dataType = dataType;
     if (isRequired !== undefined) filter.isRequired = isRequired === 'true';
     if (active !== undefined) filter.active = active === 'true';
@@ -87,15 +93,12 @@ export class AttributeController {
 
   // Create new attribute
   static createAttribute = asyncHandler(async (req: AuthRequest, res: Response): Promise<any> => {
-    // Debug logging
-    console.log('Received attribute creation request:', req.body);
-    
     const {
       id,
       name,
       displayName,
       description,
-      category,
+      categories,
       dataType,
       isRequired,
       isMultiValue,
@@ -108,25 +111,14 @@ export class AttributeController {
       metadata,
     } = req.body;
 
-    // Debug individual fields
-    console.log('Validation check:', {
-      id: id || 'MISSING',
-      name: name || 'MISSING', 
-      displayName: displayName || 'MISSING',
-      category: category || 'MISSING',
-      dataType: dataType || 'MISSING'
-    });
-
     // Validate required fields
-    if (!id || !name || !displayName || !category || !dataType) {
+    if (!id || !name || !displayName || !categories || !dataType) {
       const missingFields = [];
       if (!id) missingFields.push('id');
       if (!name) missingFields.push('name');
       if (!displayName) missingFields.push('displayName');
-      if (!category) missingFields.push('category');
+      if (!categories) missingFields.push('categories');
       if (!dataType) missingFields.push('dataType');
-      
-      console.error('Missing required fields:', missingFields);
       throw new ValidationError(`Missing required fields: ${missingFields.join(', ')}`);
     }
 
@@ -148,7 +140,7 @@ export class AttributeController {
       name: name.trim(),
       displayName: displayName.trim(),
       description: description?.trim(),
-      category,
+      categories,
       dataType,
       isRequired: isRequired || false,
       isMultiValue: isMultiValue || false,
@@ -294,12 +286,12 @@ export class AttributeController {
       throw new ValidationError('Category parameter is required');
     }
 
-    const validCategories = ['subject', 'resource', 'action', 'environment'];
+    const validCategories = ['subject', 'resource'];
     if (!validCategories.includes(category)) {
       throw new ValidationError(`Invalid category. Valid categories: ${validCategories.join(', ')}`);
     }
 
-    const filter = { category, active: true };
+    const filter = { categories: category, active: true };
     const skip = (paginationOptions.page - 1) * paginationOptions.limit;
     const sortObject = PaginationHelper.buildSortObject(
       paginationOptions.sortBy!,
@@ -331,12 +323,12 @@ export class AttributeController {
       throw new ValidationError('Category parameter is required');
     }
 
-    const validCategories = ['subject', 'resource', 'action', 'environment'];
+    const validCategories = ['subject', 'resource'];
     if (!validCategories.includes(category)) {
       throw new ValidationError(`Invalid category. Valid categories: ${validCategories.join(', ')}`);
     }
 
-    const attributes = await Attribute.find({ category, active: true });
+    const attributes = await Attribute.find({ categories: category, active: true });
     
     const schema = {
       type: 'object',
@@ -412,9 +404,10 @@ export class AttributeController {
 
     const categoryStats = await Attribute.aggregate([
       { $match: { active: true } },
+      { $unwind: '$categories' },
       {
         $group: {
-          _id: '$category',
+          _id: '$categories',
           count: { $sum: 1 },
           required: {
             $sum: { $cond: [{ $eq: ['$isRequired', true] }, 1, 0] }
