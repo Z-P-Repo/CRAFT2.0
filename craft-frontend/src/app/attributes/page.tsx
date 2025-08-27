@@ -2447,6 +2447,52 @@ export default function AttributesPage() {
                 )}
               </Box>
 
+              {/* Created Information */}
+              <Box sx={{ display: 'flex', gap: 2 }}>
+                <TextField
+                  fullWidth
+                  label="Created By"
+                  value={
+                    viewAttribute.createdBy 
+                      ? (typeof viewAttribute.createdBy === 'string' 
+                          ? viewAttribute.createdBy 
+                          : viewAttribute.createdBy.name || 'Unknown')
+                      : (viewAttribute.metadata?.createdBy || 'System')
+                  }
+                  variant="outlined"
+                  size="small"
+                  InputProps={{
+                    readOnly: true,
+                  }}
+                  sx={{
+                    '& .MuiInputBase-input': {
+                      color: 'text.primary',
+                    },
+                    '& .MuiOutlinedInput-root': {
+                      backgroundColor: 'grey.50',
+                    }
+                  }}
+                />
+                <TextField
+                  fullWidth
+                  label="Created At"
+                  value={viewAttribute.createdAt ? new Date(viewAttribute.createdAt).toLocaleString() : 'Unknown'}
+                  variant="outlined"
+                  size="small"
+                  InputProps={{
+                    readOnly: true,
+                  }}
+                  sx={{
+                    '& .MuiInputBase-input': {
+                      color: 'text.primary',
+                    },
+                    '& .MuiOutlinedInput-root': {
+                      backgroundColor: 'grey.50',
+                    }
+                  }}
+                />
+              </Box>
+
             </Box>
           )}
         </DialogContent>
