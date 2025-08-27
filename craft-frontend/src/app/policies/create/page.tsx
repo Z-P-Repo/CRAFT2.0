@@ -1638,14 +1638,6 @@ export default function CreatePolicyPage() {
                       <Checkbox checked={selectedCategories.indexOf('resource') > -1} />
                       <Typography>Resource</Typography>
                     </MenuItem>
-                    <MenuItem value="action">
-                      <Checkbox checked={selectedCategories.indexOf('action') > -1} />
-                      <Typography>Action</Typography>
-                    </MenuItem>
-                    <MenuItem value="environment">
-                      <Checkbox checked={selectedCategories.indexOf('environment') > -1} />
-                      <Typography>Environment</Typography>
-                    </MenuItem>
                   </Select>
                 </FormControl>
 
