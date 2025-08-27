@@ -1238,6 +1238,22 @@ export default function ObjectsPage() {
           >
             Close
           </Button>
+          {canEdit(currentUser) && (
+            <Button
+              onClick={() => {
+                handleViewClose();
+                handleClickOpen(viewObject!);
+              }}
+              variant="contained"
+              sx={{
+                textTransform: 'none',
+                fontWeight: 600,
+                px: 3
+              }}
+            >
+              Edit Resource
+            </Button>
+          )}
         </DialogActions>
       </Dialog>
 
