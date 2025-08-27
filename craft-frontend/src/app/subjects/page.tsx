@@ -1021,6 +1021,22 @@ export default function SubjectsPage() {
           >
             Close
           </Button>
+          {canEdit(currentUser) && (
+            <Button
+              onClick={() => {
+                handleViewClose();
+                handleClickOpen(viewSubject!);
+              }}
+              variant="contained"
+              sx={{
+                textTransform: 'none',
+                fontWeight: 600,
+                px: 3
+              }}
+            >
+              Edit Subject
+            </Button>
+          )}
         </DialogActions>
       </Dialog>
 
