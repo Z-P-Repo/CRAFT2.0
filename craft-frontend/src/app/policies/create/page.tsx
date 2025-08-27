@@ -118,7 +118,8 @@ interface Attribute {
   name: string;
   displayName: string;
   description?: string;
-  category: 'subject' | 'resource' | 'action' | 'environment';
+  category?: 'subject' | 'resource' | 'action' | 'environment'; // Legacy field for compatibility
+  categories?: string[]; // New field - array of categories
   dataType: 'string' | 'number' | 'boolean' | 'date';
   isRequired: boolean;
   isMultiValue: boolean;
@@ -151,6 +152,19 @@ const steps = [
   'Actions & Resources',
   'Review & Create'
 ];
+
+// Helper function to check if an attribute belongs to a specific category
+const attributeHasCategory = (attribute: Attribute, categoryToCheck: string): boolean => {
+  // Check new categories array field first
+  if (attribute.categories && Array.isArray(attribute.categories)) {
+    return attribute.categories.includes(categoryToCheck);
+  }
+  // Fallback to legacy category field
+  if (attribute.category) {
+    return attribute.category === categoryToCheck;
+  }
+  return false;
+};
 
 export default function CreatePolicyPage() {
   const router = useRouter();
@@ -734,7 +748,7 @@ export default function CreatePolicyPage() {
                         <Box sx={{ mb: 3 }}>
                           <Autocomplete
                             multiple
-                            options={attributes?.filter(attr => attr.category === 'subject' && attr.active) || []}
+                            options={attributes?.filter(attr => attributeHasCategory(attr, 'subject') && attr.active) || []}
                             value={selectedAttributes}
                             onChange={handleAttributeSelection}
                             getOptionLabel={(option) => option.displayName}

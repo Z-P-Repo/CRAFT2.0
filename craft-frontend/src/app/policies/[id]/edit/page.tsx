@@ -163,7 +163,8 @@ interface Attribute {
   name: string;
   displayName: string;
   description?: string;
-  category: 'subject' | 'resource' | 'action' | 'environment';
+  category?: 'subject' | 'resource' | 'action' | 'environment'; // Legacy field for compatibility
+  categories?: string[]; // New field - array of categories
   dataType: 'string' | 'number' | 'boolean' | 'date';
   isRequired: boolean;
   isMultiValue: boolean;
@@ -196,6 +197,19 @@ const steps = [
   'Actions & Resources',
   'Review & Save'
 ];
+
+// Helper function to check if an attribute belongs to a specific category
+const attributeHasCategory = (attribute: Attribute, categoryToCheck: string): boolean => {
+  // Check new categories array field first
+  if (attribute.categories && Array.isArray(attribute.categories)) {
+    return attribute.categories.includes(categoryToCheck);
+  }
+  // Fallback to legacy category field
+  if (attribute.category) {
+    return attribute.category === categoryToCheck;
+  }
+  return false;
+};
 
 export default function EditPolicyPage() {
   const router = useRouter();
@@ -626,7 +640,7 @@ export default function EditPolicyPage() {
                               (Optional)
                             </Typography>
                             <Chip 
-                              label={`${attributes?.filter(attr => attr.category === 'subject' && attr.active).length || 0} Available`}
+                              label={`${attributes?.filter(attr => attributeHasCategory(attr, 'subject') && attr.active).length || 0} Available`}
                               size="small"
                               variant="outlined"
                               sx={{ ml: 2, fontSize: '0.7rem', height: 20 }}
@@ -662,7 +676,7 @@ export default function EditPolicyPage() {
                           </Box>
                           <Grid container spacing={2}>
                             {attributes
-                              ?.filter(attr => attr.category === 'subject' && attr.active)
+                              ?.filter(attr => attributeHasCategory(attr, 'subject') && attr.active)
                               .sort((a, b) => {
                                 // Sort by required first, then alphabetically
                                 if (a.isRequired && !b.isRequired) return -1;
@@ -852,7 +866,7 @@ export default function EditPolicyPage() {
                             );
                           })}
                         
-                            {(attributes?.filter(attr => attr.category === 'subject' && attr.active).length || 0) === 0 && (
+                            {(attributes?.filter(attr => attributeHasCategory(attr, 'subject') && attr.active).length || 0) === 0 && (
                               <Grid size={{ xs: 12 }}>
                                 <Box sx={{ 
                                   textAlign: 'center', 
