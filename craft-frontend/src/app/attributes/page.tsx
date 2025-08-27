@@ -116,6 +116,7 @@ interface Attribute {
   active: boolean;
   createdAt: string;
   updatedAt: string;
+  createdBy?: string | { name?: string }; // Add this field for compatibility
 }
 
 export default function AttributesPage() {
@@ -1185,14 +1186,14 @@ export default function AttributesPage() {
                           <TableCell>
                             <Typography variant="body2" color="text.secondary">
                               {(() => {
-                                if (attribute.createdBy?.name) {
-                                  return attribute.createdBy.name;
-                                } else if (typeof attribute.createdBy === 'string') {
+                                if (typeof attribute.createdBy === 'string') {
                                   return attribute.createdBy;
+                                } else if (attribute.createdBy && typeof attribute.createdBy === 'object' && attribute.createdBy.name) {
+                                  return attribute.createdBy.name;
                                 } else if (attribute.metadata?.createdBy) {
                                   return typeof attribute.metadata.createdBy === 'string' 
                                     ? attribute.metadata.createdBy 
-                                    : attribute.metadata.createdBy?.name || 'System';
+                                    : 'System';
                                 }
                                 return 'System';
                               })()} 
@@ -2289,7 +2290,7 @@ export default function AttributesPage() {
                 <TextField
                   fullWidth
                   label="Category"
-                  value={viewAttribute.category}
+                  value={viewAttribute.categories.join(', ')}
                   variant="outlined"
                   size="small"
                   InputProps={{
@@ -2544,11 +2545,11 @@ export default function AttributesPage() {
               }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                   <Avatar sx={{
-                    bgcolor: `${getCategoryColor(deleteAttribute.category)}.main`,
+                    bgcolor: `${getCategoryColor(deleteAttribute.categories[0] || 'subject')}.main`,
                     width: 32,
                     height: 32
                   }}>
-                    {getCategoryIcon(deleteAttribute.category)}
+                    {getCategoryIcon(deleteAttribute.categories[0] || 'subject')}
                   </Avatar>
                   <Box>
                     <Typography variant="subtitle2" fontWeight="600">
@@ -2659,11 +2660,11 @@ export default function AttributesPage() {
                 return (
                   <Box key={attributeId} sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1.5 }}>
                     <Avatar sx={{
-                      bgcolor: `${getCategoryColor(attribute.category)}.main`,
+                      bgcolor: `${getCategoryColor(attribute.categories[0] || 'subject')}.main`,
                       width: 28,
                       height: 28
                     }}>
-                      {getCategoryIcon(attribute.category)}
+                      {getCategoryIcon(attribute.categories[0] || 'subject')}
                     </Avatar>
                     <Box sx={{ flex: 1 }}>
                       <Typography variant="body2" fontWeight="500">
@@ -2674,9 +2675,9 @@ export default function AttributesPage() {
                       </Typography>
                     </Box>
                     <Chip
-                      label={attribute.category}
+                      label={attribute.categories[0] || 'subject'}
                       size="small"
-                      color={getCategoryColor(attribute.category) as any}
+                      color={getCategoryColor(attribute.categories[0] || 'subject') as any}
                       variant="outlined"
                     />
                   </Box>

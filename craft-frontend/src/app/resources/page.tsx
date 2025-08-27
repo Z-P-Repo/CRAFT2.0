@@ -105,6 +105,7 @@ interface ExtendedResourceObject extends ResourceObject {
   _id?: string;
   createdAt?: string;
   updatedAt?: string;
+  createdBy?: string | { name?: string }; // Add this field for compatibility
 }
 
 

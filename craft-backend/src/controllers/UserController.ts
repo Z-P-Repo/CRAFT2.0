@@ -439,7 +439,7 @@ export class UserController {
     }
 
     // Prevent users from changing their own role to avoid privilege escalation
-    if (currentUser._id.toString() === id) {
+    if (currentUser && currentUser._id && currentUser._id.toString() === id) {
       throw new ValidationError('Security restriction: You cannot change your own role. Please ask another Admin or Super Admin to change your role if needed.');
     }
 
