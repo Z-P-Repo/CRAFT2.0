@@ -233,15 +233,6 @@ export default function PolicyViewPage() {
   const renderHumanReadablePolicy = () => {
     if (!policy || !policy.rules.length) return null;
 
-    // Debug logging (can be removed later)
-    console.log('Rendering policy with data:', {
-      policy: policy.name,
-      subjectsCount: subjects.length,
-      actionsCount: actions.length,
-      resourcesCount: resources.length,
-      attributesCount: attributes.length,
-      rules: policy.rules.length
-    });
 
     return (
       <Card sx={{ 

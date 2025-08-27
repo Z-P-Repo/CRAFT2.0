@@ -722,7 +722,6 @@ export default function CreatePolicyPage() {
                             variant="outlined"
                             startIcon={<AddIcon />}
                             onClick={() => {
-                              console.log('Policy Creation - Add Attribute clicked');
                               handleClickOpen();
                             }}
                             sx={{ fontSize: '0.75rem' }}

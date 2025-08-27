@@ -1,6 +1,7 @@
 import mongoose from 'mongoose';
 import { Action } from '@/models/Action';
 import { databaseConnection } from '@/config/database';
+import { logger } from '@/utils/logger';
 
 const sampleActions = [
   {
@@ -212,7 +213,6 @@ async function seedActions() {
     
     // Clear existing actions
     await Action.deleteMany({});
-    console.log('Cleared existing actions');
 
     // Insert sample actions using create to trigger pre-save middleware
     const createdActions = [];
@@ -220,11 +220,11 @@ async function seedActions() {
       const action = await Action.create(actionData);
       createdActions.push(action);
     }
-    console.log(`✅ Seeded ${createdActions.length} actions successfully`);
+    logger.info(`✅ Seeded ${createdActions.length} actions successfully`);
     
     // Display created actions
     createdActions.forEach(action => {
-      console.log(`   ⚡ ${action.displayName} (${action.category}) - ${action.riskLevel} risk - ${action.id}`);
+      logger.info(`   ⚡ ${action.displayName} (${action.category}) - ${action.riskLevel} risk - ${action.id}`);
     });
 
   } catch (error) {

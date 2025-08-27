@@ -291,7 +291,6 @@ export default function EditPolicyPage() {
         }
       });
       
-      console.log('Setting selectedSubjectAttributes from policy:', subjectAttrs);
       setSelectedSubjectAttributes(subjectAttrs);
     }
   }, [originalPolicy, attributes]);

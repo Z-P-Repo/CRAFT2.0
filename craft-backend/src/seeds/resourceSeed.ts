@@ -1,6 +1,7 @@
 import mongoose from 'mongoose';
 import { Resource } from '@/models/Resource';
 import { databaseConnection } from '@/config/database';
+import { logger } from '@/utils/logger';
 
 const sampleResources = [
   {
@@ -128,7 +129,6 @@ async function seedResources() {
     
     // Clear existing resources
     await Resource.deleteMany({});
-    console.log('Cleared existing resources');
 
     // Insert sample resources using create to trigger pre-save middleware
     const createdResources = [];
@@ -136,11 +136,11 @@ async function seedResources() {
       const resource = await Resource.create(resourceData);
       createdResources.push(resource);
     }
-    console.log(`✅ Seeded ${createdResources.length} resources successfully`);
+    logger.info(`✅ Seeded ${createdResources.length} resources successfully`);
     
     // Display created resources
     createdResources.forEach(resource => {
-      console.log(`   📁 ${resource.displayName} (${resource.type}) - ${resource.id}`);
+      logger.info(`   📁 ${resource.displayName} (${resource.type}) - ${resource.id}`);
     });
 
   } catch (error) {

@@ -189,7 +189,6 @@ export default function SubjectsPage() {
       // If subject was not found (404), it might have been already deleted
       // Remove from local state and close the dialog
       if (error.code === 'NOT_FOUND' || error.message?.includes('not found')) {
-        console.log('Subject not found, removing from local state...');
         setSubjects(prev => prev.filter(subj => subj._id !== deleteSubject._id));
         setTotal(prev => prev - 1);
         handleDeleteClose();
@@ -283,7 +282,6 @@ export default function SubjectsPage() {
         // Clear selection
         setSelectedSubjects([]);
         
-        console.log(`Successfully deleted ${selectedSubjects.length} subjects`);
       } else {
         throw new Error(response.error || 'Failed to delete subjects');
       }

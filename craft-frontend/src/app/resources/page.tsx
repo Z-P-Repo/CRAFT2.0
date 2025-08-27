@@ -252,7 +252,6 @@ export default function ObjectsPage() {
       // If object was not found (404), it might have been already deleted
       // Remove from local state and close the dialog
       if (error.code === 'NOT_FOUND' || error.message?.includes('not found')) {
-        console.log('Object not found, removing from local state...');
         const updatedObjects = objects.filter(obj => obj._id !== deleteObject._id);
         setObjects(updatedObjects);
         // Only count objects that have id (and will be displayed)
@@ -352,7 +351,6 @@ export default function ObjectsPage() {
         // Clear selection
         setSelectedObjects([]);
 
-        console.log(`Successfully deleted ${selectedObjects.length} objects`);
       } else {
         throw new Error(response.error || 'Failed to delete objects');
       }

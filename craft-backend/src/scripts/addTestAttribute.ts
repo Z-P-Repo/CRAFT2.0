@@ -36,7 +36,6 @@ async function addTestAttribute() {
     const createdAttribute = await Attribute.create(testAttribute);
     logger.info(`Test attribute created: ${createdAttribute.displayName} (ID: ${createdAttribute._id})`);
 
-    console.log(`Created deletable attribute with ID: ${createdAttribute._id}`);
   } catch (error) {
     logger.error('Error adding test attribute:', error);
   } finally {

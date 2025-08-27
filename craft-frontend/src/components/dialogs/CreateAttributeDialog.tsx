@@ -49,12 +49,6 @@ const CreateAttributeDialog: React.FC<CreateAttributeDialogProps> = ({
   onSubmit,
   loading = false
 }) => {
-  // Debug logging
-  React.useEffect(() => {
-    if (open) {
-      console.log('CreateAttributeDialog - Dialog opened');
-    }
-  }, [open]);
   const [formData, setFormData] = useState<AttributeData>({
     name: '',
     displayName: '',
@@ -69,7 +63,6 @@ const CreateAttributeDialog: React.FC<CreateAttributeDialogProps> = ({
   const handleSubmit = async () => {
     if (!formData.name || !formData.displayName) return;
     
-    console.log('CreateAttributeDialog - Submitting:', formData);
     await onSubmit(formData);
     handleReset();
   };

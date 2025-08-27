@@ -3,6 +3,7 @@ import rateLimit from 'express-rate-limit';
 import { Request, Response, NextFunction } from 'express';
 import { config } from '@/config/environment';
 import { RateLimitError } from '@/exceptions/AppError';
+import { logger } from '@/utils/logger';
 
 // Rate limiting configuration
 export const createRateLimit = (options?: {
@@ -77,7 +78,7 @@ export const requestLogger = (req: Request, res: Response, next: NextFunction) =
   
   res.on('finish', () => {
     const duration = Date.now() - startTime;
-    console.log(`${req.method} ${req.path} - ${res.statusCode} - ${duration}ms`);
+    logger.info(`${req.method} ${req.path} - ${res.statusCode} - ${duration}ms`);
   });
   
   next();

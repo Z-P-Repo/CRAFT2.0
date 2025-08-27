@@ -176,7 +176,6 @@ export default function AttributesPage() {
   };
 
   const handleClickOpen = async (attribute?: Attribute) => {
-    console.log('🔍 DEBUGGING: Opening modal with attribute:', attribute);
     setSelectedAttribute(attribute || null);
     setDisplayName(attribute?.displayName || '');
     setDisplayNameError('');
@@ -186,17 +185,13 @@ export default function AttributesPage() {
     
     // Initialize values immediately if attribute exists
     if (attribute && attribute.constraints && attribute.constraints.enumValues && attribute.constraints.enumValues.length > 0) {
-      console.log('🔍 DEBUGGING: Found enumValues:', attribute.constraints.enumValues);
-      console.log('🔍 DEBUGGING: DataType:', attribute.dataType);
       const enumValues = attribute.constraints.enumValues;
       setExistingValues(enumValues);
       
       // Set values immediately based on data type
       if (attribute.dataType === 'string') {
-        console.log('🔍 DEBUGGING: Setting string values:', enumValues);
         setStringValues([...enumValues]);
         setPermittedValues(enumValues.join(', '));
-        console.log('🔍 DEBUGGING: stringValues should be:', [...enumValues]);
       } else if (attribute.dataType === 'number') {
         setNumberValues(enumValues.map(String));
         setPermittedValues(enumValues.join(', '));
@@ -593,7 +588,6 @@ export default function AttributesPage() {
       // Clear selection
       setSelectedAttributes([]);
       
-      console.log(`Successfully deleted ${selectedAttributes.length} attributes`);
     } catch (error) {
       console.error('Failed to delete attributes:', error);
       setError('Failed to delete some attributes. Please try again.');
@@ -693,7 +687,6 @@ export default function AttributesPage() {
       };
 
       // Debug logging
-      console.log('Submitting attribute data:', attributeData);
 
       if (selectedAttribute) {
         // Update existing attribute
@@ -870,7 +863,6 @@ export default function AttributesPage() {
               variant="contained"
               startIcon={<AddIcon />}
               onClick={() => {
-                console.log('Attributes - Create Attribute clicked');
                 handleClickOpen();
               }}
               sx={{ px: 3 }}

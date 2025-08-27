@@ -145,9 +145,7 @@ export default function ActionsPage() {
         params.search = searchTerm.trim();
       }
       
-      console.log('Fetching actions with params:', params);
       const response: ApiResponse<ActionObject[]> = await apiClient.get('/actions', params);
-      console.log('Actions response:', response);
       
       if (!response.success) {
         throw new Error(response.error || 'Failed to fetch actions');
@@ -283,9 +281,7 @@ export default function ActionsPage() {
     try {
       setIsDeleting(true);
       
-      console.log('Deleting action:', deleteAction._id);
       const response = await apiClient.delete(`/actions/${deleteAction._id}`);
-      console.log('Delete response:', response);
       
       if (!response.success) {
         throw new Error(response.error || 'Failed to delete action');
@@ -389,11 +385,9 @@ export default function ActionsPage() {
     try {
       setIsDeleting(true);
       
-      console.log('Bulk deleting actions:', selectedActions);
       const response = await apiClient.delete('/actions/bulk/delete', {
         actionIds: selectedActions
       });
-      console.log('Bulk delete response:', response);
       
       if (!response.success) {
         throw new Error(response.error || 'Failed to delete actions');

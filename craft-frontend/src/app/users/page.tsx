@@ -269,7 +269,6 @@ export default function UsersPage() {
       console.error('Error deleting user:', error);
       
       if (error.code === 'NOT_FOUND' || error.message?.includes('not found')) {
-        console.log('User not found, removing from local state...');
         const updatedUsers = users.filter(user => user._id !== deleteUser._id);
         setUsers(updatedUsers);
         const usersWithId = updatedUsers.filter(user => user.id);
@@ -496,7 +495,7 @@ export default function UsersPage() {
               </Typography>
               {canDelete(currentUser) && (
                 <Tooltip title="Delete selected">
-                  <IconButton color="error" onClick={() => console.log('Bulk delete')}>
+                  <IconButton color="error" onClick={() => {/* Bulk delete functionality */}}>
                     <DeleteIcon />
                   </IconButton>
                 </Tooltip>
