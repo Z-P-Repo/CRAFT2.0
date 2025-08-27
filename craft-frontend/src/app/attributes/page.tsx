@@ -2217,24 +2217,14 @@ export default function AttributesPage() {
         <DialogContent sx={{ px: 3, pt: 2, pb: 2 }}>
           {viewAttribute && (
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5, mt: 1 }}>
-              {/* Display Name */}
+              {/* Name */}
               <TextField
                 fullWidth
-                label="Display Name"
+                label="Name"
                 value={viewAttribute.displayName}
                 variant="outlined"
-                size="small"
-                InputProps={{
-                  readOnly: true,
-                }}
-                sx={{
-                  '& .MuiInputBase-input': {
-                    color: 'text.primary',
-                  },
-                  '& .MuiOutlinedInput-root': {
-                    backgroundColor: 'grey.50',
-                  }
-                }}
+                InputProps={{ readOnly: true }}
+                sx={{ '& .MuiInputBase-input': { bgcolor: 'grey.50' } }}
               />
 
 
@@ -2242,43 +2232,27 @@ export default function AttributesPage() {
               <TextField
                 fullWidth
                 label="Description"
-                value={viewAttribute.description || 'No description provided'}
+                value={viewAttribute.description || 'No description available'}
                 variant="outlined"
-                size="small"
                 multiline
-                minRows={2}
-                InputProps={{
-                  readOnly: true,
-                }}
-                sx={{
-                  '& .MuiInputBase-input': {
-                    color: 'text.primary',
-                  },
-                  '& .MuiOutlinedInput-root': {
-                    backgroundColor: 'grey.50',
-                  }
-                }}
+                rows={3}
+                InputProps={{ readOnly: true }}
+                sx={{ '& .MuiInputBase-input': { bgcolor: 'grey.50' } }}
               />
 
-              {/* Category and Data Type - Same Row */}
+              {/* Category & Data Type */}
               <Box sx={{ display: 'flex', gap: 2 }}>
                 <TextField
                   fullWidth
                   label="Category"
                   value={viewAttribute.categories.join(', ')}
                   variant="outlined"
-                  size="small"
-                  InputProps={{
-                    readOnly: true,
-                  }}
-                  sx={{
-                    '& .MuiInputBase-input': {
-                      color: 'text.primary',
-                      textTransform: 'capitalize',
-                    },
-                    '& .MuiOutlinedInput-root': {
-                      backgroundColor: 'grey.50',
-                    }
+                  InputProps={{ readOnly: true }}
+                  sx={{ 
+                    '& .MuiInputBase-input': { 
+                      bgcolor: 'grey.50',
+                      textTransform: 'capitalize'
+                    } 
                   }}
                 />
                 <TextField
@@ -2286,28 +2260,22 @@ export default function AttributesPage() {
                   label="Data Type"
                   value={viewAttribute.dataType}
                   variant="outlined"
-                  size="small"
-                  InputProps={{
-                    readOnly: true,
-                  }}
-                  sx={{
-                    '& .MuiInputBase-input': {
-                      color: 'text.primary',
-                      textTransform: 'capitalize',
-                    },
-                    '& .MuiOutlinedInput-root': {
-                      backgroundColor: 'grey.50',
-                    }
+                  InputProps={{ readOnly: true }}
+                  sx={{ 
+                    '& .MuiInputBase-input': { 
+                      bgcolor: 'grey.50',
+                      textTransform: 'capitalize'
+                    } 
                   }}
                 />
               </Box>
 
               {/* Permitted Values */}
-              <Box>
-                <Typography variant="body2" color="text.secondary" sx={{ mb: 1, fontWeight: 500 }}>
-                  Permitted Values
-                </Typography>
-                {viewAttribute.constraints.enumValues && viewAttribute.constraints.enumValues.length > 0 ? (
+              {viewAttribute.constraints.enumValues && viewAttribute.constraints.enumValues.length > 0 && (
+                <Box>
+                  <Typography variant="body2" color="text.secondary" sx={{ mb: 1, fontWeight: 500 }}>
+                    Permitted Values
+                  </Typography>
                   <Box sx={{
                     border: '1px solid',
                     borderColor: 'grey.200',
@@ -2335,66 +2303,62 @@ export default function AttributesPage() {
                       ))}
                     </Box>
                   </Box>
-                ) : (
-                  <Box sx={{
-                    border: '1px solid',
-                    borderColor: 'grey.200',
-                    borderRadius: 1,
-                    p: 1.5,
-                    bgcolor: 'grey.50',
-                    textAlign: 'center'
-                  }}>
-                    <Typography variant="body2" color="text.secondary" fontStyle="italic">
-                      Any value allowed
-                    </Typography>
-                  </Box>
-                )}
-              </Box>
+                </Box>
+              )}
 
-              {/* Created Information */}
-              <Box sx={{ display: 'flex', gap: 2 }}>
-                <TextField
-                  fullWidth
-                  label="Created By"
-                  value={
-                    viewAttribute.createdBy 
-                      ? (typeof viewAttribute.createdBy === 'string' 
-                          ? viewAttribute.createdBy 
-                          : viewAttribute.createdBy.name || 'Unknown')
-                      : (viewAttribute.metadata?.createdBy || 'System')
-                  }
-                  variant="outlined"
-                  size="small"
-                  InputProps={{
-                    readOnly: true,
-                  }}
-                  sx={{
-                    '& .MuiInputBase-input': {
-                      color: 'text.primary',
-                    },
-                    '& .MuiOutlinedInput-root': {
-                      backgroundColor: 'grey.50',
-                    }
-                  }}
-                />
-                <TextField
-                  fullWidth
-                  label="Created At"
-                  value={viewAttribute.createdAt ? new Date(viewAttribute.createdAt).toLocaleString() : 'Unknown'}
-                  variant="outlined"
-                  size="small"
-                  InputProps={{
-                    readOnly: true,
-                  }}
-                  sx={{
-                    '& .MuiInputBase-input': {
-                      color: 'text.primary',
-                    },
-                    '& .MuiOutlinedInput-root': {
-                      backgroundColor: 'grey.50',
-                    }
-                  }}
-                />
+              {/* Metadata */}
+              <Box>
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 1, fontWeight: 500 }}>
+                  Metadata
+                </Typography>
+                <Box sx={{
+                  border: '1px solid',
+                  borderColor: 'grey.200',
+                  borderRadius: 1,
+                  p: 1.5,
+                  bgcolor: 'grey.50',
+                }}>
+                  <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
+                    <Box>
+                      <Typography variant="caption" color="text.secondary">
+                        Created By
+                      </Typography>
+                      <Typography variant="body2">
+                        {
+                          viewAttribute.createdBy 
+                            ? (typeof viewAttribute.createdBy === 'string' 
+                                ? viewAttribute.createdBy 
+                                : viewAttribute.createdBy.name || 'Unknown')
+                            : (viewAttribute.metadata?.createdBy || 'System')
+                        }
+                      </Typography>
+                    </Box>
+                    <Box>
+                      <Typography variant="caption" color="text.secondary">
+                        Version
+                      </Typography>
+                      <Typography variant="body2">
+                        {viewAttribute.metadata?.version || '1.0.0'}
+                      </Typography>
+                    </Box>
+                    <Box>
+                      <Typography variant="caption" color="text.secondary">
+                        Created At
+                      </Typography>
+                      <Typography variant="body2">
+                        {viewAttribute.createdAt ? new Date(viewAttribute.createdAt).toLocaleDateString() : 'Unknown'}
+                      </Typography>
+                    </Box>
+                    <Box>
+                      <Typography variant="caption" color="text.secondary">
+                        Last Updated
+                      </Typography>
+                      <Typography variant="body2">
+                        {viewAttribute.updatedAt ? new Date(viewAttribute.updatedAt).toLocaleDateString() : 'Unknown'}
+                      </Typography>
+                    </Box>
+                  </Box>
+                </Box>
               </Box>
 
             </Box>
@@ -2404,16 +2368,14 @@ export default function AttributesPage() {
         <DialogActions sx={{
           px: 3,
           pb: 3,
-          pt: 1,
-          gap: 1.5
+          pt: 1
         }}>
           <Button
             onClick={handleViewClose}
-            variant="text"
-            color="inherit"
+            variant="outlined"
             sx={{
               textTransform: 'none',
-              fontWeight: 500
+              minWidth: 100
             }}
           >
             Close
