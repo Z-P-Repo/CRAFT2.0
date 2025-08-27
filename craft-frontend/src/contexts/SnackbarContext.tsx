@@ -1,7 +1,8 @@
 'use client';
 
 import React, { createContext, useContext, useState, useCallback, ReactNode } from 'react';
-import { Snackbar, Alert, AlertColor, Slide, SlideProps } from '@mui/material';
+import { Snackbar, Alert, AlertColor, Slide } from '@mui/material';
+import { TransitionProps } from '@mui/material/transitions';
 
 export interface SnackbarMessage {
   id: string;
@@ -23,9 +24,22 @@ interface SnackbarContextType {
 const SnackbarContext = createContext<SnackbarContextType | undefined>(undefined);
 
 // Custom slide transition
-function SlideTransition(props: SlideProps) {
-  return <Slide {...props} direction="down" />;
-}
+const SlideTransition = React.forwardRef<
+  unknown,
+  TransitionProps & { children: React.ReactElement<any, any> }
+>(function SlideTransition(props, ref) {
+  const { appear = true, enter = true, exit = true, ...otherProps } = props;
+  return (
+    <Slide 
+      direction="down" 
+      ref={ref} 
+      appear={appear}
+      enter={enter}
+      exit={exit}
+      {...otherProps} 
+    />
+  );
+});
 
 export function SnackbarProvider({ children }: { children: ReactNode }) {
   const [snackbar, setSnackbar] = useState<SnackbarMessage | null>(null);
@@ -85,23 +99,23 @@ export function SnackbarProvider({ children }: { children: ReactNode }) {
   return (
     <SnackbarContext.Provider value={value}>
       {children}
-      <Snackbar
-        open={!!snackbar}
-        autoHideDuration={snackbar?.duration}
-        onClose={handleClose}
-        TransitionComponent={SlideTransition}
-        anchorOrigin={{
-          vertical: 'top',
-          horizontal: 'center',
-        }}
-        sx={{
-          top: { xs: 16, sm: 24 },
-          '& .MuiSnackbarContent-root': {
-            padding: 0,
-          }
-        }}
-      >
-        {snackbar && (
+      {snackbar && (
+        <Snackbar
+          open={!!snackbar}
+          autoHideDuration={snackbar.duration ?? null}
+          onClose={handleClose}
+          TransitionComponent={SlideTransition}
+          anchorOrigin={{
+            vertical: 'top',
+            horizontal: 'center',
+          }}
+          sx={{
+            top: { xs: 16, sm: 24 },
+            '& .MuiSnackbarContent-root': {
+              padding: 0,
+            }
+          }}
+        >
           <Alert
             onClose={handleClose}
             severity={snackbar.severity}
@@ -124,8 +138,8 @@ export function SnackbarProvider({ children }: { children: ReactNode }) {
           >
             {snackbar.message}
           </Alert>
-        )}
-      </Snackbar>
+        </Snackbar>
+      )}
     </SnackbarContext.Provider>
   );
 }
