@@ -28,7 +28,7 @@ const initialState: AuthState & { error: string | null } = {
   token: null,
   refreshToken: null,
   isAuthenticated: false,
-  isLoading: false,
+  isLoading: true, // Start with loading true to prevent flash
   error: null,
 };
 
@@ -88,8 +88,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Define checkAuth first before useEffect
   const checkAuth = useCallback(async (): Promise<void> => {
     try {
-      dispatch({ type: 'SET_LOADING', payload: true });
-      
       const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
       
       if (!token) {

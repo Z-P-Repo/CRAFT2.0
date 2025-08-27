@@ -61,7 +61,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const [drawerOpen, setDrawerOpen] = useState(!isMobile);
   const [collapsed, setCollapsed] = useState(false);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
-  
+
   const { user, logout } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
@@ -117,17 +117,17 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           {collapsed ? <MenuIcon /> : <ChevronLeftIcon />}
         </IconButton>
       </Box>
-      
+
       <Divider />
-      
+
       {/* Navigation */}
       <List sx={{ flex: 1, pt: 1 }}>
         {menuItems.map((item) => {
           const Icon = item.icon;
           // Check for exact match or sub-paths (drill-down pages)
-          const isActive = pathname === item.path || 
+          const isActive = pathname === item.path ||
             (item.path !== '/dashboard' && pathname.startsWith(item.path + '/'));
-          
+
           return (
             <ListItem key={item.text} disablePadding sx={{ display: 'block' }}>
               <ListItemButton
@@ -157,7 +157,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                 </ListItemIcon>
                 <ListItemText
                   primary={item.text}
-                  sx={{ 
+                  sx={{
                     opacity: collapsed ? 0 : 1,
                     '& .MuiListItemText-primary': {
                       fontSize: '0.875rem',
@@ -199,7 +199,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           >
             <MenuIcon />
           </IconButton>
-          
+
           <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
             {menuItems.find(item => item.path === pathname)?.text || 'Dashboard'}
           </Typography>
@@ -241,7 +241,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
             open={Boolean(anchorEl)}
             onClose={handleProfileMenuClose}
             PaperProps={{
-              sx: { 
+              sx: {
                 minWidth: 220,
                 mt: 1,
                 '& .MuiMenuItem-root': {
@@ -274,7 +274,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                 sx={{ fontSize: '0.75rem' }}
               />
             </Box>
-            
+
             <MenuItem onClick={handleLogout} sx={{ mt: 1 }}>
               <ListItemIcon>
                 <LogoutIcon fontSize="small" />
@@ -306,7 +306,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         >
           {drawer}
         </Drawer>
-        
+
         {/* Desktop drawer */}
         <Drawer
           variant="permanent"
@@ -341,15 +341,15 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         }}
       >
         <Toolbar />
-        <Box sx={{ 
-          p: 3, 
+        <Box sx={{
+          p: 3,
           flexGrow: 1,
           overflow: 'auto',
           minHeight: 'calc(100vh - 64px - 60px)', // Subtract toolbar and footer height
         }}>
           {children}
         </Box>
-        
+
         {/* Footer */}
         <Box
           component="footer"
@@ -362,16 +362,16 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
             mt: 'auto',
           }}
         >
-          <Box sx={{ 
-            display: 'flex', 
-            justifyContent: 'space-between', 
+          <Box sx={{
+            display: 'flex',
+            justifyContent: 'space-between',
             alignItems: 'center',
             flexWrap: 'wrap',
             gap: 2
           }}>
             <Box>
               <Typography variant="body2" color="text.secondary">
-                © 2024 CRAFT Permission System. All rights reserved.
+                © 2025 CRAFT Permission System. All rights reserved.
               </Typography>
             </Box>
             <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
