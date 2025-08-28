@@ -249,9 +249,11 @@ export class AttributeController {
     // Check if attribute is used in any policies
     const policiesUsingAttribute = await AttributeController.checkAttributeUsageInPolicies(attribute.name);
     if (policiesUsingAttribute.length > 0) {
-      const policyNames = policiesUsingAttribute.map(p => p.name).join(', ');
+      const policyCount = policiesUsingAttribute.length;
+      const policyNames = policiesUsingAttribute.map(p => p.displayName || p.name).join(', ');
+      
       throw new ValidationError(
-        `Cannot delete attribute "${attribute.displayName}" because it is being used in the following policies: ${policyNames}. Please remove the attribute from these policies before deletion.`
+        `Unable to delete "${attribute.displayName}" - This attribute is currently being used in ${policyCount} ${policyCount === 1 ? 'policy' : 'policies'}`
       );
     }
 
@@ -504,11 +506,16 @@ export class AttributeController {
     }
 
     if (attributesInUse.length > 0) {
-      const errorMessages = attributesInUse.map(usage => 
-        `"${usage.attribute}" is used in policies: ${usage.policies.join(', ')}`
-      );
+      const attributeCount = attributesInUse.length;
+      const totalPolicies = [...new Set(attributesInUse.flatMap(usage => usage.policies))].length;
+      
+      const errorMessages = attributesInUse.map(usage => {
+        const policyCount = usage.policies.length;
+        return `• "${usage.attribute}" is used in ${policyCount} ${policyCount === 1 ? 'policy' : 'policies'}: ${usage.policies.join(', ')}`;
+      });
+      
       throw new ValidationError(
-        `Cannot delete the following attributes because they are being used in policies:\n${errorMessages.join('\n')}\n\nPlease remove these attributes from their respective policies before deletion.`
+        `Unable to delete ${attributeCount} ${attributeCount === 1 ? 'attribute' : 'attributes'} - ${attributeCount === 1 ? 'It is' : 'They are'} currently being used in ${totalPolicies} ${totalPolicies === 1 ? 'policy' : 'policies'}`
       );
     }
 

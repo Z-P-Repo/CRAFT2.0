@@ -284,18 +284,21 @@ export default function AttributesPage() {
     } catch (error: any) {
       console.error('Delete error:', error);
       
+      // Get the error message from the API response
+      const errorMessage = error?.error || error?.message || 'Unknown error';
+      
       // Handle specific error cases with better messages
-      if (error.message?.includes('404') || error.message?.includes('not found')) {
+      if (errorMessage.includes('404') || errorMessage.includes('not found')) {
         snackbar.showInfo('Attribute no longer exists. Refreshing the list...');
         await fetchAttributes(); // Refresh the data
         handleDeleteClose();
-      } else if (error.message?.includes('Cannot delete system attributes') ||
-        error.message?.includes('system attribute')) {
+      } else if (errorMessage.includes('Cannot delete system attributes') ||
+        errorMessage.includes('system attribute')) {
         snackbar.showWarning('System attributes cannot be deleted as they are required for the system to function properly.');
         handleDeleteClose();
-      } else if (error.message?.includes('being used in the following policies')) {
-        // Handle policy dependency error with detailed message
-        snackbar.showError(error.message, 8000); // Longer duration for detailed message
+      } else if (errorMessage.includes('Unable to delete') && errorMessage.includes('currently being used in')) {
+        // Handle policy dependency error with snackbar
+        snackbar.showError(errorMessage);
         handleDeleteClose();
       } else {
         // Handle other API errors
@@ -598,12 +601,15 @@ export default function AttributesPage() {
     } catch (error: any) {
       console.error('Failed to delete attributes:', error);
       
+      // Get the error message from the API response
+      const errorMessage = error?.error || error?.message || 'Unknown error';
+      
       // Handle specific error cases
-      if (error.message?.includes('Cannot delete system attributes')) {
+      if (errorMessage.includes('Cannot delete system attributes')) {
         snackbar.showWarning('Some attributes could not be deleted because they are system attributes required for the system to function.');
-      } else if (error.message?.includes('being used in policies')) {
-        // Handle policy dependency error with detailed message
-        snackbar.showError(error.message, 10000); // Extra long duration for detailed message
+      } else if (errorMessage.includes('Unable to delete') && errorMessage.includes('currently being used in')) {
+        // Handle policy dependency error with simplified message
+        snackbar.showError(errorMessage);
       } else {
         snackbar.handleApiError(error, 'Failed to delete attributes');
       }
@@ -2604,6 +2610,7 @@ export default function AttributesPage() {
           </Button>
         </DialogActions>
       </Dialog>
+
 
     </DashboardLayout>
   );

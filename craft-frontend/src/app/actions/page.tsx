@@ -68,6 +68,7 @@ import { apiClient } from '@/lib/api';
 import { ApiResponse } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
 import { canManage, canEdit, canDelete, canCreate } from '@/utils/permissions';
+import { useApiSnackbar } from '@/contexts/SnackbarContext';
 
 interface ActionObject {
   _id: string;
@@ -95,6 +96,7 @@ interface ActionObject {
 
 export default function ActionsPage() {
   const { user: currentUser } = useAuth();
+  const snackbar = useApiSnackbar();
   const [actions, setActions] = useState<ActionObject[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -283,18 +285,41 @@ export default function ActionsPage() {
       
       const response = await apiClient.delete(`/actions/${deleteAction._id}`);
       
-      if (!response.success) {
-        throw new Error(response.error || 'Failed to delete action');
+      if (response.success) {
+        // Remove from local state immediately
+        setActions(prev => prev.filter(action => action._id !== deleteAction._id));
+        setTotal(prev => prev - 1);
+        handleDeleteClose();
+        snackbar.showSuccess(`Action "${deleteAction.displayName}" deleted successfully`);
+      } else {
+        snackbar.handleApiResponse(response, undefined, 'Failed to delete action');
+        handleDeleteClose();
       }
       
-      // Remove from local state immediately
-      setActions(prev => prev.filter(action => action._id !== deleteAction._id));
-      setTotal(prev => prev - 1);
-      handleDeleteClose();
+    } catch (error: any) {
+      console.error('Delete error:', error);
       
-    } catch (err: any) {
-      console.error('Error deleting action:', err);
-      setError(err.message || 'Failed to delete action');
+      // Get the error message from the API response
+      const errorMessage = error?.error || error?.message || 'Unknown error';
+      
+      // Handle specific error cases with better messages
+      if (errorMessage.includes('404') || errorMessage.includes('not found')) {
+        snackbar.showInfo('Action no longer exists. Refreshing the list...');
+        await fetchActions(); // Refresh the data
+        handleDeleteClose();
+      } else if (errorMessage.includes('Cannot delete system actions') ||
+        errorMessage.includes('system action')) {
+        snackbar.showWarning('System actions cannot be deleted as they are required for the system to function properly.');
+        handleDeleteClose();
+      } else if (errorMessage.includes('Unable to delete') && errorMessage.includes('currently being used in')) {
+        // Handle policy dependency error with snackbar
+        snackbar.showError(errorMessage);
+        handleDeleteClose();
+      } else {
+        // Handle other API errors
+        snackbar.handleApiError(error, 'Failed to delete action');
+        handleDeleteClose();
+      }
     } finally {
       setIsDeleting(false);
     }
@@ -389,20 +414,37 @@ export default function ActionsPage() {
         actionIds: selectedActions
       });
       
-      if (!response.success) {
-        throw new Error(response.error || 'Failed to delete actions');
+      if (response.success) {
+        // Update local state by filtering out deleted actions
+        setActions(prev => prev.filter(action => !selectedActions.includes(action.id)));
+        setTotal(prev => prev - selectedActions.length);
+        
+        setSelectedActions([]);
+        handleBulkDeleteClose();
+        snackbar.showSuccess(`${selectedActions.length} actions deleted successfully`);
+      } else {
+        snackbar.handleApiResponse(response, undefined, 'Failed to delete actions');
+        handleBulkDeleteClose();
       }
       
-      // Update local state by filtering out deleted actions
-      setActions(prev => prev.filter(action => !selectedActions.includes(action.id)));
-      setTotal(prev => prev - selectedActions.length);
+    } catch (error: any) {
+      console.error('Failed to delete actions:', error);
       
-      setSelectedActions([]);
-      handleBulkDeleteClose();
+      // Get the error message from the API response
+      const errorMessage = error?.error || error?.message || 'Unknown error';
       
-    } catch (err: any) {
-      console.error('Error bulk deleting actions:', err);
-      setError(err.message || 'Failed to delete actions');
+      // Handle specific error cases
+      if (errorMessage.includes('Cannot delete system actions')) {
+        snackbar.showWarning('Some actions could not be deleted because they are system actions required for the system to function.');
+        handleBulkDeleteClose();
+      } else if (errorMessage.includes('Unable to delete') && errorMessage.includes('currently being used in')) {
+        // Handle policy dependency error with simplified message
+        snackbar.showError(errorMessage);
+        handleBulkDeleteClose();
+      } else {
+        snackbar.handleApiError(error, 'Failed to delete actions');
+        handleBulkDeleteClose();
+      }
     } finally {
       setIsDeleting(false);
     }

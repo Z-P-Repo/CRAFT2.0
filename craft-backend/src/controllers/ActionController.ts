@@ -5,6 +5,7 @@ import { asyncHandler } from '@/middleware/errorHandler';
 import { PaginationHelper } from '@/utils/pagination';
 import { logger } from '@/utils/logger';
 import { Action, IAction } from '@/models/Action';
+import { Policy } from '@/models/Policy';
 
 export class ActionController {
   // Get all actions with pagination and filtering
@@ -206,6 +207,21 @@ export class ActionController {
     // Check permissions (only owner or admin can delete) - skip for demo with optional auth
     if (req.user && action.metadata.owner !== req.user.name && req.user.role !== 'admin') {
       throw new ValidationError('Insufficient permissions to delete action');
+    }
+
+    // Prevent deletion of system actions
+    if (action.metadata.isSystem) {
+      throw new ValidationError('Cannot delete system actions');
+    }
+
+    // Check if action is used in any policies
+    const policiesUsingAction = await ActionController.checkActionUsageInPolicies(action.name);
+    if (policiesUsingAction.length > 0) {
+      const policyCount = policiesUsingAction.length;
+      
+      throw new ValidationError(
+        `Unable to delete "${action.displayName}" - This action is currently being used in ${policyCount} ${policyCount === 1 ? 'policy' : 'policies'}`
+      );
     }
 
     // Delete by MongoDB _id to ensure we delete the correct action
@@ -473,7 +489,38 @@ export class ActionController {
       throw new ValidationError('Action IDs array is required');
     }
 
-    const result = await Action.deleteMany({ $or: [{ id: { $in: actionIds } }, { _id: { $in: actionIds } }] });
+    // Get actions to be deleted
+    const actionsToDelete = await Action.find({ id: { $in: actionIds } });
+
+    // Prevent deletion of system actions
+    const systemActions = actionsToDelete.filter(action => action.metadata.isSystem);
+    if (systemActions.length > 0) {
+      const systemActionNames = systemActions.map(action => action.displayName).join(', ');
+      throw new ValidationError(`Cannot delete system actions: ${systemActionNames}`);
+    }
+
+    // Check if any actions are used in policies
+    const actionsInUse: { action: string; policies: string[] }[] = [];
+    for (const action of actionsToDelete) {
+      const policiesUsingAction = await ActionController.checkActionUsageInPolicies(action.name);
+      if (policiesUsingAction.length > 0) {
+        actionsInUse.push({
+          action: action.displayName,
+          policies: policiesUsingAction.map(p => p.name)
+        });
+      }
+    }
+
+    if (actionsInUse.length > 0) {
+      const actionCount = actionsInUse.length;
+      const totalPolicies = [...new Set(actionsInUse.flatMap(usage => usage.policies))].length;
+      
+      throw new ValidationError(
+        `Unable to delete ${actionCount} ${actionCount === 1 ? 'action' : 'actions'} - ${actionCount === 1 ? 'It is' : 'They are'} currently being used in ${totalPolicies} ${totalPolicies === 1 ? 'policy' : 'policies'}`
+      );
+    }
+
+    const result = await Action.deleteMany({ id: { $in: actionIds } });
 
     logger.info(`Bulk delete performed on ${result.deletedCount} actions by ${req.user?.email}`);
 
@@ -485,4 +532,17 @@ export class ActionController {
       message: `${result.deletedCount} actions deleted successfully`,
     });
   });
+
+  private static async checkActionUsageInPolicies(actionName: string): Promise<any[]> {
+    // Search for policies that use this action
+    // We need to check both actions array and rules.action.name
+    const policies = await Policy.find({
+      $or: [
+        { 'actions': actionName },
+        { 'rules.action.name': actionName }
+      ]
+    }, 'id name displayName').lean();
+
+    return policies;
+  }
 }
