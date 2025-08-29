@@ -1250,135 +1250,49 @@ export default function ActionsPage() {
       </Dialog>
 
       {/* Delete Confirmation Dialog */}
-      <Dialog
+      <DeleteConfirmationDialog
         open={deleteOpen}
         onClose={handleDeleteClose}
-        maxWidth="xs"
-        fullWidth
-        PaperProps={{
-          sx: {
-            borderRadius: 2,
-          }
-        }}
-      >
-        <DialogTitle sx={{ pb: 2 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-            <Avatar sx={{ bgcolor: 'error.main' }}>
-              <DeleteIcon />
-            </Avatar>
-            <Box>
-              <Typography variant="h6" fontWeight="600" color="text.primary">
-                Delete Action
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                This action cannot be undone
-              </Typography>
-            </Box>
-          </Box>
-        </DialogTitle>
-        <DialogContent sx={{ pt: 0 }}>
-          <Typography variant="body1">
-            Are you sure you want to delete <strong>"{deleteAction?.displayName}"</strong>?
-          </Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-            This will permanently remove the action and all associated configurations.
-          </Typography>
-        </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 3, gap: 1.5 }}>
-          <Button
-            onClick={handleDeleteClose}
-            variant="text"
-            color="inherit"
-            sx={{ textTransform: 'none', fontWeight: 500 }}
-          >
-            Cancel
-          </Button>
-          <Button
-            onClick={handleDelete}
-            variant="contained"
-            color="error"
-            disabled={isDeleting}
-            sx={{ textTransform: 'none', fontWeight: 600 }}
-          >
-            {isDeleting ? 'Deleting...' : 'Delete Action'}
-          </Button>
-        </DialogActions>
-      </Dialog>
+        onConfirm={handleDelete}
+        title="Delete Action"
+        item={deleteAction ? {
+          id: deleteAction._id || deleteAction.id || '',
+          name: deleteAction.name || 'No name',
+          displayName: deleteAction.displayName || deleteAction.name || 'No name',
+          isSystem: false
+        } : undefined}
+        loading={isDeleting}
+        entityName="action"
+        entityNamePlural="actions"
+        additionalInfo="This will permanently remove the action and all associated configurations."
+      />
 
       {/* Bulk Delete Confirmation Dialog */}
-      <Dialog
+      <DeleteConfirmationDialog
         open={bulkDeleteOpen}
         onClose={handleBulkDeleteClose}
-        maxWidth="sm"
-        fullWidth
-        PaperProps={{
-          sx: {
-            borderRadius: 2,
-          }
-        }}
-      >
-        <DialogTitle sx={{ pb: 2 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-            <Avatar sx={{ bgcolor: 'error.main' }}>
-              <BulkDeleteIcon />
-            </Avatar>
-            <Box>
-              <Typography variant="h6" fontWeight="600" color="text.primary">
-                Delete {selectedActions.length} Actions
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                This action cannot be undone
-              </Typography>
-            </Box>
-          </Box>
-        </DialogTitle>
-        <DialogContent sx={{ pt: 0 }}>
-          <Typography variant="body1" sx={{ mb: 2 }}>
-            Are you sure you want to delete the following actions?
-          </Typography>
-          <Box sx={{ 
-            maxHeight: 200, 
-            overflow: 'auto', 
-            border: '1px solid', 
-            borderColor: 'grey.200', 
-            borderRadius: 1,
-            bgcolor: 'grey.50'
-          }}>
-            {selectedActions.map((actionId) => {
-              const action = actions.find(a => a._id === actionId);
-              return action ? (
-                <Box key={actionId} sx={{ p: 1.5, borderBottom: '1px solid', borderColor: 'grey.200' }}>
-                  <Typography variant="body2" fontWeight="500">
-                    {action.displayName}
-                  </Typography>
-                  <Typography variant="caption" color="text.secondary">
-                    {action.description || 'No description available'}
-                  </Typography>
-                </Box>
-              ) : null;
-            })}
-          </Box>
-        </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 3, gap: 1.5 }}>
-          <Button
-            onClick={handleBulkDeleteClose}
-            variant="text"
-            color="inherit"
-            sx={{ textTransform: 'none', fontWeight: 500 }}
-          >
-            Cancel
-          </Button>
-          <Button
-            onClick={handleBulkDelete}
-            variant="contained"
-            color="error"
-            disabled={isDeleting}
-            sx={{ textTransform: 'none', fontWeight: 600 }}
-          >
-            {isDeleting ? 'Deleting...' : `Delete ${selectedActions.length} Actions`}
-          </Button>
-        </DialogActions>
-      </Dialog>
+        onConfirm={handleBulkDelete}
+        title="Delete Multiple Actions"
+        items={selectedActions.map(actionId => {
+          const action = actions.find(a => a._id === actionId);
+          return action ? {
+            id: action._id || action.id || '',
+            name: action.name || 'No name',
+            displayName: action.displayName || action.name || 'No name',
+            isSystem: false
+          } : {
+            id: actionId,
+            name: 'Unknown Action',
+            displayName: 'Unknown Action',
+            isSystem: false
+          };
+        })}
+        loading={isDeleting}
+        entityName="action"
+        entityNamePlural="actions"
+        bulkMode={true}
+        additionalInfo="This will permanently remove all selected actions and their associated configurations."
+      />
     </DashboardLayout>
   );
 }

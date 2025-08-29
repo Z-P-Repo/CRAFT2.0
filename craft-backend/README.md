@@ -22,6 +22,7 @@ A robust, scalable Node.js backend API for the CRAFT (Attribute-Based Access Con
 - **🏷️ Attribute System** - Multi-category attribute management (Subject/Resource) for ABAC
 - **📊 Policy Dependency Tracking** - Real-time policy count display and dependency visualization across all entities
 - **🔒 Deletion Protection** - Prevents deletion of entities (subjects, actions, resources, attributes) currently referenced in active policies
+- **🎨 Standardized UI Integration** - Backend supports frontend's standardized delete confirmation dialogs with consistent error responses and system protection features
 - **🧪 Policy Evaluation** - Real-time policy testing and validation
 - **📊 Comprehensive Logging** - Structured logging with Winston
 - **🛡️ Security Features** - Rate limiting, CORS, helmet, and input validation
@@ -333,3 +334,8 @@ For support and questions:
 - Create an issue in the repository
 - Check the documentation
 - Review the troubleshooting guide
+
+---
+
+*Last updated: August 29, 2025*  
+🤖 *Generated and maintained with [Claude Code](https://claude.ai/code)*

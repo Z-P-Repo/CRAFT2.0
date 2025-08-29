@@ -59,6 +59,7 @@ import {
 } from '@mui/icons-material';
 import { useRouter } from 'next/navigation';
 import DashboardLayout from '@/components/layout/DashboardLayout';
+import DeleteConfirmationDialog from '@/components/common/DeleteConfirmationDialog';
 import { apiClient } from '@/lib/api';
 import { User, ApiResponse } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
@@ -882,29 +883,22 @@ export default function UsersPage() {
       </Dialog>
 
       {/* Delete Confirmation Dialog */}
-      <Dialog open={deleteOpen} onClose={handleDeleteClose}>
-        <DialogTitle>Delete User</DialogTitle>
-        <DialogContent>
-          {deleteUser && (
-            <Typography>
-              Are you sure you want to delete <strong>{deleteUser.name}</strong>? This action cannot be undone.
-            </Typography>
-          )}
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleDeleteClose} disabled={isDeleting}>
-            Cancel
-          </Button>
-          <Button 
-            onClick={handleDelete} 
-            color="error" 
-            variant="contained"
-            disabled={isDeleting}
-          >
-            {isDeleting ? 'Deleting...' : 'Delete'}
-          </Button>
-        </DialogActions>
-      </Dialog>
+      <DeleteConfirmationDialog
+        open={deleteOpen}
+        onClose={handleDeleteClose}
+        onConfirm={handleDelete}
+        title="Delete User"
+        item={deleteUser ? {
+          id: deleteUser._id || deleteUser.id || '',
+          name: deleteUser.name || 'No name',
+          displayName: deleteUser.name || 'No name',
+          isSystem: false
+        } : undefined}
+        loading={isDeleting}
+        entityName="user"
+        entityNamePlural="users"
+        additionalInfo="This will permanently remove the user from the system and may affect any policies or permissions associated with them."
+      />
 
       {/* Filter Popover */}
       <Popover

@@ -37,6 +37,16 @@ A comprehensive Attribute-Based Access Control (ABAC) permission system built wi
 
 ### Quick Commands
 
+- **Build & Fix Errors**: When you prompt "build", it means fix all build errors for both frontend and backend:
+  ```bash
+  # This command will:
+  # 1. Check and fix TypeScript errors in both projects
+  # 2. Resolve compilation issues
+  # 3. Fix linting errors
+  # 4. Ensure both projects build successfully
+  build
+  ```
+
 - **Commit and Push**: After making changes, simply run any of these:
   ```bash
   # Option 1: Using the script directly
@@ -125,6 +135,7 @@ CRAFT2.0/
 - **Auto-Refresh Capabilities**: Automatic data synchronization with window focus and periodic updates
 - **Deletion Protection**: Prevents deletion of entities currently referenced in active policies
 - **Schema Consistency**: Fixed entity-policy mapping to ensure accurate policy counts and deletion protection
+- **Standardized Delete Modals**: Clean, professional delete confirmation dialogs with close icons and consistent design across all modules
 
 ### 🧪 Policy Testing
 - Interactive policy evaluation tool
@@ -327,6 +338,13 @@ git push origin main
 
 ## 🚨 Troubleshooting
 
+### Quick Fix Command
+- **"build" Prompt**: When you simply say "build", it means:
+  - Fix all TypeScript compilation errors in both frontend and backend
+  - Resolve any linting issues
+  - Ensure both projects build successfully without errors
+  - Address any import/export issues or type mismatches
+
 ### Common Issues
 
 1. **Port already in use**:
@@ -402,4 +420,5 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 **Built with ❤️ using Next.js, Node.js, and MongoDB**
 
-🤖 *Generated with [Claude Code](https://claude.ai/code)*
+*Last updated: August 29, 2025*  
+🤖 *Generated and maintained with [Claude Code](https://claude.ai/code)*

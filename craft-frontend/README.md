@@ -23,6 +23,7 @@ A modern, responsive React-based dashboard for managing the CRAFT (Attribute-Bas
 - **📈 Policy Dependency Tracking** - Real-time policy count display with tooltips showing up to 5 policy names across all entity management pages
 - **🔄 Auto-Refresh Capabilities** - Automatic data synchronization using window focus events and 30-second periodic updates
 - **🛡️ Deletion Protection UI** - User-friendly error messages when attempting to delete entities referenced in active policies
+- **🗑️ Standardized Delete Modals** - Clean, professional delete confirmation dialogs with close icons, system item warnings, and consistent design across all modules (Subjects, Resources, Actions, Attributes, Users)
 - **🧪 Policy Tester** - Interactive policy evaluation and testing with detailed results
 - **📊 Real-time Statistics** - Dashboard with live metrics and activity tracking
 - **🎨 Professional UI/UX** - Material-UI components with consistent theming
@@ -171,12 +172,13 @@ src/
 ### Component Library
 - Authentication forms
 - Data tables with pagination and sortable policy count columns
-- Modal dialogs with deletion confirmation and protection warnings
+- Standardized delete confirmation dialogs with professional design and system protection warnings
 - Form components with validation
 - Navigation components
 - Dashboard cards
 - Policy count chips with Material-UI tooltips
 - Refresh buttons with loading states
+- Shared DeleteConfirmationDialog component used across all entity management pages
 
 ## 🔧 API Integration
 
@@ -254,6 +256,7 @@ npm run test:coverage
 - **Column Headers**: Use single-line headers with appropriate widths (180px for "Created By")
 - **Error Handling**: Display user-friendly messages for deletion protection errors
 - **Data Consistency**: Policy creation and display now use consistent entity ID references ensuring accurate policy counts and deletion protection
+- **Delete Modals**: Standardized DeleteConfirmationDialog component with close icons, clean design, system protection warnings, loading states, and entity-specific messaging
 
 ## 🚀 Deployment
 
@@ -334,3 +337,8 @@ For support and questions:
 
 - [CRAFT Backend](../craft-backend/) - Express.js API server
 - [CRAFT Documentation](../docs/) - System documentation
+
+---
+
+*Last updated: August 29, 2025*  
+🤖 *Generated and maintained with [Claude Code](https://claude.ai/code)*

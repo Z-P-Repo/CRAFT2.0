@@ -69,6 +69,7 @@ import {
   Refresh as RefreshIcon,
 } from '@mui/icons-material';
 import DashboardLayout from '@/components/layout/DashboardLayout';
+import DeleteConfirmationDialog from '@/components/common/DeleteConfirmationDialog';
 import { apiClient } from '@/lib/api';
 import { ApiResponse } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
@@ -1790,7 +1791,7 @@ export default function AttributesPage() {
                           chipProps.onDelete = () => handleStringValuesRemove(index);
                         }
                         
-                        return <Chip {...chipProps} />;
+                        return <Chip key={index} {...chipProps} />;
                       })}
                     </Box>
                     <Typography variant="caption" color="text.secondary">
@@ -1849,7 +1850,7 @@ export default function AttributesPage() {
                           chipProps.onDelete = () => handleNumberValuesRemove(index);
                         }
                         
-                        return <Chip {...chipProps} />;
+                        return <Chip key={index} {...chipProps} />;
                       })}
                     </Box>
                     <Typography variant="caption" color="text.secondary">
@@ -2509,212 +2510,49 @@ export default function AttributesPage() {
       </Dialog>
 
       {/* Delete Confirmation Dialog */}
-      <Dialog
+      <DeleteConfirmationDialog
         open={deleteOpen}
         onClose={handleDeleteClose}
-        maxWidth="xs"
-        fullWidth
-        PaperProps={{
-          sx: {
-            borderRadius: 2,
-          }
-        }}
-      >
-        <DialogTitle sx={{ pb: 2 }}>
-          <Typography variant="h6" fontWeight="600" color="error.main">
-            Delete Attribute
-          </Typography>
-        </DialogTitle>
-
-        <DialogContent sx={{ pb: 2 }}>
-          {deleteAttribute && (
-            <Box>
-              <Typography variant="body1" gutterBottom>
-                Are you sure you want to delete this attribute?
-              </Typography>
-
-              <Box sx={{
-                mt: 2,
-                p: 2,
-                bgcolor: 'grey.50',
-                borderRadius: 1,
-                border: '1px solid',
-                borderColor: 'grey.200'
-              }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                  <Avatar sx={{
-                    bgcolor: `${getCategoryColor(deleteAttribute.categories?.[0] || 'subject')}.main`,
-                    width: 32,
-                    height: 32
-                  }}>
-                    {getCategoryIcon(deleteAttribute.categories?.[0] || 'subject')}
-                  </Avatar>
-                  <Box>
-                    <Typography variant="subtitle2" fontWeight="600">
-                      {deleteAttribute.displayName}
-                    </Typography>
-                    <Typography variant="caption" color="text.secondary" fontFamily="monospace">
-                      {deleteAttribute.name}
-                    </Typography>
-                  </Box>
-                </Box>
-              </Box>
-
-              <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
-                This action cannot be undone. The attribute will be permanently removed from the system.
-              </Typography>
-
-              {/* Warning for system attributes */}
-              {deleteAttribute.metadata.isSystem && (
-                <Box sx={{
-                  mt: 2,
-                  p: 2,
-                  bgcolor: 'warning.50',
-                  borderRadius: 1,
-                  border: '1px solid',
-                  borderColor: 'warning.200'
-                }}>
-                  <Typography variant="body2" color="warning.dark" sx={{ fontWeight: 600 }}>
-                    ⚠️ System Attribute
-                  </Typography>
-                  <Typography variant="caption" color="warning.dark">
-                    This is a system attribute and cannot be deleted. System attributes are protected and required for proper system operation.
-                  </Typography>
-                </Box>
-              )}
-            </Box>
-          )}
-        </DialogContent>
-
-        <DialogActions sx={{ px: 3, pb: 3, gap: 1 }}>
-          <Button
-            onClick={handleDeleteClose}
-            variant="outlined"
-            disabled={isDeleting}
-            sx={{
-              textTransform: 'none',
-              minWidth: 80
-            }}
-          >
-            Cancel
-          </Button>
-          <Button
-            onClick={handleDeleteConfirm}
-            variant="contained"
-            color="error"
-            disabled={isDeleting || Boolean(deleteAttribute?.metadata.isSystem)}
-            sx={{
-              textTransform: 'none',
-              minWidth: 80
-            }}
-          >
-            {isDeleting ? 'Deleting...' :
-              deleteAttribute?.metadata.isSystem ? 'Cannot Delete' : 'Delete'}
-          </Button>
-        </DialogActions>
-      </Dialog>
+        onConfirm={handleDeleteConfirm}
+        title="Delete Attribute"
+        item={deleteAttribute ? {
+          id: deleteAttribute._id || deleteAttribute.id || '',
+          name: deleteAttribute.name || 'No name',
+          displayName: deleteAttribute.displayName || deleteAttribute.name || 'No name',
+          isSystem: Boolean(deleteAttribute.metadata?.isSystem)
+        } : undefined}
+        loading={isDeleting}
+        entityName="attribute"
+        entityNamePlural="attributes"
+        additionalInfo="This will permanently remove the attribute from the system and may affect existing policies that use it."
+      />
 
       {/* Bulk Delete Confirmation Dialog */}
-      <Dialog
+      <DeleteConfirmationDialog
         open={bulkDeleteOpen}
         onClose={handleBulkDeleteClose}
-        maxWidth="sm"
-        fullWidth
-        PaperProps={{
-          sx: {
-            borderRadius: 2,
-          }
-        }}
-      >
-        <DialogTitle sx={{ pb: 2 }}>
-          <Typography variant="h6" fontWeight="600" color="error.main">
-            Delete Multiple Attributes
-          </Typography>
-        </DialogTitle>
-        
-        <DialogContent sx={{ pb: 2 }}>
-          <Box>
-            <Typography variant="body1" gutterBottom>
-              Are you sure you want to delete {selectedAttributes.length} selected attribute{selectedAttributes.length > 1 ? 's' : ''}?
-            </Typography>
-            
-            <Typography variant="body2" color="text.secondary" sx={{ mt: 2, mb: 2 }}>
-              This action cannot be undone. The following attributes will be permanently deleted:
-            </Typography>
-            
-            <Box sx={{
-              maxHeight: '200px',
-              overflow: 'auto',
-              border: '1px solid',
-              borderColor: 'grey.200',
-              borderRadius: 1,
-              p: 1.5,
-              bgcolor: 'grey.50'
-            }}>
-              {selectedAttributes.map(attributeId => {
-                const attribute = attributes.find(attr => attr.id === attributeId);
-                if (!attribute) return null;
-                
-                return (
-                  <Box key={attributeId} sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1.5 }}>
-                    <Avatar sx={{
-                      bgcolor: `${getCategoryColor(attribute.categories?.[0] || 'subject')}.main`,
-                      width: 28,
-                      height: 28
-                    }}>
-                      {getCategoryIcon(attribute.categories?.[0] || 'subject')}
-                    </Avatar>
-                    <Box sx={{ flex: 1 }}>
-                      <Typography variant="body2" fontWeight="500">
-                        {attribute.displayName}
-                      </Typography>
-                      <Typography variant="caption" color="text.secondary" fontFamily="monospace">
-                        {attribute.name}
-                      </Typography>
-                    </Box>
-                    <Chip
-                      label={attribute.categories?.[0] || 'subject'}
-                      size="small"
-                      color={getCategoryColor(attribute.categories?.[0] || 'subject') as any}
-                      variant="outlined"
-                    />
-                  </Box>
-                );
-              })}
-            </Box>
-            
-            <Typography variant="body2" color="warning.dark" sx={{ mt: 2, fontWeight: 500 }}>
-              ⚠️ Warning: Deleting attributes may affect existing policies that use them.
-            </Typography>
-          </Box>
-        </DialogContent>
-        
-        <DialogActions sx={{ px: 3, pb: 3, gap: 1 }}>
-          <Button
-            onClick={handleBulkDeleteClose}
-            variant="outlined"
-            disabled={isSubmitting}
-            sx={{
-              textTransform: 'none',
-              minWidth: 80
-            }}
-          >
-            Cancel
-          </Button>
-          <Button
-            onClick={handleBulkDeleteConfirm}
-            variant="contained"
-            color="error"
-            disabled={isSubmitting}
-            sx={{
-              textTransform: 'none',
-              minWidth: 120
-            }}
-          >
-            {isSubmitting ? 'Deleting...' : `Delete ${selectedAttributes.length} Attribute${selectedAttributes.length > 1 ? 's' : ''}`}
-          </Button>
-        </DialogActions>
-      </Dialog>
+        onConfirm={handleBulkDeleteConfirm}
+        title="Delete Multiple Attributes"
+        items={selectedAttributes.map(attributeId => {
+          const attribute = attributes.find(attr => attr.id === attributeId);
+          return attribute ? {
+            id: attribute._id || attribute.id || '',
+            name: attribute.name || 'No name',
+            displayName: attribute.displayName || attribute.name || 'No name',
+            isSystem: Boolean(attribute.metadata?.isSystem)
+          } : {
+            id: attributeId,
+            name: 'Unknown Attribute',
+            displayName: 'Unknown Attribute',
+            isSystem: false
+          };
+        })}
+        loading={isSubmitting}
+        entityName="attribute"
+        entityNamePlural="attributes"
+        bulkMode={true}
+        additionalInfo="This will permanently remove all selected attributes from the system and may affect existing policies that use them."
+      />
 
 
     </DashboardLayout>
