@@ -16,7 +16,9 @@ const UserSchema = new Schema<UserDocument>({
   },
   password: {
     type: String,
-    required: [true, 'Password is required'],
+    required: function() {
+      return this.authProvider === 'local';
+    },
     minlength: [6, 'Password must be at least 6 characters']
   },
   name: {
@@ -49,6 +51,22 @@ const UserSchema = new Schema<UserDocument>({
     type: String,
     trim: true,
     maxlength: [50, 'Department cannot exceed 50 characters']
+  },
+  authProvider: {
+    type: String,
+    enum: {
+      values: ['local', 'azuread'],
+      message: '{VALUE} is not a valid auth provider'
+    },
+    default: 'local'
+  },
+  azureAdId: {
+    type: String,
+    sparse: true,
+    unique: true
+  },
+  lastLoginAt: {
+    type: Date
   }
 }, {
   timestamps: true,
@@ -63,6 +81,8 @@ const UserSchema = new Schema<UserDocument>({
 // Indexes
 UserSchema.index({ role: 1, active: 1 });
 UserSchema.index({ department: 1 });
+UserSchema.index({ azureAdId: 1 }, { sparse: true });
+UserSchema.index({ authProvider: 1 });
 
 // Instance methods
 UserSchema.methods.comparePassword = async function(candidatePassword: string): Promise<boolean> {

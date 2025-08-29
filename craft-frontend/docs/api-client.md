@@ -444,6 +444,21 @@ try {
 }
 ```
 
+### Azure AD Integration
+
+```typescript
+import azureAdService from '@/lib/azureAdService';
+
+// Check if Azure AD is enabled
+const isAzureAdEnabled = azureAdService.isConfigured();
+
+// Get Azure AD configuration from backend
+const config = await apiClient.get('/azure-ad/config');
+
+// Handle Azure AD callback
+const result = await apiClient.get(`/azure-ad/callback?code=${code}`);
+```
+
 ### In React Components
 
 ```typescript

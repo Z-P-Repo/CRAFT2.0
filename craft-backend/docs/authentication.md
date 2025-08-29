@@ -1,10 +1,15 @@
 # Authentication Module Documentation
 
-The CRAFT backend authentication system provides secure JWT-based authentication with refresh tokens, password hashing, and comprehensive security features for the ABAC permission system.
+The CRAFT backend authentication system provides secure multi-provider authentication supporting both local JWT-based authentication and Azure AD Single Sign-On (SSO) with refresh tokens, password hashing, and comprehensive security features for the ABAC permission system.
 
 ## Overview
 
-The authentication module handles user login, registration, token management, and session security using industry-standard practices including bcrypt password hashing, JWT tokens, and automatic token refresh mechanisms.
+The authentication module handles user authentication through multiple providers:
+- **Local Authentication**: Traditional email/password with JWT tokens
+- **Azure AD SSO**: Microsoft authentication with OAuth 2.0/OpenID Connect
+- **Automatic User Provisioning**: Creates users from Azure AD with default roles
+- **Token Management**: Secure JWT token generation and refresh mechanisms
+- **Session Security**: Industry-standard security practices
 
 ## Architecture
 
@@ -17,6 +22,20 @@ The authentication module handles user login, registration, token management, an
 ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
 │  Auth Middleware│    │  JWT Utilities  │    │ UserRepository  │
 └─────────────────┘    └─────────────────┘    └─────────────────┘
+
+                        ┌─────────────────┐
+                        │ Azure AD Routes │
+                        └─────────┬───────┘
+                                  │
+                                  ▼
+                        ┌─────────────────┐    ┌─────────────────┐
+                        │AzureAdController│───▶│ AzureAdService  │
+                        └─────────────────┘    └─────────────────┘
+                                  │                       │
+                                  ▼                       ▼
+                        ┌─────────────────┐    ┌─────────────────┐
+                        │ Microsoft Graph │    │ MSAL Libraries  │
+                        └─────────────────┘    └─────────────────┘
 ```
 
 ## Core Components
@@ -185,6 +204,95 @@ async validateToken(token: string): Promise<ServiceResponse<IUser>> {
       success: false,
       error: 'Invalid token',
       statusCode: 401,
+    };
+  }
+}
+```
+
+### AzureAdController
+
+**Location**: `/src/controllers/AzureAdController.ts`
+
+Handles Azure AD OAuth 2.0/OpenID Connect authentication flow.
+
+#### Endpoints
+
+```typescript
+class AzureAdController {
+  // GET /api/v1/azure-ad/auth-url
+  getAuthUrl = asyncHandler(async (req: Request, res: Response): Promise<any> => {
+    const authUrl = await this.azureAdService.getAuthUrl();
+    
+    res.status(200).json({
+      success: true,
+      message: 'Azure AD auth URL generated',
+      data: { authUrl, enabled: true }
+    });
+  });
+
+  // GET /api/v1/azure-ad/callback
+  handleCallback = asyncHandler(async (req: Request, res: Response): Promise<any> => {
+    const { code, state, error, error_description } = req.query;
+
+    if (error) {
+      throw new AuthenticationError(`Azure AD authentication failed: ${error_description || error}`);
+    }
+
+    const result = await this.azureAdService.handleCallback(code as string, state as string);
+
+    res.status(200).json({
+      success: true,
+      message: 'Azure AD authentication successful',
+      data: {
+        user: result.user,
+        accessToken: result.accessToken,
+        refreshToken: result.refreshToken,
+        authProvider: 'azuread'
+      }
+    });
+  });
+}
+```
+
+### AzureAdService
+
+**Location**: `/src/services/AzureAdService.ts`
+
+Handles Azure AD integration using Microsoft Authentication Library (MSAL).
+
+#### Key Methods
+
+```typescript
+class AzureAdService {
+  public async getAuthUrl(): Promise<string> {
+    const authCodeUrlParameters = {
+      scopes: ['openid', 'profile', 'email', 'User.Read'],
+      redirectUri: config.azureAd.redirectUri!,
+    };
+
+    return await this.msalClient.getAuthCodeUrl(authCodeUrlParameters);
+  }
+
+  public async handleCallback(authCode: string, state?: string): Promise<{
+    user: Omit<IUser, 'password'>;
+    accessToken: string;
+    refreshToken?: string;
+  }> {
+    const tokenRequest = {
+      code: authCode,
+      scopes: ['openid', 'profile', 'email', 'User.Read'],
+      redirectUri: config.azureAd.redirectUri!,
+    };
+
+    const response = await this.msalClient.acquireTokenByCode(tokenRequest);
+    const userInfo = await this.getUserInfoFromGraph(response.accessToken!);
+    const user = await this.findOrCreateUser(userInfo, response.account);
+    const tokenResult = await this.authService.generateTokens(user._id!);
+
+    return {
+      user: { ...user },
+      accessToken: tokenResult.accessToken,
+      refreshToken: tokenResult.refreshToken,
     };
   }
 }

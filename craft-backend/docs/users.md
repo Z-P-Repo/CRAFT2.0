@@ -1,10 +1,16 @@
 # User Management Documentation
 
-The User Management module provides comprehensive user administration capabilities for the CRAFT backend system, including user authentication, profile management, and role-based access control.
+The User Management module provides comprehensive user administration capabilities for the CRAFT backend system, including multi-provider user authentication, profile management, and role-based access control with support for both local accounts and Azure AD SSO.
 
 ## Overview
 
-The user management system handles user registration, authentication, profile updates, and administrative operations while maintaining security through JWT tokens and password hashing. The system implements a three-tier role hierarchy: Super Admin, Admin, and Basic users, with strict role-based access control and automatic Basic role assignment for new registrations.
+The user management system handles user registration, authentication, profile updates, and administrative operations through multiple authentication providers:
+
+- **Local Authentication**: Traditional email/password registration and authentication
+- **Azure AD SSO**: Microsoft authentication with automatic user provisioning  
+- **Role Management**: Three-tier role hierarchy (Super Admin, Admin, Basic)
+- **Security**: JWT tokens, password hashing, and secure session management
+- **User Provisioning**: Automatic account creation from Azure AD with default role assignment
 
 ## Data Model
 
@@ -22,7 +28,9 @@ interface IUser extends Document {
   managerId?: string;
   attributes: Map<string, any>;
   active: boolean;
-  lastLogin?: Date;
+  authProvider?: 'local' | 'azuread';
+  azureAdId?: string;
+  lastLoginAt?: Date;
   loginCount: number;
   createdAt: Date;
   updatedAt: Date;
@@ -82,7 +90,17 @@ const UserSchema = new Schema<IUser>({
     type: Boolean,
     default: true,
   },
-  lastLogin: {
+  authProvider: {
+    type: String,
+    enum: ['local', 'azuread'],
+    default: 'local',
+  },
+  azureAdId: {
+    type: String,
+    sparse: true,
+    unique: true,
+  },
+  lastLoginAt: {
     type: Date,
   },
   loginCount: {

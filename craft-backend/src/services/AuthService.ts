@@ -237,4 +237,15 @@ export class AuthService {
   private async hashPassword(password: string): Promise<string> {
     return bcrypt.hash(password, config.security.bcryptRounds);
   }
+
+  public generateTokens(userId: string): { accessToken: string; refreshToken: string | undefined } {
+    const user = { _id: userId } as IUser; // Minimal user object for token generation
+    
+    const refreshToken = this.generateRefreshToken(user);
+    
+    return {
+      accessToken: this.generateToken(user),
+      refreshToken: refreshToken || undefined,
+    };
+  }
 }

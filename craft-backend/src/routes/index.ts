@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { Request, Response } from 'express';
 import authRoutes from './auth';
+import azureAdRoutes from './azureAdRoutes';
 import userRoutes from './userRoutes';
 import subjectRoutes from './subjectRoutes';
 import resourceRoutes from './resourceRoutes';
@@ -35,6 +36,7 @@ router.get('/info', (req: Request, res: Response) => {
     documentation: `${req.protocol}://${req.get('host')}${config.apiPrefix}/docs`,
     endpoints: {
       auth: `${config.apiPrefix}/auth`,
+      azureAd: `${config.apiPrefix}/azure-ad`,
       users: `${config.apiPrefix}/users`,
       subjects: `${config.apiPrefix}/subjects`,
       resources: `${config.apiPrefix}/resources`,
@@ -47,6 +49,7 @@ router.get('/info', (req: Request, res: Response) => {
 
 // Mount route modules
 router.use('/auth', authRoutes);
+router.use('/azure-ad', azureAdRoutes);
 router.use('/users', userRoutes);
 router.use('/subjects', subjectRoutes);
 router.use('/resources', resourceRoutes);

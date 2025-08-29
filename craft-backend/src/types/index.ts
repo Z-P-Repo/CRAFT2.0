@@ -91,6 +91,9 @@ export interface IUser {
   active: boolean;
   managerId?: string;
   department?: string;
+  authProvider?: 'local' | 'azuread';
+  azureAdId?: string;
+  lastLoginAt?: Date;
   createdAt?: Date;
   updatedAt?: Date;
 }
@@ -162,7 +165,7 @@ export interface IJWTPayload {
 }
 
 export interface IAuthRequest extends Request {
-  user?: Omit<IUser, 'password'>;
+  user?: Omit<IUser, 'password'> | undefined;
 }
 
 // Error Types

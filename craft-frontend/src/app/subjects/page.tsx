@@ -698,7 +698,7 @@ export default function SubjectsPage() {
                         )}
                       </Box>
                     </TableCell>
-                    <TableCell align="center" sx={{ fontWeight: 600, fontSize: '0.875rem', color: 'text.primary', width: '180px', minWidth: '180px' }}>
+                    <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', color: 'text.primary', width: '180px', minWidth: '180px' }}>
                       Created By
                     </TableCell>
                     <TableCell align="center" sx={{ fontWeight: 600, fontSize: '0.875rem', color: 'text.primary', width: '120px', minWidth: '120px' }}>
@@ -808,7 +808,7 @@ export default function SubjectsPage() {
                               )}
                             </Box>
                           </TableCell>
-                          <TableCell align="center" sx={{ width: '180px', minWidth: '180px' }}>
+                          <TableCell sx={{ width: '180px', minWidth: '180px' }}>
                             <Typography variant="body2" color="text.secondary">
                               {subject.metadata?.createdBy || 'System'}
                             </Typography>

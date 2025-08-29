@@ -1,4 +1,5 @@
 import 'reflect-metadata';
+import './types/express-augmentation';
 import express from 'express';
 import cors from 'cors';
 import compression from 'compression';

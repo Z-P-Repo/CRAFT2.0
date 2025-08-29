@@ -3,9 +3,11 @@ import jwt from 'jsonwebtoken';
 import { config } from '@/config/environment';
 import { AuthenticationError, AuthorizationError } from '@/exceptions/AppError';
 import { IJWTPayload, IUser } from '@/types';
+import { AuthenticatedRequest, OptionalAuthRequest } from '@/types/express';
 import { UserRepository } from '@/repositories/UserRepository';
 import { asyncHandler } from './errorHandler';
 
+// Keep the old interface for backward compatibility
 export interface AuthRequest extends Request {
   user?: Omit<IUser, 'password'>;
 }

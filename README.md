@@ -101,14 +101,17 @@ CRAFT2.0/
 ## ✨ Features
 
 ### 🔐 Authentication & Authorization
-- JWT-based authentication with refresh tokens
-- Three-tier role-based access control (Super Admin, Admin, Basic)
-- User registration with automatic Basic role assignment  
-- Role management with hierarchical permissions (only Admin/Super Admin can change roles)
-- Basic users have view-only access to all system entities
-- Admin/Super Admin have full CRUD access to all entities
-- Secure password hashing with bcrypt
-- Token validation and automatic refresh
+- **Multi-provider Authentication**: Local accounts and Azure AD Single Sign-On (SSO)
+- **JWT-based authentication** with refresh tokens
+- **Azure AD SSO Integration**: OAuth 2.0/OpenID Connect with automatic user provisioning
+- **Three-tier role-based access control** (Super Admin, Admin, Basic)
+- **User registration** with automatic Basic role assignment  
+- **Role management** with hierarchical permissions (only Admin/Super Admin can change roles)
+- **Basic users** have view-only access to all system entities
+- **Admin/Super Admin** have full CRUD access to all entities
+- **Secure password hashing** with bcrypt
+- **Token validation** and automatic refresh
+- **Hybrid authentication** supporting both local and Azure AD users
 
 ### 📊 Dashboard
 - Modern, responsive dashboard with Material-UI
@@ -187,6 +190,13 @@ NODE_ENV=development
 
 # CORS Configuration
 FRONTEND_URL=http://localhost:3002
+
+# Azure AD SSO (optional)
+AZURE_AD_CLIENT_ID=your-azure-ad-client-id
+AZURE_AD_CLIENT_SECRET=your-azure-ad-client-secret
+AZURE_AD_TENANT_ID=your-azure-ad-tenant-id
+AZURE_AD_AUTHORITY=https://login.microsoftonline.com/your-tenant-id
+AZURE_AD_REDIRECT_URI=http://localhost:3002/auth/callback
 ```
 
 #### Frontend (.env.local)
@@ -197,13 +207,20 @@ NEXT_PUBLIC_API_URL=http://localhost:3001/api/v1
 # App Configuration
 NEXT_PUBLIC_APP_NAME=CRAFT 2.0
 NEXT_PUBLIC_APP_VERSION=1.0.0
+
+# Azure AD SSO (optional)
+NEXT_PUBLIC_AZURE_AD_CLIENT_ID=your-azure-ad-client-id
+NEXT_PUBLIC_AZURE_AD_AUTHORITY=https://login.microsoftonline.com/your-tenant-id
 ```
 
 ## 📚 Documentation
 
+### Authentication Documentation
+- [Azure AD SSO Setup](./docs/AZURE_AD_SSO.md) - Complete Azure AD integration guide
+
 ### Frontend Documentation
 - [Layout System](./craft-frontend/docs/layout.md) - Dashboard layout and navigation
-- [Authentication](./craft-frontend/docs/authentication.md) - Auth implementation
+- [Authentication](./craft-frontend/docs/authentication.md) - Local auth implementation
 - [API Client](./craft-frontend/docs/api-client.md) - HTTP client and API integration
 - [Policy Management](./craft-frontend/docs/policies.md) - Policy CRUD operations
 - [Subject Management](./craft-frontend/docs/subjects.md) - User and role management
@@ -422,3 +439,12 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 *Last updated: August 29, 2025*  
 🤖 *Generated and maintained with [Claude Code](https://claude.ai/code)*
+
+## ⭐ Latest Updates
+
+### Version 1.1.0 - Azure AD SSO Integration
+- **🔐 Azure AD Single Sign-On**: Complete OAuth 2.0/OpenID Connect integration
+- **👤 Automatic User Provisioning**: Users are automatically created from Azure AD with default roles
+- **🔄 Hybrid Authentication**: Support for both local accounts and Microsoft accounts
+- **📚 Comprehensive Documentation**: Complete setup guide for Azure AD integration
+- **🛡️ Enhanced Security**: Modern authentication standards and secure token management

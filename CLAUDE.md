@@ -18,8 +18,8 @@ When user prompts "update", update all .md files:
 3. Ensure consistency across all markdown documentation
 
 ## Project Structure
-- Frontend: `/craft-frontend` (Next.js 15, TypeScript, Material-UI)
-- Backend: `/craft-backend` (Node.js, Express, TypeScript, MongoDB)
+- Frontend: `/craft-frontend` (Next.js 15, TypeScript, Material-UI, Azure AD MSAL)
+- Backend: `/craft-backend` (Node.js, Express, TypeScript, MongoDB, Azure AD SSO)
 
 ## Build Commands
 - Frontend: `cd craft-frontend && npm run build`

@@ -1,10 +1,14 @@
 # Authentication System Documentation
 
-The CRAFT frontend implements a comprehensive JWT-based authentication system with automatic token refresh, secure storage, and protected routing.
+The CRAFT frontend implements a comprehensive authentication system supporting both local JWT-based authentication and Azure AD Single Sign-On (SSO) with automatic token refresh, secure storage, and protected routing.
 
 ## Overview
 
-The authentication system provides secure user login, registration, and session management with automatic token refresh and seamless user experience.
+The authentication system provides secure user authentication through multiple providers:
+- **Local Authentication**: JWT-based login with username/password
+- **Azure AD SSO**: Microsoft authentication with OAuth 2.0/OpenID Connect
+- **Automatic Token Refresh**: Seamless session management
+- **Protected Routing**: Secure access control
 
 ## Architecture
 
@@ -18,6 +22,30 @@ The authentication system provides secure user login, registration, and session 
 │ Protected   │    │ Local       │    │ Backend     │
 │ Routes      │    │ Storage     │    │ API         │
 └─────────────┘    └─────────────┘    └─────────────┘
+                          │
+                          ▼
+                  ┌─────────────┐
+                  │ Azure AD    │
+                  │ Service     │
+                  └─────────────┘
+```
+
+### Multi-Provider Support
+
+```
+┌─────────────────┐
+│   Login Page    │
+└─────────┬───────┘
+          │
+    ┌─────▼─────┐
+    │   Local   │
+    │   Login   │
+    └───────────┘
+          │
+    ┌─────▼─────┐         ┌─────────────┐
+    │  Azure AD │────────▶│ Microsoft   │
+    │   Login   │         │   OAuth     │
+    └───────────┘         └─────────────┘
 ```
 
 ## Components
@@ -64,6 +92,7 @@ User authentication interface with form validation and error handling.
 - **Loading States**: Visual feedback during authentication
 - **Error Display**: User-friendly error messages
 - **Demo Credentials**: Development environment helpers
+- **Azure AD Integration**: "Sign in with Microsoft" button
 - **Responsive Design**: Works on all device sizes
 
 #### Implementation
@@ -83,6 +112,73 @@ const handleSubmit = async () => {
   }
 };
 ```
+
+### Azure AD Components
+
+**Location**: `/src/lib/azureAdService.ts` and `/src/lib/azureAdConfig.ts`
+
+#### Azure AD Configuration
+
+```typescript
+const azureAdConfig: Configuration = {
+  auth: {
+    clientId: process.env.NEXT_PUBLIC_AZURE_AD_CLIENT_ID || '',
+    authority: process.env.NEXT_PUBLIC_AZURE_AD_AUTHORITY || '',
+    redirectUri: `${window.location.origin}/auth/callback`,
+    postLogoutRedirectUri: `${window.location.origin}/login`,
+  },
+  cache: {
+    cacheLocation: 'sessionStorage',
+    storeAuthStateInCookie: false,
+  },
+};
+```
+
+#### Azure AD Service
+
+```typescript
+class AzureAdService {
+  public async loginRedirect(): Promise<void> {
+    if (!this.msalInstance) {
+      throw new Error('Azure AD is not configured');
+    }
+
+    try {
+      await this.msalInstance.loginRedirect(loginRequest);
+    } catch (error) {
+      console.error('Azure AD login redirect failed:', error);
+      throw error;
+    }
+  }
+
+  public async handleRedirectPromise(): Promise<AuthenticationResult | null> {
+    if (!this.msalInstance) {
+      return null;
+    }
+
+    try {
+      const response = await this.msalInstance.handleRedirectPromise();
+      return response;
+    } catch (error) {
+      console.error('Azure AD redirect promise handling failed:', error);
+      throw error;
+    }
+  }
+}
+```
+
+### Auth Callback Page
+
+**Location**: `/src/app/auth/callback/page.tsx`
+
+Handles Azure AD OAuth redirect and token exchange.
+
+#### Features
+- **OAuth Callback Handling**: Processes authorization codes
+- **Error Handling**: Manages OAuth error responses
+- **Token Exchange**: Communicates with backend for local token generation
+- **Loading States**: Visual feedback during callback processing
+- **Automatic Redirection**: Navigates to dashboard or login on completion
 
 ## Authentication Flow
 
@@ -105,7 +201,31 @@ sequenceDiagram
     LP->>U: Redirect to dashboard
 ```
 
-### 2. Token Storage
+### 2. Azure AD SSO Process
+
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant LP as LoginPage
+    participant AS as AzureAdService
+    participant AAD as Azure AD
+    participant CB as CallbackPage
+    participant API as Backend API
+    participant AC as AuthContext
+    
+    U->>LP: Click "Sign in with Microsoft"
+    LP->>AS: loginRedirect()
+    AS->>AAD: Redirect to OAuth
+    AAD->>U: Microsoft login
+    U->>AAD: Enter credentials
+    AAD->>CB: Redirect with auth code
+    CB->>API: Exchange code for tokens
+    API->>CB: Return local JWT tokens
+    CB->>AC: Store tokens and user data
+    CB->>U: Redirect to dashboard
+```
+
+### 3. Token Storage
 
 ```typescript
 // Store tokens in localStorage
@@ -122,7 +242,7 @@ const setRefreshToken = (refreshToken: string): void => {
 };
 ```
 
-### 3. Automatic Token Refresh
+### 4. Automatic Token Refresh
 
 ```typescript
 // API client handles automatic refresh
@@ -146,7 +266,7 @@ async refreshToken(): Promise<void> {
 }
 ```
 
-### 4. Protected Routes
+### 5. Protected Routes
 
 ```typescript
 useEffect(() => {
@@ -434,6 +554,10 @@ const handleLogout = async () => {
 NEXT_PUBLIC_API_URL=http://localhost:3001/api/v1
 NEXT_PUBLIC_APP_URL=http://localhost:3002
 
+# Azure AD SSO (Optional)
+NEXT_PUBLIC_AZURE_AD_CLIENT_ID=your-azure-ad-client-id
+NEXT_PUBLIC_AZURE_AD_AUTHORITY=https://login.microsoftonline.com/your-tenant-id
+
 # Environment
 NODE_ENV=development
 ```
@@ -529,7 +653,26 @@ console.log('Auth State:', {
 ## Future Enhancements
 
 - **Biometric Authentication**: Fingerprint/Face ID
-- **Multi-Factor Authentication**: SMS/Email verification
+- **Multi-Factor Authentication**: SMS/Email verification  
 - **Session Management**: Active session monitoring
 - **Remember Me**: Persistent login option
-- **Social Login**: OAuth integration
+- **Additional SSO Providers**: Google, GitHub, SAML
+- **Conditional Access**: Location and device-based policies
+
+## Azure AD Setup
+
+For detailed Azure AD configuration instructions, see:
+- [Complete Azure AD SSO Setup Guide](../../docs/AZURE_AD_SSO.md)
+
+### Quick Setup Steps
+
+1. **Register Application in Azure AD**
+2. **Configure Environment Variables**
+3. **Test SSO Integration**
+4. **Deploy with HTTPS for Production**
+
+The Azure AD integration provides:
+- **Seamless Authentication**: No separate password required
+- **Enterprise Security**: Leverages existing Azure AD policies
+- **User Provisioning**: Automatic account creation
+- **Role Mapping**: Default role assignment with admin override
