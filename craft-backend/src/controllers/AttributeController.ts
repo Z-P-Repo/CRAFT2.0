@@ -64,7 +64,23 @@ export class AttributeController {
       Attribute.countDocuments(filter)
     ]);
 
-    const result = PaginationHelper.buildPaginationResult(attributes, total, paginationOptions);
+    // Add policy count to each attribute
+    const attributesWithPolicyCount = await Promise.all(
+      attributes.map(async (attribute) => {
+        const policiesUsingAttribute = await AttributeController.checkAttributeUsageInPolicies(attribute.name);
+        return {
+          ...attribute,
+          policyCount: policiesUsingAttribute.length,
+          usedInPolicies: policiesUsingAttribute.map(p => ({ 
+            id: p._id || p.id, 
+            name: p.name, 
+            displayName: p.displayName 
+          }))
+        };
+      })
+    );
+
+    const result = PaginationHelper.buildPaginationResult(attributesWithPolicyCount, total, paginationOptions);
 
     res.status(200).json({
       success: true,
@@ -86,9 +102,21 @@ export class AttributeController {
       throw new NotFoundError('Attribute not found');
     }
 
+    // Add policy count to the attribute
+    const policiesUsingAttribute = await AttributeController.checkAttributeUsageInPolicies(attribute.name);
+    const attributeWithPolicyCount = {
+      ...attribute,
+      policyCount: policiesUsingAttribute.length,
+      usedInPolicies: policiesUsingAttribute.map(p => ({ 
+        id: p._id || p.id, 
+        name: p.name, 
+        displayName: p.displayName 
+      }))
+    };
+
     res.status(200).json({
       success: true,
-      data: attribute,
+      data: attributeWithPolicyCount,
     });
   });
 

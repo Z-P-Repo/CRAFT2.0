@@ -108,10 +108,10 @@ CRAFT2.0/
 
 ### 🏗️ ABAC Components
 - **Policies**: Define access control rules with step-by-step wizard (view-only access for Basic users)
-- **Subjects**: Manage users, groups, roles with comprehensive attributes (view-only access for Basic users)
-- **Resources**: Protected resources and assets with attribute support (view-only access for Basic users)
-- **Actions**: Operations that can be performed with categorization (view-only access for Basic users)
-- **Attributes**: Contextual information with multi-category support (Subject/Resource) and full CRUD (view-only access for Basic users)
+- **Subjects**: Manage users, groups, roles with comprehensive attributes and real-time policy count tracking (view-only access for Basic users)
+- **Resources**: Protected resources and assets with attribute support and policy dependency visualization (view-only access for Basic users)
+- **Actions**: Operations that can be performed with categorization and policy usage tracking (view-only access for Basic users)
+- **Attributes**: Contextual information with multi-category support (Subject/Resource) and policy count display (view-only access for Basic users)
 - **Users**: Complete user management with three-tier role system and role change restrictions
 
 ### 📋 Policy Management
@@ -121,6 +121,10 @@ CRAFT2.0/
 - **Bulk Operations**: Select and delete multiple policies
 - **Human-readable Rules**: Natural language policy display
 - **Comprehensive Pagination**: Full pagination support across all entities
+- **Policy Dependency Tracking**: Real-time policy count display across all entity management pages with consistent ID-based entity mapping
+- **Auto-Refresh Capabilities**: Automatic data synchronization with window focus and periodic updates
+- **Deletion Protection**: Prevents deletion of entities currently referenced in active policies
+- **Schema Consistency**: Fixed entity-policy mapping to ensure accurate policy counts and deletion protection
 
 ### 🧪 Policy Testing
 - Interactive policy evaluation tool

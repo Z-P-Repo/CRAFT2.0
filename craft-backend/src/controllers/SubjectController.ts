@@ -5,6 +5,7 @@ import { asyncHandler } from '@/middleware/errorHandler';
 import { PaginationHelper } from '@/utils/pagination';
 import { logger } from '@/utils/logger';
 import { Subject, ISubject } from '@/models/Subject';
+import { Policy } from '@/models/Policy';
 
 export class SubjectController {
   // Get all subjects with pagination and filtering
@@ -54,7 +55,23 @@ export class SubjectController {
       Subject.countDocuments(filter)
     ]);
 
-    const result = PaginationHelper.buildPaginationResult(subjects, total, paginationOptions);
+    // Add policy count to each subject
+    const subjectsWithPolicyCount = await Promise.all(
+      subjects.map(async (subject) => {
+        const policiesUsingSubject = await SubjectController.checkSubjectUsageInPolicies(subject.id);
+        return {
+          ...subject,
+          policyCount: policiesUsingSubject.length,
+          usedInPolicies: policiesUsingSubject.map(p => ({ 
+            id: p._id || p.id, 
+            name: p.name, 
+            displayName: p.displayName 
+          }))
+        };
+      })
+    );
+
+    const result = PaginationHelper.buildPaginationResult(subjectsWithPolicyCount, total, paginationOptions);
 
     res.status(200).json({
       success: true,
@@ -76,9 +93,21 @@ export class SubjectController {
       throw new NotFoundError('Subject not found');
     }
 
+    // Add policy count to the subject
+    const policiesUsingSubject = await SubjectController.checkSubjectUsageInPolicies(subject.name || subject.id);
+    const subjectWithPolicyCount = {
+      ...subject,
+      policyCount: policiesUsingSubject.length,
+      usedInPolicies: policiesUsingSubject.map(p => ({ 
+        id: p._id || p.id, 
+        name: p.name, 
+        displayName: p.displayName 
+      }))
+    };
+
     res.status(200).json({
       success: true,
-      data: subject,
+      data: subjectWithPolicyCount,
     });
   });
 
@@ -223,6 +252,17 @@ export class SubjectController {
     // Prevent deletion of system subjects
     if (subject.metadata.isSystem) {
       throw new ValidationError('Cannot delete system subjects');
+    }
+
+    // Check if subject is used in any policies
+    console.log(`Attempting to delete subject: ${subject.displayName} (name: ${subject.name}, id: ${subject.id})`);
+    const policiesUsingSubject = await SubjectController.checkSubjectUsageInPolicies(subject.id);
+    if (policiesUsingSubject.length > 0) {
+      const policyCount = policiesUsingSubject.length;
+      
+      throw new ValidationError(
+        `Unable to delete "${subject.displayName}" - This subject is currently being used in ${policyCount} ${policyCount === 1 ? 'policy' : 'policies'}`
+      );
     }
 
     await Subject.findByIdAndDelete(subject._id);
@@ -396,14 +436,35 @@ export class SubjectController {
       throw new ValidationError('Subject IDs array is required');
     }
 
-    // Prevent deletion of system subjects
-    const systemSubjects = await Subject.find({
-      id: { $in: subjectIds },
-      'metadata.isSystem': true
-    });
+    // Get subjects to be deleted
+    const subjectsToDelete = await Subject.find({ id: { $in: subjectIds } });
 
+    // Prevent deletion of system subjects
+    const systemSubjects = subjectsToDelete.filter(subject => subject.metadata.isSystem);
     if (systemSubjects.length > 0) {
-      throw new ValidationError('Cannot delete system subjects');
+      const systemSubjectNames = systemSubjects.map(subject => subject.displayName).join(', ');
+      throw new ValidationError(`Cannot delete system subjects: ${systemSubjectNames}`);
+    }
+
+    // Check if any subjects are used in policies
+    const subjectsInUse: { subject: string; policies: string[] }[] = [];
+    for (const subject of subjectsToDelete) {
+      const policiesUsingSubject = await SubjectController.checkSubjectUsageInPolicies(subject.id);
+      if (policiesUsingSubject.length > 0) {
+        subjectsInUse.push({
+          subject: subject.displayName,
+          policies: policiesUsingSubject.map(p => p.name)
+        });
+      }
+    }
+
+    if (subjectsInUse.length > 0) {
+      const subjectCount = subjectsInUse.length;
+      const totalPolicies = [...new Set(subjectsInUse.flatMap(usage => usage.policies))].length;
+      
+      throw new ValidationError(
+        `Unable to delete ${subjectCount} ${subjectCount === 1 ? 'subject' : 'subjects'} - ${subjectCount === 1 ? 'It is' : 'They are'} currently being used in ${totalPolicies} ${totalPolicies === 1 ? 'policy' : 'policies'}`
+      );
     }
 
     const result = await Subject.deleteMany({ id: { $in: subjectIds } });
@@ -418,4 +479,17 @@ export class SubjectController {
       message: `${result.deletedCount} subjects deleted successfully`,
     });
   });
+
+  private static async checkSubjectUsageInPolicies(subjectId: string): Promise<any[]> {
+    // Search for policies that use this subject
+    // We need to check both subjects array and rules.subject.type
+    const policies = await Policy.find({
+      $or: [
+        { 'subjects': subjectId },
+        { 'rules.subject.type': subjectId }
+      ]
+    }, 'id name displayName').lean();
+
+    return policies;
+  }
 }

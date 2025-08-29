@@ -64,6 +64,7 @@ import {
   ArrowDownward as ArrowDownIcon,
 } from '@mui/icons-material';
 import DashboardLayout from '@/components/layout/DashboardLayout';
+import DeleteConfirmationDialog from '@/components/common/DeleteConfirmationDialog';
 import { apiClient } from '@/lib/api';
 import { ApiResponse } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
@@ -81,6 +82,12 @@ interface ActionObject {
   endpoint?: string;
   riskLevel: 'low' | 'medium' | 'high' | 'critical';
   active: boolean;
+  policyCount?: number;
+  usedInPolicies?: Array<{
+    id: string;
+    name: string;
+    displayName: string;
+  }>;
   metadata: {
     owner: string;
     createdBy: string;
@@ -646,7 +653,26 @@ export default function ActionsPage() {
                     )}
                   </Box>
                 </TableCell>
-                <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', color: 'text.primary', width: '140px' }}>
+                <TableCell 
+                  sx={{ 
+                    fontWeight: 600, 
+                    fontSize: '0.875rem', 
+                    color: 'text.primary',
+                    width: '120px',
+                    cursor: 'pointer',
+                    userSelect: 'none',
+                    '&:hover': { bgcolor: 'grey.100' }
+                  }}
+                  onClick={() => handleSort('policyCount')}
+                >
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, whiteSpace: 'nowrap' }}>
+                    Policies
+                    {sortBy === 'policyCount' && (
+                      sortOrder === 'asc' ? <ArrowUpIcon fontSize="small" /> : <ArrowDownIcon fontSize="small" />
+                    )}
+                  </Box>
+                </TableCell>
+                <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', color: 'text.primary', width: '180px', minWidth: '180px' }}>
                   Created By
                 </TableCell>
                 <TableCell align="center" sx={{ fontWeight: 600, fontSize: '0.875rem', color: 'text.primary', width: '120px' }}>
@@ -657,7 +683,7 @@ export default function ActionsPage() {
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={4} sx={{ textAlign: 'center', py: 4 }}>
+                  <TableCell colSpan={5} sx={{ textAlign: 'center', py: 4 }}>
                     <Typography variant="body1" color="text.secondary">
                       Loading actions...
                     </Typography>
@@ -665,7 +691,7 @@ export default function ActionsPage() {
                 </TableRow>
               ) : error ? (
                 <TableRow>
-                  <TableCell colSpan={4} sx={{ textAlign: 'center', py: 4 }}>
+                  <TableCell colSpan={5} sx={{ textAlign: 'center', py: 4 }}>
                     <Typography color="error" variant="body1">
                       {error}
                     </Typography>
@@ -673,7 +699,7 @@ export default function ActionsPage() {
                 </TableRow>
               ) : actions.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={4} sx={{ textAlign: 'center', py: 4 }}>
+                  <TableCell colSpan={5} sx={{ textAlign: 'center', py: 4 }}>
                     <Typography variant="body1" color="text.secondary">
                       No actions found
                     </Typography>
@@ -731,6 +757,47 @@ export default function ActionsPage() {
                               {action.description || 'No description available'}
                             </Typography>
                           </Box>
+                        </Box>
+                      </TableCell>
+                      <TableCell>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          {action.policyCount !== undefined && action.policyCount > 0 ? (
+                            <Tooltip 
+                              title={
+                                <Box>
+                                  <Typography variant="body2" sx={{ fontWeight: 600, mb: 1 }}>
+                                    Used in {action.policyCount} {action.policyCount === 1 ? 'policy' : 'policies'}:
+                                  </Typography>
+                                  {action.usedInPolicies?.slice(0, 5).map((policy, index) => (
+                                    <Typography key={policy.id} variant="body2" sx={{ fontSize: '0.75rem' }}>
+                                      • {policy.displayName || policy.name}
+                                    </Typography>
+                                  ))}
+                                  {action.usedInPolicies && action.usedInPolicies.length > 5 && (
+                                    <Typography variant="body2" sx={{ fontSize: '0.75rem', fontStyle: 'italic' }}>
+                                      ... and {action.usedInPolicies.length - 5} more
+                                    </Typography>
+                                  )}
+                                </Box>
+                              }
+                              arrow
+                              placement="top"
+                            >
+                              <Chip
+                                label={action.policyCount}
+                                size="small"
+                                color="primary"
+                                sx={{ minWidth: '32px', fontWeight: 600 }}
+                              />
+                            </Tooltip>
+                          ) : (
+                            <Chip
+                              label="0"
+                              size="small"
+                              variant="outlined"
+                              sx={{ minWidth: '32px', color: 'text.secondary' }}
+                            />
+                          )}
                         </Box>
                       </TableCell>
                       <TableCell>

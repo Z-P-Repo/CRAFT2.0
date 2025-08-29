@@ -137,13 +137,11 @@ const PolicySchema = new Schema<IPolicy>({
     required: false,
     unique: true,
     sparse: true,
-    index: true,
   },
   name: {
     type: String,
     required: true,
     trim: true,
-    index: true,
   },
   description: {
     type: String,
@@ -156,7 +154,6 @@ const PolicySchema = new Schema<IPolicy>({
       message: 'Effect must be either Allow or Deny',
     },
     required: true,
-    index: true,
   },
   status: {
     type: String,
@@ -165,7 +162,6 @@ const PolicySchema = new Schema<IPolicy>({
       message: 'Status must be one of: Active, Inactive, Draft',
     },
     default: 'Draft',
-    index: true,
   },
   rules: [PolicyRuleSchema],
   subjects: [{
@@ -212,6 +208,7 @@ const PolicySchema = new Schema<IPolicy>({
 });
 
 // Indexes for better query performance
+// Note: id field already has unique constraint which creates an index
 PolicySchema.index({ name: 1, effect: 1 });
 PolicySchema.index({ status: 1 });
 PolicySchema.index({ effect: 1, status: 1 });

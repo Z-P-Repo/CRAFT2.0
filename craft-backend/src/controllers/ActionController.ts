@@ -53,7 +53,23 @@ export class ActionController {
       Action.countDocuments(filter)
     ]);
 
-    const result = PaginationHelper.buildPaginationResult(actions, total, paginationOptions);
+    // Add policy count to each action
+    const actionsWithPolicyCount = await Promise.all(
+      actions.map(async (action) => {
+        const policiesUsingAction = await ActionController.checkActionUsageInPolicies(action.id);
+        return {
+          ...action,
+          policyCount: policiesUsingAction.length,
+          usedInPolicies: policiesUsingAction.map(p => ({ 
+            id: p._id || p.id, 
+            name: p.name, 
+            displayName: p.displayName 
+          }))
+        };
+      })
+    );
+
+    const result = PaginationHelper.buildPaginationResult(actionsWithPolicyCount, total, paginationOptions);
 
     res.status(200).json({
       success: true,
@@ -75,9 +91,21 @@ export class ActionController {
       throw new NotFoundError('Action not found');
     }
 
+    // Add policy count to the action
+    const policiesUsingAction = await ActionController.checkActionUsageInPolicies(action.id);
+    const actionWithPolicyCount = {
+      ...action,
+      policyCount: policiesUsingAction.length,
+      usedInPolicies: policiesUsingAction.map(p => ({ 
+        id: p._id || p.id, 
+        name: p.name, 
+        displayName: p.displayName 
+      }))
+    };
+
     res.status(200).json({
       success: true,
-      data: action,
+      data: actionWithPolicyCount,
     });
   });
 
@@ -215,7 +243,9 @@ export class ActionController {
     }
 
     // Check if action is used in any policies
-    const policiesUsingAction = await ActionController.checkActionUsageInPolicies(action.name);
+    console.log(`Attempting to delete action: ${action.displayName} (name: ${action.name}, id: ${action.id})`);
+    const policiesUsingAction = await ActionController.checkActionUsageInPolicies(action.id);
+    console.log(`Checking action usage for: ${action.name} (id: ${action.id}), found ${policiesUsingAction.length} policies`);
     if (policiesUsingAction.length > 0) {
       const policyCount = policiesUsingAction.length;
       
@@ -502,7 +532,9 @@ export class ActionController {
     // Check if any actions are used in policies
     const actionsInUse: { action: string; policies: string[] }[] = [];
     for (const action of actionsToDelete) {
-      const policiesUsingAction = await ActionController.checkActionUsageInPolicies(action.name);
+      console.log(`Checking bulk delete for action: ${action.displayName} (name: ${action.name}, id: ${action.id})`);
+      const policiesUsingAction = await ActionController.checkActionUsageInPolicies(action.id);
+      console.log(`Found ${policiesUsingAction.length} policies using action: ${action.name}`);
       if (policiesUsingAction.length > 0) {
         actionsInUse.push({
           action: action.displayName,
@@ -533,13 +565,13 @@ export class ActionController {
     });
   });
 
-  private static async checkActionUsageInPolicies(actionName: string): Promise<any[]> {
+  private static async checkActionUsageInPolicies(actionId: string): Promise<any[]> {
     // Search for policies that use this action
     // We need to check both actions array and rules.action.name
     const policies = await Policy.find({
       $or: [
-        { 'actions': actionName },
-        { 'rules.action.name': actionName }
+        { 'actions': actionId },
+        { 'rules.action.name': actionId }
       ]
     }, 'id name displayName').lean();
 

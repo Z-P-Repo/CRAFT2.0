@@ -66,6 +66,7 @@ import {
   Clear as ClearIcon,
   ArrowUpward as ArrowUpIcon,
   ArrowDownward as ArrowDownIcon,
+  Refresh as RefreshIcon,
 } from '@mui/icons-material';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import { apiClient } from '@/lib/api';
@@ -85,6 +86,12 @@ interface Attribute {
   isRequired: boolean;
   isMultiValue: boolean;
   defaultValue?: any;
+  policyCount?: number;
+  usedInPolicies?: Array<{
+    id: string;
+    name: string;
+    displayName: string;
+  }>;
   constraints: {
     minLength?: number;
     maxLength?: number;
@@ -800,6 +807,31 @@ export default function AttributesPage() {
     }
   }, [searchTerm, page, rowsPerPage, filterCategory, filterDataType, sortBy, sortOrder]);
 
+  // Add window focus refresh - refresh data when user returns to the page
+  useEffect(() => {
+    const handleFocus = () => {
+      // Only refresh if the page has been loaded before and user is returning
+      if (!loading) {
+        fetchAttributes();
+      }
+    };
+
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
+  }, [loading]);
+
+  // Add periodic refresh every 30 seconds when page is active
+  useEffect(() => {
+    const interval = setInterval(() => {
+      // Only refresh if page is visible and not currently loading
+      if (document.visibilityState === 'visible' && !loading) {
+        fetchAttributes();
+      }
+    }, 30000); // 30 seconds
+
+    return () => clearInterval(interval);
+  }, [loading]);
+
   const getStatusColor = (active: boolean) => {
     return active ? 'success' : 'error';
   };
@@ -960,6 +992,21 @@ export default function AttributesPage() {
                     )}
                   </IconButton>
                 </Tooltip>
+
+                <Tooltip title="Refresh data - Updates policy counts and other information">
+                  <IconButton 
+                    onClick={fetchAttributes}
+                    disabled={loading}
+                    sx={{
+                      color: 'primary.main',
+                      '&:hover': {
+                        backgroundColor: 'primary.50',
+                      }
+                    }}
+                  >
+                    <RefreshIcon />
+                  </IconButton>
+                </Tooltip>
               </Box>
             </>
           )}
@@ -1037,7 +1084,24 @@ export default function AttributesPage() {
                     <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', color: 'text.primary' }}>
                       Permitted Values
                     </TableCell>
-                    <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', color: 'text.primary' }}>
+                    <TableCell 
+                      sx={{ 
+                        fontWeight: 600, 
+                        fontSize: '0.875rem', 
+                        color: 'text.primary',
+                        cursor: 'pointer',
+                        '&:hover': { backgroundColor: 'grey.50' }
+                      }}
+                      onClick={() => handleSortChange('policyCount')}
+                    >
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, whiteSpace: 'nowrap' }}>
+                        Policies
+                        {sortBy === 'policyCount' && (
+                          sortOrder === 'asc' ? <ArrowUpIcon fontSize="small" /> : <ArrowDownIcon fontSize="small" />
+                        )}
+                      </Box>
+                    </TableCell>
+                    <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', color: 'text.primary', width: '180px', minWidth: '180px' }}>
                       Created By
                     </TableCell>
                     <TableCell align="center" sx={{ fontWeight: 600, fontSize: '0.875rem', color: 'text.primary', width: '120px', minWidth: '120px' }}>
@@ -1048,7 +1112,7 @@ export default function AttributesPage() {
                 <TableBody>
                   {loading ? (
                     <TableRow>
-                      <TableCell colSpan={7} sx={{ textAlign: 'center', py: 4 }}>
+                      <TableCell colSpan={8} sx={{ textAlign: 'center', py: 4 }}>
                         <Typography variant="body1" color="text.secondary">
                           Loading attributes...
                         </Typography>
@@ -1056,7 +1120,7 @@ export default function AttributesPage() {
                     </TableRow>
                   ) : paginatedAttributes.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={7} sx={{ textAlign: 'center', py: 4 }}>
+                      <TableCell colSpan={8} sx={{ textAlign: 'center', py: 4 }}>
                         <Typography variant="body1" color="text.secondary">
                           No attributes found
                         </Typography>
@@ -1165,6 +1229,47 @@ export default function AttributesPage() {
                                 Any value
                               </Typography>
                             )}
+                          </TableCell>
+                          <TableCell>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                              {attribute.policyCount !== undefined && attribute.policyCount > 0 ? (
+                                <Tooltip 
+                                  title={
+                                    <Box>
+                                      <Typography variant="body2" sx={{ fontWeight: 600, mb: 1 }}>
+                                        Used in {attribute.policyCount} {attribute.policyCount === 1 ? 'policy' : 'policies'}:
+                                      </Typography>
+                                      {attribute.usedInPolicies?.slice(0, 5).map((policy, index) => (
+                                        <Typography key={policy.id} variant="body2" sx={{ fontSize: '0.75rem' }}>
+                                          • {policy.displayName || policy.name}
+                                        </Typography>
+                                      ))}
+                                      {attribute.usedInPolicies && attribute.usedInPolicies.length > 5 && (
+                                        <Typography variant="body2" sx={{ fontSize: '0.75rem', fontStyle: 'italic' }}>
+                                          ... and {attribute.usedInPolicies.length - 5} more
+                                        </Typography>
+                                      )}
+                                    </Box>
+                                  }
+                                  arrow
+                                  placement="top"
+                                >
+                                  <Chip
+                                    label={attribute.policyCount}
+                                    size="small"
+                                    color="primary"
+                                    sx={{ minWidth: '32px', fontWeight: 600 }}
+                                  />
+                                </Tooltip>
+                              ) : (
+                                <Chip
+                                  label="0"
+                                  size="small"
+                                  variant="outlined"
+                                  sx={{ minWidth: '32px', color: 'text.secondary' }}
+                                />
+                              )}
+                            </Box>
                           </TableCell>
                           <TableCell>
                             <Typography variant="body2" color="text.secondary">

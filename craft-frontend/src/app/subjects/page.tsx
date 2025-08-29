@@ -68,10 +68,12 @@ import {
   ArrowDownward as ArrowDownIcon,
 } from '@mui/icons-material';
 import DashboardLayout from '@/components/layout/DashboardLayout';
+import DeleteConfirmationDialog from '@/components/common/DeleteConfirmationDialog';
 import { apiClient } from '@/lib/api';
 import { ApiResponse } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
 import { canManage, canEdit, canDelete, canCreate } from '@/utils/permissions';
+import { useApiSnackbar } from '@/contexts/SnackbarContext';
 
 interface Subject {
   _id: string;
@@ -85,6 +87,12 @@ interface Subject {
   description?: string;
   status: 'active' | 'inactive';
   permissions: string[];
+  policyCount?: number;
+  usedInPolicies?: Array<{
+    id: string;
+    name: string;
+    displayName: string;
+  }>;
   metadata: {
     createdBy: string;
     lastModifiedBy: string;
@@ -102,6 +110,7 @@ interface Subject {
 
 export default function SubjectsPage() {
   const { user: currentUser } = useAuth();
+  const snackbar = useApiSnackbar();
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -180,20 +189,34 @@ export default function SubjectsPage() {
         setSubjects(prev => prev.filter(subj => subj._id !== deleteSubject._id));
         setTotal(prev => prev - 1);
         handleDeleteClose();
+        snackbar.showSuccess(`Subject "${deleteSubject.displayName}" deleted successfully`);
       } else {
-        throw new Error(response.error || 'Failed to delete subject');
+        snackbar.handleApiResponse(response, undefined, 'Failed to delete subject');
+        handleDeleteClose();
       }
     } catch (error: any) {
-      console.error('Error deleting subject:', error);
+      console.error('Delete error:', error);
       
-      // If subject was not found (404), it might have been already deleted
-      // Remove from local state and close the dialog
-      if (error.code === 'NOT_FOUND' || error.message?.includes('not found')) {
-        setSubjects(prev => prev.filter(subj => subj._id !== deleteSubject._id));
-        setTotal(prev => prev - 1);
+      // Get the error message from the API response
+      const errorMessage = error?.error || error?.message || 'Unknown error';
+      
+      // Handle specific error cases with better messages
+      if (errorMessage.includes('404') || errorMessage.includes('not found')) {
+        snackbar.showInfo('Subject no longer exists. Refreshing the list...');
+        await fetchSubjects(); // Refresh the data
+        handleDeleteClose();
+      } else if (errorMessage.includes('Cannot delete system subjects') ||
+        errorMessage.includes('system subject')) {
+        snackbar.showWarning('System subjects cannot be deleted as they are required for the system to function properly.');
+        handleDeleteClose();
+      } else if (errorMessage.includes('Unable to delete') && errorMessage.includes('currently being used in')) {
+        // Handle policy dependency error with snackbar
+        snackbar.showError(errorMessage);
         handleDeleteClose();
       } else {
-        setError('Failed to delete subject');
+        // Handle other API errors
+        snackbar.handleApiError(error, 'Failed to delete subject');
+        handleDeleteClose();
       }
     } finally {
       setIsDeleting(false);
@@ -288,16 +311,21 @@ export default function SubjectsPage() {
     } catch (error: any) {
       console.error('Failed to delete subjects:', error);
       
+      // Extract error message from API response
+      const errorMessage = error?.error || error?.message || 'Unknown error';
+      
+      // Handle specific error cases
+      if (errorMessage.includes('Unable to delete') && errorMessage.includes('currently being used in')) {
+        snackbar.showError(errorMessage);
+      } else if (!error.message?.includes('not found') && error.code !== 'NOT_FOUND') {
+        snackbar.showError('Failed to delete some subjects. Please try again.');
+      }
+      
       // Always refresh the data to sync with backend state
       await fetchSubjects();
       
       // Clear selection regardless of error
       setSelectedSubjects([]);
-      
-      // Only show error if it's not a "not found" case
-      if (!error.message?.includes('not found') && error.code !== 'NOT_FOUND') {
-        setError('Failed to delete some subjects. Please try again.');
-      }
     } finally {
       setIsSubmitting(false);
     }
@@ -652,7 +680,25 @@ export default function SubjectsPage() {
                         )}
                       </Box>
                     </TableCell>
-                    <TableCell align="center" sx={{ fontWeight: 600, fontSize: '0.875rem', color: 'text.primary', width: '140px', minWidth: '140px' }}>
+                    <TableCell 
+                      sx={{ 
+                        fontWeight: 600, 
+                        fontSize: '0.875rem', 
+                        color: 'text.primary',
+                        width: '120px',
+                        cursor: 'pointer',
+                        '&:hover': { backgroundColor: 'grey.50' }
+                      }}
+                      onClick={() => handleSortChange('policyCount')}
+                    >
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, whiteSpace: 'nowrap' }}>
+                        Policies
+                        {sortBy === 'policyCount' && (
+                          sortOrder === 'asc' ? <ArrowUpIcon fontSize="small" /> : <ArrowDownIcon fontSize="small" />
+                        )}
+                      </Box>
+                    </TableCell>
+                    <TableCell align="center" sx={{ fontWeight: 600, fontSize: '0.875rem', color: 'text.primary', width: '180px', minWidth: '180px' }}>
                       Created By
                     </TableCell>
                     <TableCell align="center" sx={{ fontWeight: 600, fontSize: '0.875rem', color: 'text.primary', width: '120px', minWidth: '120px' }}>
@@ -663,7 +709,7 @@ export default function SubjectsPage() {
                 <TableBody>
                   {loading ? (
                     <TableRow>
-                      <TableCell colSpan={4} sx={{ textAlign: 'center', py: 4 }}>
+                      <TableCell colSpan={5} sx={{ textAlign: 'center', py: 4 }}>
                         <Typography variant="body1" color="text.secondary">
                           Loading subjects...
                         </Typography>
@@ -671,7 +717,7 @@ export default function SubjectsPage() {
                     </TableRow>
                   ) : paginatedSubjects.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={4} sx={{ textAlign: 'center', py: 4 }}>
+                      <TableCell colSpan={5} sx={{ textAlign: 'center', py: 4 }}>
                         <Typography variant="body1" color="text.secondary">
                           No subjects found
                         </Typography>
@@ -721,7 +767,48 @@ export default function SubjectsPage() {
                               </Box>
                             </Box>
                           </TableCell>
-                          <TableCell align="center" sx={{ width: '140px', minWidth: '140px' }}>
+                          <TableCell>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                              {subject.policyCount !== undefined && subject.policyCount > 0 ? (
+                                <Tooltip 
+                                  title={
+                                    <Box>
+                                      <Typography variant="body2" sx={{ fontWeight: 600, mb: 1 }}>
+                                        Used in {subject.policyCount} {subject.policyCount === 1 ? 'policy' : 'policies'}:
+                                      </Typography>
+                                      {subject.usedInPolicies?.slice(0, 5).map((policy, index) => (
+                                        <Typography key={policy.id} variant="body2" sx={{ fontSize: '0.75rem' }}>
+                                          • {policy.displayName || policy.name}
+                                        </Typography>
+                                      ))}
+                                      {subject.usedInPolicies && subject.usedInPolicies.length > 5 && (
+                                        <Typography variant="body2" sx={{ fontSize: '0.75rem', fontStyle: 'italic' }}>
+                                          ... and {subject.usedInPolicies.length - 5} more
+                                        </Typography>
+                                      )}
+                                    </Box>
+                                  }
+                                  arrow
+                                  placement="top"
+                                >
+                                  <Chip
+                                    label={subject.policyCount}
+                                    size="small"
+                                    color="primary"
+                                    sx={{ minWidth: '32px', fontWeight: 600 }}
+                                  />
+                                </Tooltip>
+                              ) : (
+                                <Chip
+                                  label="0"
+                                  size="small"
+                                  variant="outlined"
+                                  sx={{ minWidth: '32px', color: 'text.secondary' }}
+                                />
+                              )}
+                            </Box>
+                          </TableCell>
+                          <TableCell align="center" sx={{ width: '180px', minWidth: '180px' }}>
                             <Typography variant="body2" color="text.secondary">
                               {subject.metadata?.createdBy || 'System'}
                             </Typography>
@@ -1040,200 +1127,44 @@ export default function SubjectsPage() {
         </DialogActions>
       </Dialog>
 
-      {/* Delete Confirmation Dialog */}
-      <Dialog
+      {/* Delete Confirmation Dialogs */}
+      <DeleteConfirmationDialog
         open={deleteOpen}
         onClose={handleDeleteClose}
-        maxWidth="xs"
-        fullWidth
-        PaperProps={{
-          sx: {
-            borderRadius: 2,
-          }
-        }}
-      >
-        <DialogTitle sx={{ pb: 2 }}>
-          <Typography variant="h6" fontWeight="600" color="error.main">
-            Delete Subject
-          </Typography>
-        </DialogTitle>
+        onConfirm={handleDeleteConfirm}
+        title="Delete Subject"
+        item={deleteSubject ? {
+          id: deleteSubject.id,
+          name: deleteSubject.name,
+          displayName: deleteSubject.displayName,
+          isSystem: deleteSubject.metadata.isSystem
+        } : undefined}
+        loading={isDeleting}
+        entityName="subject"
+        entityNamePlural="subjects"
+        additionalInfo="Deleting subjects may affect existing policies that reference them."
+      />
 
-        <DialogContent sx={{ pb: 2 }}>
-          {deleteSubject && (
-            <Box>
-              <Typography variant="body1" gutterBottom>
-                Are you sure you want to delete this subject?
-              </Typography>
-
-              <Box sx={{
-                mt: 2,
-                p: 2,
-                bgcolor: 'grey.50',
-                borderRadius: 1,
-                border: '1px solid',
-                borderColor: 'grey.200'
-              }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                  <Avatar sx={{
-                    bgcolor: `${getTypeColor(deleteSubject.type)}.main`,
-                    width: 32,
-                    height: 32
-                  }}>
-                    {getTypeIcon(deleteSubject.type)}
-                  </Avatar>
-                  <Box>
-                    <Typography variant="subtitle2" fontWeight="600">
-                      {deleteSubject.displayName}
-                    </Typography>
-                    <Typography variant="caption" color="text.secondary" fontFamily="monospace">
-                      {deleteSubject.name}
-                    </Typography>
-                  </Box>
-                </Box>
-              </Box>
-
-              <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
-                This action cannot be undone. The subject will be permanently removed from the system.
-              </Typography>
-              
-              {deleteSubject.metadata.isSystem && (
-                <Typography variant="body2" color="error.main" sx={{ mt: 2, fontWeight: 500 }}>
-                  Warning: This is a system subject and cannot be deleted.
-                </Typography>
-              )}
-            </Box>
-          )}
-        </DialogContent>
-
-        <DialogActions sx={{ px: 3, pb: 3, gap: 1 }}>
-          <Button
-            onClick={handleDeleteClose}
-            variant="outlined"
-            disabled={isDeleting}
-            sx={{
-              textTransform: 'none',
-              minWidth: 80
-            }}
-          >
-            Cancel
-          </Button>
-          <Button
-            onClick={handleDeleteConfirm}
-            variant="contained"
-            color="error"
-            disabled={isDeleting || Boolean(deleteSubject?.metadata.isSystem)}
-            sx={{
-              textTransform: 'none',
-              minWidth: 80
-            }}
-          >
-            {isDeleting ? 'Deleting...' :
-              deleteSubject?.metadata.isSystem ? 'Cannot Delete' : 'Delete'}
-          </Button>
-        </DialogActions>
-      </Dialog>
-
-      {/* Bulk Delete Confirmation Dialog */}
-      <Dialog
+      <DeleteConfirmationDialog
         open={bulkDeleteOpen}
         onClose={handleBulkDeleteClose}
-        maxWidth="sm"
-        fullWidth
-        PaperProps={{
-          sx: {
-            borderRadius: 2,
-          }
-        }}
-      >
-        <DialogTitle sx={{ pb: 2 }}>
-          <Typography variant="h6" fontWeight="600" color="error.main">
-            Delete Multiple Subjects
-          </Typography>
-        </DialogTitle>
-        
-        <DialogContent sx={{ pb: 2 }}>
-          <Box>
-            <Typography variant="body1" gutterBottom>
-              Are you sure you want to delete {selectedSubjects.length} selected subject{selectedSubjects.length > 1 ? 's' : ''}?
-            </Typography>
-            
-            <Typography variant="body2" color="text.secondary" sx={{ mt: 2, mb: 2 }}>
-              This action cannot be undone. The following subjects will be permanently deleted:
-            </Typography>
-            
-            <Box sx={{
-              maxHeight: '200px',
-              overflow: 'auto',
-              border: '1px solid',
-              borderColor: 'grey.200',
-              borderRadius: 1,
-              p: 1.5,
-              bgcolor: 'grey.50'
-            }}>
-              {selectedSubjects.map(subjectId => {
-                const subject = subjects.find(sub => sub.id === subjectId);
-                if (!subject) return null;
-                
-                return (
-                  <Box key={subjectId} sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1.5 }}>
-                    <Avatar sx={{
-                      bgcolor: `${getTypeColor(subject.type)}.main`,
-                      width: 28,
-                      height: 28
-                    }}>
-                      {getTypeIcon(subject.type)}
-                    </Avatar>
-                    <Box sx={{ flex: 1 }}>
-                      <Typography variant="body2" fontWeight="500">
-                        {subject.displayName}
-                      </Typography>
-                      <Typography variant="caption" color="text.secondary" fontFamily="monospace">
-                        {subject.name}
-                      </Typography>
-                    </Box>
-                    <Chip
-                      label={subject.type}
-                      size="small"
-                      color={getTypeColor(subject.type) as any}
-                      variant="outlined"
-                    />
-                  </Box>
-                );
-              })}
-            </Box>
-            
-            <Typography variant="body2" color="warning.dark" sx={{ mt: 2, fontWeight: 500 }}>
-              Warning: Deleting subjects may affect existing policies that reference them.
-            </Typography>
-          </Box>
-        </DialogContent>
-        
-        <DialogActions sx={{ px: 3, pb: 3, gap: 1 }}>
-          <Button
-            onClick={handleBulkDeleteClose}
-            variant="outlined"
-            disabled={isSubmitting}
-            sx={{
-              textTransform: 'none',
-              minWidth: 80
-            }}
-          >
-            Cancel
-          </Button>
-          <Button
-            onClick={handleBulkDeleteConfirm}
-            variant="contained"
-            color="error"
-            disabled={isSubmitting}
-            sx={{
-              textTransform: 'none',
-              minWidth: 120
-            }}
-          >
-            {isSubmitting ? 'Deleting...' : `Delete ${selectedSubjects.length} Subject${selectedSubjects.length > 1 ? 's' : ''}`}
-          </Button>
-        </DialogActions>
-      </Dialog>
+        onConfirm={handleBulkDeleteConfirm}
+        title="Delete Multiple Subjects"
+        items={selectedSubjects.map(subjectId => {
+          const subject = subjects.find(sub => sub.id === subjectId);
+          return subject ? {
+            id: subject.id,
+            name: subject.name,
+            displayName: subject.displayName,
+            isSystem: subject.metadata.isSystem
+          } : { id: subjectId, name: subjectId, displayName: subjectId, isSystem: false };
+        }).filter(Boolean)}
+        loading={isSubmitting}
+        entityName="subject"
+        entityNamePlural="subjects"
+        bulkMode={true}
+        additionalInfo="Deleting subjects may affect existing policies that reference them."
+      />
 
       {/* Filter Popover */}
       <Popover

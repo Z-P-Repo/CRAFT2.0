@@ -33,7 +33,6 @@ const SubjectSchema = new Schema<ISubject>({
     required: [true, 'Subject ID is required'],
     unique: true,
     trim: true,
-    index: true,
   },
   name: {
     type: String,
@@ -150,7 +149,7 @@ const SubjectSchema = new Schema<ISubject>({
 });
 
 // Indexes for better query performance
-SubjectSchema.index({ id: 1 });
+// Note: id field already has unique constraint which creates an index
 SubjectSchema.index({ type: 1, active: 1 });
 SubjectSchema.index({ status: 1 });
 SubjectSchema.index({ department: 1 });

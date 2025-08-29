@@ -53,28 +53,96 @@ export interface ApiResponse<T = any> {
 
 export interface Subject {
   _id?: string;
+  id?: string;
   name: string;
-  attributeIds: string[] | AttributeDefinition[];
+  displayName?: string;
+  email?: string;
+  type?: 'user' | 'group' | 'role';
+  role?: string;
+  department?: string;
   description?: string;
+  status?: 'active' | 'inactive';
+  active?: boolean;
+  permissions?: string[];
+  attributeIds?: string[] | AttributeDefinition[];
+  policyCount?: number;
+  usedInPolicies?: Array<{
+    id: string;
+    name: string;
+    displayName: string;
+  }>;
+  metadata?: {
+    createdBy?: string;
+    lastModifiedBy?: string;
+    tags?: string[];
+    isSystem?: boolean;
+    isCustom?: boolean;
+    version?: string;
+    externalId?: string;
+  };
   createdAt?: string;
   updatedAt?: string;
 }
 
 export interface ResourceObject {
   _id?: string;
+  id?: string;
   name: string;
-  attributeIds: string[] | AttributeDefinition[];
+  displayName?: string;
+  type?: string;
+  uri?: string;
   description?: string;
+  active?: boolean;
+  attributeIds?: string[] | AttributeDefinition[];
+  policyCount?: number;
+  usedInPolicies?: Array<{
+    id: string;
+    name: string;
+    displayName: string;
+  }>;
+  parentId?: string;
+  permissions?: {
+    read: boolean;
+    write: boolean;
+    delete: boolean;
+    execute: boolean;
+    admin: boolean;
+  };
+  metadata?: {
+    classification?: string;
+    tags?: string[];
+    owner?: string;
+    createdBy?: string;
+    lastModifiedBy?: string;
+    isSystem?: boolean;
+    isCustom?: boolean;
+    version?: string;
+    externalId?: string;
+    mimeType?: string;
+    size?: number;
+  };
   createdAt?: string;
   updatedAt?: string;
 }
 
 export interface Action {
   _id?: string;
+  id?: string;
   name: string;
+  displayName?: string;
   description?: string;
   category: string;
+  httpMethod?: string;
+  endpoint?: string;
+  riskLevel?: string;
+  active?: boolean;
   attributeIds: string[] | AttributeDefinition[];
+  policyCount?: number;
+  usedInPolicies?: Array<{
+    id: string;
+    name: string;
+    displayName: string;
+  }>;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -82,11 +150,52 @@ export interface Action {
 export interface AttributeDefinition {
   _id?: string;
   name: string;
+  displayName?: string;
   type: 'string' | 'number' | 'boolean' | 'array' | 'object';
+  dataType?: 'string' | 'number' | 'boolean' | 'date' | 'array' | 'object';
   value: any;
   description?: string;
   applicableToEntity: ('subject' | 'object')[];
+  categories?: ('subject' | 'resource')[];
   usedInSubjects?: string[];
+  policyCount?: number;
+  usedInPolicies?: Array<{
+    id: string;
+    name: string;
+    displayName: string;
+  }>;
+  isRequired?: boolean;
+  isMultiValue?: boolean;
+  active?: boolean;
+  metadata?: {
+    createdBy: string;
+    lastModifiedBy: string;
+    tags: string[];
+    isSystem: boolean;
+    isCustom: boolean;
+    version: string;
+    externalId?: string;
+  };
+  constraints?: {
+    minLength?: number;
+    maxLength?: number;
+    minValue?: number;
+    maxValue?: number;
+    pattern?: string;
+    enumValues?: any[];
+    format?: string;
+  };
+  validation?: {
+    isEmail?: boolean;
+    isUrl?: boolean;
+    isPhoneNumber?: boolean;
+    customValidator?: string;
+  };
+  mapping?: {
+    sourceField?: string;
+    transformFunction?: string;
+    cacheTime?: number;
+  };
   createdAt?: string;
   updatedAt?: string;
 }

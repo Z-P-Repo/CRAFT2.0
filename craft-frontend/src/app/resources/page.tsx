@@ -62,11 +62,14 @@ import {
   Clear as ClearIcon,
   ArrowUpward as ArrowUpIcon,
   ArrowDownward as ArrowDownIcon,
+  Refresh as RefreshIcon,
 } from '@mui/icons-material';
 import DashboardLayout from '@/components/layout/DashboardLayout';
+import DeleteConfirmationDialog from '@/components/common/DeleteConfirmationDialog';
 import { apiClient } from '@/lib/api';
 import { ApiResponse, ResourceObject } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
+import { useApiSnackbar } from '@/contexts/SnackbarContext';
 import { canManage, canEdit, canDelete, canCreate } from '@/utils/permissions';
 
 interface ExtendedResourceObject extends ResourceObject {
@@ -79,6 +82,12 @@ interface ExtendedResourceObject extends ResourceObject {
   children?: string[];
   path?: string;
   owner?: string;
+  policyCount?: number;
+  usedInPolicies?: Array<{
+    id: string;
+    name: string;
+    displayName: string;
+  }>;
   permissions?: {
     read: boolean;
     write: boolean;
@@ -111,6 +120,7 @@ interface ExtendedResourceObject extends ResourceObject {
 
 export default function ObjectsPage() {
   const { user: currentUser } = useAuth();
+  const snackbar = useApiSnackbar();
   const [objects, setObjects] = useState<ExtendedResourceObject[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -259,7 +269,16 @@ export default function ObjectsPage() {
         setTotal(objectsWithId.length);
         handleDeleteClose();
       } else {
-        setError('Failed to delete object');
+        // Extract error message from API response
+        const errorMessage = error?.error || error?.message || 'Unknown error';
+        
+        if (errorMessage.includes('Unable to delete') && errorMessage.includes('currently being used in')) {
+          snackbar.showError(errorMessage);
+          handleDeleteClose();
+        } else {
+          snackbar.showError('Failed to delete resource');
+          handleDeleteClose();
+        }
       }
     } finally {
       setIsDeleting(false);
@@ -363,9 +382,14 @@ export default function ObjectsPage() {
       // Clear selection regardless of error
       setSelectedObjects([]);
 
-      // Only show error if it's not a "not found" case
-      if (!error.message?.includes('not found') && error.code !== 'NOT_FOUND') {
-        setError('Failed to delete some objects. Please try again.');
+      // Extract error message from API response
+      const errorMessage = error?.error || error?.message || 'Unknown error';
+      
+      // Handle specific error cases
+      if (errorMessage.includes('Unable to delete') && errorMessage.includes('currently being used in')) {
+        snackbar.showError(errorMessage);
+      } else if (!error.message?.includes('not found') && error.code !== 'NOT_FOUND') {
+        snackbar.showError('Failed to delete some resources. Please try again.');
       }
     } finally {
       setIsSubmitting(false);
@@ -506,6 +530,31 @@ export default function ObjectsPage() {
   useEffect(() => {
     fetchObjects();
   }, [fetchObjects]);
+
+  // Add window focus refresh - refresh data when user returns to the page
+  useEffect(() => {
+    const handleFocus = () => {
+      // Only refresh if the page has been loaded before and user is returning
+      if (!loading) {
+        fetchObjects();
+      }
+    };
+
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
+  }, [fetchObjects, loading]);
+
+  // Add periodic refresh every 30 seconds when page is active
+  useEffect(() => {
+    const interval = setInterval(() => {
+      // Only refresh if page is visible and not currently loading
+      if (document.visibilityState === 'visible' && !loading) {
+        fetchObjects();
+      }
+    }, 30000); // 30 seconds
+
+    return () => clearInterval(interval);
+  }, [fetchObjects, loading]);
 
   const getTypeColor = (type: string) => {
     switch (type) {
@@ -697,6 +746,21 @@ export default function ObjectsPage() {
                     )}
                   </IconButton>
                 </Tooltip>
+
+                <Tooltip title="Refresh data - Updates policy counts and other information">
+                  <IconButton 
+                    onClick={fetchObjects}
+                    disabled={loading}
+                    sx={{
+                      color: 'primary.main',
+                      '&:hover': {
+                        backgroundColor: 'primary.50',
+                      }
+                    }}
+                  >
+                    <RefreshIcon />
+                  </IconButton>
+                </Tooltip>
               </Box>
             </>
           )}
@@ -754,7 +818,25 @@ export default function ObjectsPage() {
                         )}
                       </Box>
                     </TableCell>
-                    <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', color: 'text.primary', width: '150px', minWidth: '150px' }}>
+                    <TableCell 
+                      sx={{ 
+                        fontWeight: 600, 
+                        fontSize: '0.875rem', 
+                        color: 'text.primary',
+                        width: '120px',
+                        cursor: 'pointer',
+                        '&:hover': { backgroundColor: 'grey.50' }
+                      }}
+                      onClick={() => handleSortChange('policyCount')}
+                    >
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, whiteSpace: 'nowrap' }}>
+                        Policies
+                        {sortBy === 'policyCount' && (
+                          sortOrder === 'asc' ? <ArrowUpIcon fontSize="small" /> : <ArrowDownIcon fontSize="small" />
+                        )}
+                      </Box>
+                    </TableCell>
+                    <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', color: 'text.primary', width: '180px', minWidth: '180px' }}>
                       Created By
                     </TableCell>
                     <TableCell align="center" sx={{ fontWeight: 600, fontSize: '0.875rem', color: 'text.primary', width: '120px', minWidth: '120px' }}>
@@ -765,7 +847,7 @@ export default function ObjectsPage() {
                 <TableBody>
                   {loading ? (
                     <TableRow>
-                      <TableCell colSpan={4} sx={{ textAlign: 'center', py: 4 }}>
+                      <TableCell colSpan={5} sx={{ textAlign: 'center', py: 4 }}>
                         <Typography variant="body1" color="text.secondary">
                           Loading objects...
                         </Typography>
@@ -773,7 +855,7 @@ export default function ObjectsPage() {
                     </TableRow>
                   ) : paginatedObjects.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={4} sx={{ textAlign: 'center', py: 4 }}>
+                      <TableCell colSpan={5} sx={{ textAlign: 'center', py: 4 }}>
                         <Typography variant="body1" color="text.secondary">
                           No objects found
                         </Typography>
@@ -823,7 +905,48 @@ export default function ObjectsPage() {
                               </Box>
                             </Box>
                           </TableCell>
-                          <TableCell sx={{ width: '150px', minWidth: '150px' }}>
+                          <TableCell>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                              {object.policyCount !== undefined && object.policyCount > 0 ? (
+                                <Tooltip 
+                                  title={
+                                    <Box>
+                                      <Typography variant="body2" sx={{ fontWeight: 600, mb: 1 }}>
+                                        Used in {object.policyCount} {object.policyCount === 1 ? 'policy' : 'policies'}:
+                                      </Typography>
+                                      {object.usedInPolicies?.slice(0, 5).map((policy, index) => (
+                                        <Typography key={policy.id} variant="body2" sx={{ fontSize: '0.75rem' }}>
+                                          • {policy.displayName || policy.name}
+                                        </Typography>
+                                      ))}
+                                      {object.usedInPolicies && object.usedInPolicies.length > 5 && (
+                                        <Typography variant="body2" sx={{ fontSize: '0.75rem', fontStyle: 'italic' }}>
+                                          ... and {object.usedInPolicies.length - 5} more
+                                        </Typography>
+                                      )}
+                                    </Box>
+                                  }
+                                  arrow
+                                  placement="top"
+                                >
+                                  <Chip
+                                    label={object.policyCount}
+                                    size="small"
+                                    color="primary"
+                                    sx={{ minWidth: '32px', fontWeight: 600 }}
+                                  />
+                                </Tooltip>
+                              ) : (
+                                <Chip
+                                  label="0"
+                                  size="small"
+                                  variant="outlined"
+                                  sx={{ minWidth: '32px', color: 'text.secondary' }}
+                                />
+                              )}
+                            </Box>
+                          </TableCell>
+                          <TableCell sx={{ width: '180px', minWidth: '180px' }}>
                             <Typography variant="body2" color="text.secondary">
                               {object?.metadata?.createdBy || 
                                (typeof object?.createdBy === 'string' ? object.createdBy : object?.createdBy?.name) || 
@@ -1257,200 +1380,44 @@ export default function ObjectsPage() {
         </DialogActions>
       </Dialog>
 
-      {/* Delete Confirmation Dialog */}
-      <Dialog
+      {/* Delete Confirmation Dialogs */}
+      <DeleteConfirmationDialog
         open={deleteOpen}
         onClose={handleDeleteClose}
-        maxWidth="xs"
-        fullWidth
-        PaperProps={{
-          sx: {
-            borderRadius: 2,
-          }
-        }}
-      >
-        <DialogTitle sx={{ pb: 2 }}>
-          <Typography variant="h6" fontWeight="600" color="error.main">
-            Delete Resource
-          </Typography>
-        </DialogTitle>
+        onConfirm={handleDeleteConfirm}
+        title="Delete Resource"
+        item={deleteObject ? {
+          id: deleteObject.id || deleteObject._id || '',
+          name: deleteObject.name || 'No name',
+          displayName: deleteObject.displayName || deleteObject.name || 'No name',
+          isSystem: Boolean(deleteObject.metadata?.isSystem)
+        } : undefined}
+        loading={isDeleting}
+        entityName="resource"
+        entityNamePlural="resources"
+        additionalInfo="Deleting resources may affect existing policies that reference them."
+      />
 
-        <DialogContent sx={{ pb: 2 }}>
-          {deleteObject && (
-            <Box>
-              <Typography variant="body1" gutterBottom>
-                Are you sure you want to delete this resource?
-              </Typography>
-
-              <Box sx={{
-                mt: 2,
-                p: 2,
-                bgcolor: 'grey.50',
-                borderRadius: 1,
-                border: '1px solid',
-                borderColor: 'grey.200'
-              }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                  <Avatar sx={{
-                    bgcolor: `${getTypeColor(deleteObject?.type || 'file')}.main`,
-                    width: 32,
-                    height: 32
-                  }}>
-                    {getTypeIcon(deleteObject?.type || 'file')}
-                  </Avatar>
-                  <Box>
-                    <Typography variant="subtitle2" fontWeight="600">
-                      {deleteObject?.displayName || 'No name'}
-                    </Typography>
-                    <Typography variant="caption" color="text.secondary" fontFamily="monospace">
-                      {deleteObject?.name || 'No name'}
-                    </Typography>
-                  </Box>
-                </Box>
-              </Box>
-
-              <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
-                This action cannot be undone. The resource will be permanently removed from the system.
-              </Typography>
-
-              {deleteObject?.metadata?.isSystem && (
-                <Typography variant="body2" color="error.main" sx={{ mt: 2, fontWeight: 500 }}>
-                  Warning: This is a system resource and cannot be deleted.
-                </Typography>
-              )}
-            </Box>
-          )}
-        </DialogContent>
-
-        <DialogActions sx={{ px: 3, pb: 3, gap: 1 }}>
-          <Button
-            onClick={handleDeleteClose}
-            variant="outlined"
-            disabled={isDeleting}
-            sx={{
-              textTransform: 'none',
-              minWidth: 80
-            }}
-          >
-            Cancel
-          </Button>
-          <Button
-            onClick={handleDeleteConfirm}
-            variant="contained"
-            color="error"
-            disabled={isDeleting || Boolean(deleteObject?.metadata?.isSystem)}
-            sx={{
-              textTransform: 'none',
-              minWidth: 80
-            }}
-          >
-            {isDeleting ? 'Deleting...' :
-              deleteObject?.metadata?.isSystem ? 'Cannot Delete' : 'Delete'}
-          </Button>
-        </DialogActions>
-      </Dialog>
-
-      {/* Bulk Delete Confirmation Dialog */}
-      <Dialog
+      <DeleteConfirmationDialog
         open={bulkDeleteOpen}
         onClose={handleBulkDeleteClose}
-        maxWidth="sm"
-        fullWidth
-        PaperProps={{
-          sx: {
-            borderRadius: 2,
-          }
-        }}
-      >
-        <DialogTitle sx={{ pb: 2 }}>
-          <Typography variant="h6" fontWeight="600" color="error.main">
-            Delete Multiple Resources
-          </Typography>
-        </DialogTitle>
-
-        <DialogContent sx={{ pb: 2 }}>
-          <Box>
-            <Typography variant="body1" gutterBottom>
-              Are you sure you want to delete {selectedObjects.length} selected resource{selectedObjects.length > 1 ? 's' : ''}?
-            </Typography>
-
-            <Typography variant="body2" color="text.secondary" sx={{ mt: 2, mb: 2 }}>
-              This action cannot be undone. The following resources will be permanently deleted:
-            </Typography>
-
-            <Box sx={{
-              maxHeight: '200px',
-              overflow: 'auto',
-              border: '1px solid',
-              borderColor: 'grey.200',
-              borderRadius: 1,
-              p: 1.5,
-              bgcolor: 'grey.50'
-            }}>
-              {selectedObjects.map(objectId => {
-                const object = objects.find(obj => obj.id === objectId);
-                if (!object) return null;
-
-                return (
-                  <Box key={objectId} sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1.5 }}>
-                    <Avatar sx={{
-                      bgcolor: `${getTypeColor(object?.type || 'file')}.main`,
-                      width: 28,
-                      height: 28
-                    }}>
-                      {getTypeIcon(object?.type || 'file')}
-                    </Avatar>
-                    <Box sx={{ flex: 1 }}>
-                      <Typography variant="body2" fontWeight="500">
-                        {object?.displayName || 'No name'}
-                      </Typography>
-                      <Typography variant="caption" color="text.secondary" fontFamily="monospace">
-                        {object?.name || 'No name'}
-                      </Typography>
-                    </Box>
-                    <Chip
-                      label={object?.type || 'unknown'}
-                      size="small"
-                      color={getTypeColor(object?.type || 'file') as any}
-                      variant="outlined"
-                    />
-                  </Box>
-                );
-              })}
-            </Box>
-
-            <Typography variant="body2" color="warning.dark" sx={{ mt: 2, fontWeight: 500 }}>
-              Warning: Deleting resources may affect existing policies that reference them.
-            </Typography>
-          </Box>
-        </DialogContent>
-
-        <DialogActions sx={{ px: 3, pb: 3, gap: 1 }}>
-          <Button
-            onClick={handleBulkDeleteClose}
-            variant="outlined"
-            disabled={isSubmitting}
-            sx={{
-              textTransform: 'none',
-              minWidth: 80
-            }}
-          >
-            Cancel
-          </Button>
-          <Button
-            onClick={handleBulkDeleteConfirm}
-            variant="contained"
-            color="error"
-            disabled={isSubmitting}
-            sx={{
-              textTransform: 'none',
-              minWidth: 120
-            }}
-          >
-            {isSubmitting ? 'Deleting...' : `Delete ${selectedObjects.length} Resource${selectedObjects.length > 1 ? 's' : ''}`}
-          </Button>
-        </DialogActions>
-      </Dialog>
+        onConfirm={handleBulkDeleteConfirm}
+        title="Delete Multiple Resources"
+        items={selectedObjects.map(objectId => {
+          const object = objects.find(obj => obj.id === objectId);
+          return object ? {
+            id: object.id || object._id || '',
+            name: object.name || 'No name',
+            displayName: object.displayName || object.name || 'No name',
+            isSystem: Boolean(object.metadata?.isSystem)
+          } : { id: objectId, name: objectId, displayName: objectId, isSystem: false };
+        }).filter(Boolean)}
+        loading={isSubmitting}
+        entityName="resource"
+        entityNamePlural="resources"
+        bulkMode={true}
+        additionalInfo="Deleting resources may affect existing policies that reference them."
+      />
     </DashboardLayout>
   );
 }

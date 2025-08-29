@@ -20,6 +20,8 @@ A robust, scalable Node.js backend API for the CRAFT (Attribute-Based Access Con
 - **📁 Resource Management** - Handle files, databases, APIs, and system resources
 - **⚡ Action Framework** - Categorized system actions with risk assessment
 - **🏷️ Attribute System** - Multi-category attribute management (Subject/Resource) for ABAC
+- **📊 Policy Dependency Tracking** - Real-time policy count display and dependency visualization across all entities
+- **🔒 Deletion Protection** - Prevents deletion of entities (subjects, actions, resources, attributes) currently referenced in active policies
 - **🧪 Policy Evaluation** - Real-time policy testing and validation
 - **📊 Comprehensive Logging** - Structured logging with Winston
 - **🛡️ Security Features** - Rate limiting, CORS, helmet, and input validation
@@ -172,32 +174,32 @@ src/
 - `DELETE /api/v1/policies/bulk` - Bulk delete policies
 
 ### Subjects
-- `GET /api/v1/subjects` - List subjects with pagination
+- `GET /api/v1/subjects` - List subjects with pagination and policy count tracking
 - `POST /api/v1/subjects` - Create new subject
-- `GET /api/v1/subjects/:id` - Get specific subject
+- `GET /api/v1/subjects/:id` - Get specific subject with policy dependency information
 - `PUT /api/v1/subjects/:id` - Update subject
-- `DELETE /api/v1/subjects/:id` - Delete subject
+- `DELETE /api/v1/subjects/:id` - Delete subject (with policy dependency protection)
 
 ### Actions
-- `GET /api/v1/actions` - List actions with pagination
+- `GET /api/v1/actions` - List actions with pagination and policy count tracking
 - `POST /api/v1/actions` - Create new action
-- `GET /api/v1/actions/:id` - Get specific action
+- `GET /api/v1/actions/:id` - Get specific action with policy dependency information
 - `PUT /api/v1/actions/:id` - Update action
-- `DELETE /api/v1/actions/:id` - Delete action
+- `DELETE /api/v1/actions/:id` - Delete action (with policy dependency protection)
 
 ### Resources
-- `GET /api/v1/resources` - List resources with pagination
+- `GET /api/v1/resources` - List resources with pagination and policy count tracking
 - `POST /api/v1/resources` - Create new resource
-- `GET /api/v1/resources/:id` - Get specific resource
+- `GET /api/v1/resources/:id` - Get specific resource with policy dependency information
 - `PUT /api/v1/resources/:id` - Update resource
-- `DELETE /api/v1/resources/:id` - Delete resource
+- `DELETE /api/v1/resources/:id` - Delete resource (with policy dependency protection)
 
 ### Attributes
-- `GET /api/v1/attributes` - List attributes with pagination and filtering
+- `GET /api/v1/attributes` - List attributes with pagination, filtering, and policy count tracking
 - `POST /api/v1/attributes` - Create new attribute
-- `GET /api/v1/attributes/:id` - Get specific attribute
+- `GET /api/v1/attributes/:id` - Get specific attribute with policy dependency information
 - `PUT /api/v1/attributes/:id` - Update attribute
-- `DELETE /api/v1/attributes/:id` - Delete attribute
+- `DELETE /api/v1/attributes/:id` - Delete attribute (with policy dependency protection)
 
 ### Health & Info
 - `GET /health` - Health check
@@ -219,10 +221,18 @@ npm run test:watch
 ## 🏗️ Architecture Patterns
 
 ### Clean Architecture
-- **Controllers**: Handle HTTP requests and responses
-- **Services**: Business logic and rules
+- **Controllers**: Handle HTTP requests and responses, including policy dependency tracking
+- **Services**: Business logic and rules with entity deletion protection
 - **Repositories**: Data access abstraction
 - **Models**: Data structures and validation
+
+### Policy Dependency Management
+- **Usage Tracking**: Each entity controller tracks policy dependencies using checkUsageInPolicies methods with consistent ID-based mapping
+- **Schema Consistency**: Fixed entity-policy mapping - all controllers now search by entity ID instead of name for accurate results
+- **Deletion Protection**: ValidationError thrown when attempting to delete entities referenced in active policies
+- **Real-time Counts**: Policy count and dependency information calculated on every API request
+- **Performance**: Optimized MongoDB queries using lean() for efficient policy counting
+- **Data Integrity**: Policy arrays (subjects, resources, actions) consistently store entity IDs matching controller query patterns
 
 ### Design Patterns Used
 - **Repository Pattern**: Data access abstraction

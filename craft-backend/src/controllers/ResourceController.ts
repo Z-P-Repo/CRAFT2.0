@@ -5,6 +5,7 @@ import { asyncHandler } from '@/middleware/errorHandler';
 import { PaginationHelper } from '@/utils/pagination';
 import { logger } from '@/utils/logger';
 import { Resource, IResource } from '@/models/Resource';
+import { Policy } from '@/models/Policy';
 
 export class ResourceController {
   // Get all resources with pagination and filtering
@@ -62,7 +63,23 @@ export class ResourceController {
       Resource.countDocuments(filter)
     ]);
 
-    const result = PaginationHelper.buildPaginationResult(resources, total, paginationOptions);
+    // Add policy count to each resource
+    const resourcesWithPolicyCount = await Promise.all(
+      resources.map(async (resource) => {
+        const policiesUsingResource = await ResourceController.checkResourceUsageInPolicies(resource.id);
+        return {
+          ...resource,
+          policyCount: policiesUsingResource.length,
+          usedInPolicies: policiesUsingResource.map(p => ({ 
+            id: p._id || p.id, 
+            name: p.name, 
+            displayName: p.displayName 
+          }))
+        };
+      })
+    );
+
+    const result = PaginationHelper.buildPaginationResult(resourcesWithPolicyCount, total, paginationOptions);
 
     res.status(200).json({
       success: true,
@@ -84,9 +101,21 @@ export class ResourceController {
       throw new NotFoundError('Resource not found');
     }
 
+    // Add policy count to the resource
+    const policiesUsingResource = await ResourceController.checkResourceUsageInPolicies(resource.id);
+    const resourceWithPolicyCount = {
+      ...resource,
+      policyCount: policiesUsingResource.length,
+      usedInPolicies: policiesUsingResource.map(p => ({ 
+        id: p._id || p.id, 
+        name: p.name, 
+        displayName: p.displayName 
+      }))
+    };
+
     res.status(200).json({
       success: true,
-      data: resource,
+      data: resourceWithPolicyCount,
     });
   });
 
@@ -261,9 +290,26 @@ export class ResourceController {
       throw new ValidationError('Insufficient permissions to delete resource');
     }
 
+    // Prevent deletion of system resources
+    if (resource.metadata.isSystem) {
+      throw new ValidationError('Cannot delete system resources');
+    }
+
     // Check if resource has children
     if (resource.children && resource.children.length > 0) {
       throw new ValidationError('Cannot delete resource with children. Delete or reassign children first.');
+    }
+
+    // Check if resource is used in any policies
+    console.log(`Attempting to delete resource: ${resource.displayName} (name: ${resource.name}, id: ${resource.id})`);
+    const policiesUsingResource = await ResourceController.checkResourceUsageInPolicies(resource.id);
+    console.log(`Checking resource usage for: ${resource.name} (id: ${resource.id}), found ${policiesUsingResource.length} policies`);
+    if (policiesUsingResource.length > 0) {
+      const policyCount = policiesUsingResource.length;
+      
+      throw new ValidationError(
+        `Unable to delete "${resource.displayName}" - This resource is currently being used in ${policyCount} ${policyCount === 1 ? 'policy' : 'policies'}`
+      );
     }
 
     // Delete by MongoDB _id to ensure we delete the correct resource
@@ -492,6 +538,39 @@ export class ResourceController {
       throw new ValidationError('Resource IDs array is required');
     }
 
+    // Get resources to be deleted
+    const resourcesToDelete = await Resource.find({ id: { $in: resourceIds } });
+
+    // Prevent deletion of system resources
+    const systemResources = resourcesToDelete.filter(resource => resource.metadata.isSystem);
+    if (systemResources.length > 0) {
+      const systemResourceNames = systemResources.map(resource => resource.displayName).join(', ');
+      throw new ValidationError(`Cannot delete system resources: ${systemResourceNames}`);
+    }
+
+    // Check if any resources are used in policies
+    const resourcesInUse: { resource: string; policies: string[] }[] = [];
+    for (const resource of resourcesToDelete) {
+      console.log(`Checking bulk delete for resource: ${resource.displayName} (name: ${resource.name}, id: ${resource.id})`);
+      const policiesUsingResource = await ResourceController.checkResourceUsageInPolicies(resource.id);
+      console.log(`Found ${policiesUsingResource.length} policies using resource: ${resource.name}`);
+      if (policiesUsingResource.length > 0) {
+        resourcesInUse.push({
+          resource: resource.displayName,
+          policies: policiesUsingResource.map(p => p.name)
+        });
+      }
+    }
+
+    if (resourcesInUse.length > 0) {
+      const resourceCount = resourcesInUse.length;
+      const totalPolicies = [...new Set(resourcesInUse.flatMap(usage => usage.policies))].length;
+      
+      throw new ValidationError(
+        `Unable to delete ${resourceCount} ${resourceCount === 1 ? 'resource' : 'resources'} - ${resourceCount === 1 ? 'It is' : 'They are'} currently being used in ${totalPolicies} ${totalPolicies === 1 ? 'policy' : 'policies'}`
+      );
+    }
+
     const result = await Resource.deleteMany({ id: { $in: resourceIds } });
 
     logger.info(`Bulk delete performed on ${result.deletedCount} resources by ${req.user?.email}`);
@@ -504,4 +583,17 @@ export class ResourceController {
       message: `${result.deletedCount} resources deleted successfully`,
     });
   });
+
+  private static async checkResourceUsageInPolicies(resourceId: string): Promise<any[]> {
+    // Search for policies that use this resource
+    // We need to check both resources array and rules.object.type
+    const policies = await Policy.find({
+      $or: [
+        { 'resources': resourceId },
+        { 'rules.object.type': resourceId }
+      ]
+    }, 'id name displayName').lean();
+
+    return policies;
+  }
 }

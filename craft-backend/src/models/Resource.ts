@@ -41,7 +41,6 @@ const ResourceSchema = new Schema<IResource>({
     type: String,
     required: true,
     unique: true,
-    index: true,
   },
   name: {
     type: String,

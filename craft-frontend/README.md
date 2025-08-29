@@ -20,6 +20,9 @@ A modern, responsive React-based dashboard for managing the CRAFT (Attribute-Bas
 - **📁 Resource Management** - Manage system resources, files, databases, and APIs (view-only for Basic users)
 - **⚡ Action Management** - Define and categorize system actions with risk levels (view-only for Basic users)
 - **🏷️ Attribute Management** - Configure multi-category ABAC attributes (Subject/Resource) for context-aware decisions (view-only for Basic users)
+- **📈 Policy Dependency Tracking** - Real-time policy count display with tooltips showing up to 5 policy names across all entity management pages
+- **🔄 Auto-Refresh Capabilities** - Automatic data synchronization using window focus events and 30-second periodic updates
+- **🛡️ Deletion Protection UI** - User-friendly error messages when attempting to delete entities referenced in active policies
 - **🧪 Policy Tester** - Interactive policy evaluation and testing with detailed results
 - **📊 Real-time Statistics** - Dashboard with live metrics and activity tracking
 - **🎨 Professional UI/UX** - Material-UI components with consistent theming
@@ -147,14 +150,14 @@ src/
 ### Protected Routes
 - **Dashboard** (`/dashboard`): Main application dashboard (all users)
 - **Users** (`/users`): Complete user management with role changes (Admin/Super Admin only for CUD operations)
-- **Subjects** (`/subjects`): User and role management (view-only for Basic users)
-- **Resources** (`/resources`): Resource management (view-only for Basic users)
-- **Actions** (`/actions`): Action definitions (view-only for Basic users)
+- **Subjects** (`/subjects`): User and role management with policy count display and auto-refresh (view-only for Basic users)
+- **Resources** (`/resources`): Resource management with policy dependency tracking and manual refresh button (view-only for Basic users)
+- **Actions** (`/actions`): Action definitions with policy count badges and deletion protection (view-only for Basic users)
 - **Policies** (`/policies`): Access policy management with comprehensive pagination and filtering (view-only for Basic users)
   - **Policy Creation** (`/policies/create`): 4-step wizard for policy creation (Admin/Super Admin only)
   - **Policy View** (`/policies/[id]`): Dedicated policy viewing page (all users)
   - **Policy Edit** (`/policies/[id]/edit`): Dedicated policy editing page (Admin/Super Admin only)
-- **Attributes** (`/attributes`): Multi-category attribute system (view-only for Basic users)
+- **Attributes** (`/attributes`): Multi-category attribute system with policy count tooltips and auto-refresh (view-only for Basic users)
 - **Tester** (`/tester`): Policy evaluation testing (all users)
 
 ## 🎨 UI Components
@@ -167,20 +170,25 @@ src/
 
 ### Component Library
 - Authentication forms
-- Data tables with pagination
-- Modal dialogs
-- Form components
+- Data tables with pagination and sortable policy count columns
+- Modal dialogs with deletion confirmation and protection warnings
+- Form components with validation
 - Navigation components
 - Dashboard cards
+- Policy count chips with Material-UI tooltips
+- Refresh buttons with loading states
 
 ## 🔧 API Integration
 
 ### API Client Features
 - Automatic request/response interceptors
 - JWT token management
-- Error handling and retry logic
+- Error handling and retry logic with policy dependency error support
 - Request ID tracking
 - Automatic token refresh
+- Real-time policy count fetching with consistent ID-based entity mapping
+- Optimized entity dependency queries
+- Fixed schema consistency between frontend policy creation and backend policy tracking
 
 ### Available API Methods
 ```typescript
@@ -229,11 +237,23 @@ npm run test:coverage
 - Component organization
 
 ### Best Practices
-- Use TypeScript interfaces
+- Use TypeScript interfaces for all API responses including policy count data
 - Implement error boundaries
 - Follow React best practices
-- Write meaningful tests
+- Write meaningful tests including policy dependency scenarios
 - Use semantic HTML
+- Implement consistent auto-refresh patterns across entity pages
+- Use Material-UI Chip components for policy count display
+- Add tooltips for enhanced user experience
+
+### Policy Dependency UI Patterns
+- **Policy Count Display**: Use `<Chip>` components with `color="primary"` for policy counts with accurate ID-based backend mapping
+- **Tooltips**: Show up to 5 policy names in tooltips, with "and X more" for additional policies  
+- **Auto-refresh**: Implement window focus and 30-second periodic refresh for data consistency
+- **Manual Refresh**: Provide refresh buttons with loading states and descriptive tooltips
+- **Column Headers**: Use single-line headers with appropriate widths (180px for "Created By")
+- **Error Handling**: Display user-friendly messages for deletion protection errors
+- **Data Consistency**: Policy creation and display now use consistent entity ID references ensuring accurate policy counts and deletion protection
 
 ## 🚀 Deployment
 

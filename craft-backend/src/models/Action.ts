@@ -30,7 +30,6 @@ const ActionSchema = new Schema<IAction>({
     type: String,
     required: true,
     unique: true,
-    index: true,
   },
   name: {
     type: String,
