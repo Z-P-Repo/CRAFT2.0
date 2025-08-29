@@ -55,6 +55,7 @@ import {
 } from '@mui/icons-material';
 import { useRouter } from 'next/navigation';
 import DashboardLayout from '@/components/layout/DashboardLayout';
+import DeleteConfirmationDialog from '@/components/common/DeleteConfirmationDialog';
 import { apiClient } from '@/lib/api';
 import { ApiResponse } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
@@ -697,60 +698,49 @@ export default function PoliciesPage() {
         </Popover>
 
         {/* Delete Confirmation Dialog */}
-        <Dialog
+        <DeleteConfirmationDialog
           open={deleteOpen}
           onClose={handleDeleteClose}
-          maxWidth="sm"
-          fullWidth
-        >
-          <DialogTitle>Delete Policy</DialogTitle>
-          <DialogContent>
-            <Typography>
-              Are you sure you want to delete the policy "{deletePolicy?.name}"? This action cannot be undone.
-            </Typography>
-          </DialogContent>
-          <DialogActions>
-            <Button onClick={handleDeleteClose} disabled={deleteLoading}>
-              Cancel
-            </Button>
-            <Button 
-              onClick={handleDeleteConfirm} 
-              color="error" 
-              variant="contained"
-              disabled={deleteLoading}
-            >
-              {deleteLoading ? <CircularProgress size={20} /> : 'Delete'}
-            </Button>
-          </DialogActions>
-        </Dialog>
+          onConfirm={handleDeleteConfirm}
+          title="Delete Policy"
+          item={deletePolicy ? {
+            id: deletePolicy._id || deletePolicy.id || '',
+            name: deletePolicy.name || 'No name',
+            displayName: deletePolicy.name || 'No name',
+            isSystem: false
+          } : undefined}
+          loading={deleteLoading}
+          entityName="policy"
+          entityNamePlural="policies"
+          additionalInfo="This will permanently remove the policy and may affect access control decisions."
+        />
 
         {/* Bulk Delete Confirmation Dialog */}
-        <Dialog
+        <DeleteConfirmationDialog
           open={bulkDeleteOpen}
           onClose={handleBulkDeleteClose}
-          maxWidth="sm"
-          fullWidth
-        >
-          <DialogTitle>Delete Selected Policies</DialogTitle>
-          <DialogContent>
-            <Typography>
-              Are you sure you want to delete {selectedPolicies.length} selected policies? This action cannot be undone.
-            </Typography>
-          </DialogContent>
-          <DialogActions>
-            <Button onClick={handleBulkDeleteClose} disabled={bulkDeleteLoading}>
-              Cancel
-            </Button>
-            <Button 
-              onClick={handleBulkDeleteConfirm} 
-              color="error" 
-              variant="contained"
-              disabled={bulkDeleteLoading}
-            >
-              {bulkDeleteLoading ? <CircularProgress size={20} /> : 'Delete'}
-            </Button>
-          </DialogActions>
-        </Dialog>
+          onConfirm={handleBulkDeleteConfirm}
+          title="Delete Multiple Policies"
+          items={selectedPolicies.map(policyId => {
+            const policy = policies?.find(p => p.id === policyId);
+            return policy ? {
+              id: policy._id || policy.id || '',
+              name: policy.name || 'No name',
+              displayName: policy.name || 'No name',
+              isSystem: false
+            } : {
+              id: policyId,
+              name: 'Unknown Policy',
+              displayName: 'Unknown Policy',
+              isSystem: false
+            };
+          })}
+          loading={bulkDeleteLoading}
+          entityName="policy"
+          entityNamePlural="policies"
+          bulkMode={true}
+          additionalInfo="This will permanently remove all selected policies and may affect access control decisions."
+        />
 
         {/* Create Policy FAB */}
         {canCreate(currentUser) && (

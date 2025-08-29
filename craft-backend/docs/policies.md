@@ -2,6 +2,16 @@
 
 The CRAFT backend policy engine provides comprehensive Attribute-Based Access Control (ABAC) functionality for evaluating access decisions based on subject, resource, action, and environment attributes.
 
+## ✅ Latest Features (August 2025)
+
+- **Enhanced Policy Schema**: Support for JSON format rules with prepopulation capabilities
+- **Dependency Tracking**: Real-time tracking of policy dependencies on subjects, resources, actions, and attributes
+- **Bulk Operations**: Efficient bulk delete operations with transaction support
+- **Entity Protection**: Prevents deletion of entities referenced in active policies
+- **Optimized Queries**: MongoDB lean() queries for improved performance
+- **Schema Consistency**: Fixed entity-policy mapping using consistent ID-based references
+- **Advanced Filtering**: Complex policy filtering by status, effect, creation date, and entity references
+
 ## Overview
 
 The policy engine is the core component that evaluates access control policies to determine whether a subject can perform a specific action on a particular resource under given environmental conditions. It supports complex rule evaluation, policy combinations, and real-time decision making.

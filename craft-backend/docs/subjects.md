@@ -2,6 +2,14 @@
 
 The Subject Management module handles entities that can request access to resources in the ABAC system. Subjects can be users, groups, roles, or any entity with attributes that participate in access control decisions.
 
+## ✅ Latest Features (August 2025)
+
+- **Policy Dependency Protection**: Prevents deletion of subjects referenced in active policies with ValidationError responses
+- **Real-time Policy Counting**: Accurate policy count tracking using ID-based entity mapping
+- **Enhanced Error Handling**: Standardized error responses for frontend delete modal integration
+- **Schema Consistency**: Fixed entity-policy mapping ensuring accurate dependency tracking
+- **Optimized Queries**: MongoDB lean() queries for efficient policy counting
+
 ## Overview
 
 The subject management system provides a flexible way to define and manage entities that require access control evaluation. Subjects are characterized by their attributes and relationships within the organizational structure.
@@ -404,7 +412,7 @@ static async updateSubject(req: Request, res: Response): Promise<void> {
 }
 ```
 
-#### Delete Subject
+#### Delete Subject (with Policy Protection)
 
 ```typescript
 static async deleteSubject(req: Request, res: Response): Promise<void> {
@@ -417,6 +425,39 @@ static async deleteSubject(req: Request, res: Response): Promise<void> {
         success: false,
         error: 'Subject not found',
         code: 'SUBJECT_NOT_FOUND',
+      });
+      return;
+    }
+
+    // Check if subject is used in any active policies
+    const checkUsageInPolicies = async (subjectId: string) => {
+      const policies = await Policy.find({
+        $or: [
+          { subjects: subjectId },
+          { 'rules.subject': subjectId }
+        ],
+        status: 'Active'
+      }).select('id name').lean();
+      
+      return policies;
+    };
+
+    const policiesUsingSubject = await checkUsageInPolicies(id);
+    if (policiesUsingSubject.length > 0) {
+      const policyNames = policiesUsingSubject.slice(0, 5).map(p => p.name);
+      const additionalCount = Math.max(0, policiesUsingSubject.length - 5);
+      
+      res.status(400).json({
+        success: false,
+        error: `Cannot delete subject. It is currently used in ${policiesUsingSubject.length} active ${policiesUsingSubject.length === 1 ? 'policy' : 'policies'}: ${policyNames.join(', ')}${additionalCount > 0 ? ` and ${additionalCount} more` : ''}`,
+        code: 'VALIDATION_ERROR',
+        details: {
+          type: 'ENTITY_IN_USE',
+          entityType: 'subject',
+          entityId: id,
+          policyCount: policiesUsingSubject.length,
+          policyNames: policyNames
+        }
       });
       return;
     }

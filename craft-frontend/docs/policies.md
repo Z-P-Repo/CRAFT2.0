@@ -2,6 +2,16 @@
 
 The Policy Management module provides a comprehensive interface for creating, editing, and managing ABAC (Attribute-Based Access Control) policies in the CRAFT system.
 
+## ✅ Latest Updates (August 2025)
+
+- **Standardized Delete Modals**: Professional delete confirmation dialogs with close icons and consistent design
+- **4-Step Policy Creation Wizard**: Dedicated policy creation with step-by-step guidance
+- **Dedicated View/Edit Pages**: Full-page policy management instead of modals
+- **Advanced Filtering & Sorting**: Comprehensive policy filtering by status, effect, and search
+- **Bulk Operations**: Select and delete multiple policies with standardized confirmation dialogs
+- **Role-Based Access Control**: View-only access for Basic users; full CRUD for Admin/Super Admin
+- **Human-readable Rules**: Natural language policy display and JSON format support
+
 ## Overview
 
 The policy management system allows administrators to define access control rules that determine whether a subject can perform a specific action on a particular object based on attributes and conditions.
@@ -14,13 +24,18 @@ The policy management system allows administrators to define access control rule
 
 The main policy management interface with CRUD operations and visual analytics.
 
-#### Features
-- **Policy Listing**: Paginated table with search and filtering
-- **CRUD Operations**: Create, read, update, delete policies
-- **Status Management**: Active, Inactive, Draft policy states
-- **Effect Types**: Allow/Deny policy effects
-- **Statistics Dashboard**: Policy metrics and analytics
-- **Responsive Design**: Works on all device sizes
+#### Features (Updated August 2025)
+- **✅ Policy Listing**: Paginated table with advanced search and filtering
+- **✅ CRUD Operations**: Create, read, update, delete policies (Admin/Super Admin only for CUD)
+- **✅ Status Management**: Active, Inactive, Draft policy states with visual indicators
+- **✅ Effect Types**: Allow/Deny policy effects with color-coded chips
+- **✅ Statistics Dashboard**: Real-time policy metrics and analytics
+- **✅ Responsive Design**: Optimized for all device sizes
+- **✅ Standardized Delete Modals**: Professional confirmation dialogs with system protection
+- **✅ 4-Step Creation Wizard**: Guided policy creation process
+- **✅ Dedicated Pages**: Full-page view and edit interfaces
+- **✅ Bulk Operations**: Multi-select and bulk delete functionality
+- **✅ Permission-Based UI**: Role-appropriate interface elements
 
 ## Data Models
 

@@ -2,6 +2,14 @@
 
 The Subject Management module provides a comprehensive interface for managing users, groups, and roles within the CRAFT ABAC system. This module handles the creation, editing, and administration of all subject entities that can be granted or denied access.
 
+## ✅ Latest Updates (August 2025)
+
+- **Standardized Delete Modals**: Professional delete confirmation dialogs with close icons and system protection warnings
+- **Policy Dependency Tracking**: Real-time policy count display with accurate ID-based entity mapping
+- **Auto-refresh Capabilities**: Window focus and periodic data synchronization 
+- **Deletion Protection**: Prevents deletion of subjects referenced in active policies
+- **Role-Based Access Control**: View-only access for Basic users; full CRUD for Admin/Super Admin
+
 ## Overview
 
 Subject management is a core component of the ABAC system where subjects represent entities (users, groups, roles) that request access to resources. The module provides full CRUD operations with advanced filtering, search capabilities, and detailed profile management.
@@ -126,6 +134,27 @@ const SubjectCard = ({ subject }: { subject: Subject }) => (
     </CardContent>
   </Card>
 );
+```
+
+### Standardized Delete Confirmation Dialog
+
+```typescript
+<DeleteConfirmationDialog
+  open={deleteOpen}
+  onClose={handleDeleteClose}
+  onConfirm={handleDeleteConfirm}
+  title="Delete Subject"
+  item={deleteSubject ? {
+    id: deleteSubject._id || deleteSubject.id || '',
+    name: deleteSubject.name || 'No name',
+    displayName: deleteSubject.name || 'No name',
+    isSystem: false
+  } : undefined}
+  loading={deleteLoading}
+  entityName="subject"
+  entityNamePlural="subjects"
+  additionalInfo="This will permanently remove the subject and may affect access control decisions."
+/>
 ```
 
 ### Subject Creation Dialog
