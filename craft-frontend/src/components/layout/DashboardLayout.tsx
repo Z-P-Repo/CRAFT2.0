@@ -33,6 +33,7 @@ import {
   AccountCircle,
   ExitToApp as LogoutIcon,
   ChevronLeft as ChevronLeftIcon,
+  Timeline as TimelineIcon,
 } from '@mui/icons-material';
 import { useRouter, usePathname } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
@@ -51,6 +52,7 @@ const menuItems = [
   { text: 'Resources', icon: FolderIcon, path: '/resources' },
   { text: 'Actions', icon: ActionIcon, path: '/actions' },
   { text: 'Attributes', icon: AttributeIcon, path: '/attributes' },
+  { text: 'Activity', icon: TimelineIcon, path: '/activity' },
   { text: 'Users', icon: AccountCircle, path: '/users' },
   { text: 'Policy Tester', icon: TesterIcon, path: '/tester' },
 ];

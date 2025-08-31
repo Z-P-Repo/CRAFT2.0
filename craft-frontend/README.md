@@ -24,6 +24,7 @@ A modern, responsive React-based dashboard for managing the CRAFT (Attribute-Bas
 - **🔄 Auto-Refresh Capabilities** - Automatic data synchronization using window focus events and 30-second periodic updates
 - **🛡️ Deletion Protection UI** - User-friendly error messages when attempting to delete entities referenced in active policies
 - **🗑️ Standardized Delete Modals** - Clean, professional delete confirmation dialogs with close icons, system item warnings, and consistent design across all modules (Subjects, Resources, Actions, Attributes, Users)
+- **📋 Activity Monitoring** - Comprehensive activity logging and audit trail system with real-time activity feed, advanced filtering, and detailed activity views
 - **🧪 Policy Tester** - Interactive policy evaluation and testing with detailed results
 - **📊 Real-time Statistics** - Dashboard with live metrics and activity tracking
 - **🎨 Professional UI/UX** - Material-UI components with consistent theming
@@ -117,18 +118,22 @@ src/
 │   ├── actions/        # Actions management
 │   ├── resources/     # Resources management
 │   ├── attributes/     # Attributes management
+│   ├── activity/       # Activity monitoring and audit logs
 │   ├── layout.tsx      # Root layout with dashboard
 │   └── page.tsx        # Home page
 ├── components/         # Reusable UI components
+│   ├── activity/       # Activity-related components
+│   │   └── ActivityDetailModal.tsx # Activity detail modal
 │   └── layout/         # Layout components
 │       └── DashboardLayout.tsx # Main dashboard layout
 ├── contexts/           # React contexts
 │   └── AuthContext.tsx # Authentication context
 ├── hooks/              # Custom React hooks
 ├── lib/                # Libraries and utilities
-│   └── api.ts          # API client with interceptors
+│   ├── api.ts          # API client with interceptors
+│   └── activityService.ts # Activity tracking service
 ├── types/              # TypeScript type definitions
-│   └── index.ts        # Complete type definitions
+│   └── index.ts        # Complete type definitions (includes Activity types)
 ├── utils/              # Utility functions
 └── styles/             # Global styles and themes
 ```
@@ -159,6 +164,7 @@ src/
   - **Policy View** (`/policies/[id]`): Dedicated policy viewing page (all users)
   - **Policy Edit** (`/policies/[id]/edit`): Dedicated policy editing page (Admin/Super Admin only)
 - **Attributes** (`/attributes`): Multi-category attribute system with policy count tooltips and auto-refresh (view-only for Basic users)
+- **Activity** (`/activity`): Comprehensive activity monitoring with real-time audit logs, advanced filtering, and detailed activity views (all users)
 - **Tester** (`/tester`): Policy evaluation testing (all users)
 
 ## 🎨 UI Components
@@ -200,6 +206,13 @@ apiClient.register(userData)  // Creates Basic role user by default
 apiClient.logout()
 apiClient.getProfile()
 apiClient.validateToken()
+
+// Activity Management
+apiClient.getActivities(params)
+apiClient.getActivity(id)
+apiClient.createActivity(activity)
+apiClient.getActivityStats()
+apiClient.exportActivities(filters)
 
 // Generic CRUD
 apiClient.get(url, params)
@@ -340,5 +353,47 @@ For support and questions:
 
 ---
 
-*Last updated: August 29, 2025*  
+## 📋 Activity System
+
+The CRAFT system includes a comprehensive activity monitoring and audit trail system that tracks all significant events across the application.
+
+### Activity Features
+- **Real-time Activity Feed** - Live updates of system activities with automatic refresh
+- **Advanced Filtering** - Filter by category, severity, type, actor, and date range
+- **Activity Categories** - 8 main categories: Security, Administration, Compliance, Operation, Configuration, Integration, Monitoring, User Activity
+- **Severity Levels** - 4 levels: Low, Medium, High, Critical with color-coded indicators
+- **Detailed Activity Views** - Modal dialogs with complete activity information including metadata
+- **API Status Detection** - Automatic fallback to demo mode when backend is unavailable
+- **Export Capabilities** - CSV and JSON export for compliance and reporting
+- **Smart Activity Tracking** - Automatic activity creation throughout the application
+
+### Activity Types Tracked
+- **Authentication Events** - Login, logout, password changes
+- **Authorization Events** - Access granted/denied, permission checks
+- **Policy Management** - Policy creation, updates, deletions
+- **User Management** - User account changes, role modifications
+- **Resource Management** - Resource creation, updates, deletions
+- **System Configuration** - Settings changes, configuration updates
+- **Security Events** - Suspicious activities, security violations
+- **Audit Activities** - Compliance checks, system audits
+
+### Activity Service Integration
+The activity system provides easy integration throughout the application:
+
+```typescript
+import { trackAuth, trackPolicy, trackUser } from '@/lib/activityService';
+
+// Track authentication events
+await trackAuth('login', true);
+
+// Track policy changes
+await trackPolicy('created', 'policy-123', 'New Security Policy');
+
+// Track user management
+await trackUser('updated', 'user-456', 'John Doe');
+```
+
+---
+
+*Last updated: August 31, 2025*  
 🤖 *Generated and maintained with [Claude Code](https://claude.ai/code)*

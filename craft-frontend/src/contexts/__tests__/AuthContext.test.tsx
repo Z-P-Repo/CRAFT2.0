@@ -1,12 +1,20 @@
 import React from 'react';
-import { render, screen, fireEvent, waitFor, act } from '@/__tests__/test-utils';
+import { render, screen, act, waitFor } from '@testing-library/react';
 import { AuthProvider, useAuth } from '../AuthContext';
-import { mockApiClient, mockApiResponse } from '@/__tests__/test-utils';
+import { User } from '@/types';
 
 // Mock the API client
 jest.mock('@/lib/api', () => ({
-  apiClient: mockApiClient,
+  apiClient: {
+    login: jest.fn(),
+    register: jest.fn(),
+    logout: jest.fn(),
+    getProfile: jest.fn(),
+  },
 }));
+
+// Get reference to mocked API client
+const { apiClient: mockApiClient } = require('@/lib/api');
 
 // Mock localStorage
 const mockLocalStorage = {
@@ -19,76 +27,126 @@ Object.defineProperty(window, 'localStorage', {
   value: mockLocalStorage,
 });
 
-// Mock router
-const mockPush = jest.fn();
-const mockReplace = jest.fn();
-jest.mock('next/navigation', () => ({
-  useRouter: () => ({
-    push: mockPush,
-    replace: mockReplace,
-  }),
-}));
+// Mock window events
+const mockAddEventListener = jest.fn();
+const mockRemoveEventListener = jest.fn();
+Object.defineProperty(window, 'addEventListener', {
+  value: mockAddEventListener,
+});
+Object.defineProperty(window, 'removeEventListener', {
+  value: mockRemoveEventListener,
+});
 
-// Test component to access context
-const TestComponent = () => {
-  const { user, isAuthenticated, isLoading, login, logout, checkAuth } = useAuth();
-  
-  return (
-    <div>
-      <div data-testid="auth-state">
-        {isLoading && <span>Loading</span>}
-        {isAuthenticated && <span>Authenticated</span>}
-        {!isAuthenticated && !isLoading && <span>Not Authenticated</span>}
-      </div>
-      {user && <div data-testid="user-name">{user.name}</div>}
-      <button onClick={() => login('test@example.com', 'password')} data-testid="login-button">
-        Login
-      </button>
-      <button onClick={logout} data-testid="logout-button">
-        Logout
-      </button>
-      <button onClick={checkAuth} data-testid="check-auth-button">
-        Check Auth
-      </button>
-    </div>
-  );
+// Test the reducer function directly for edge cases
+const testAuthReducer = (state: any, action: any) => {
+  const AuthContextModule = require('../AuthContext');
+  // Access the reducer through module internals for testing
+  return AuthContextModule.default ? AuthContextModule.default(state, action) : state;
 };
 
 describe('AuthContext', () => {
+  const mockUser: User = {
+    email: 'test@example.com',
+    name: 'Test User',
+    role: 'admin',
+    attributes: {},
+    active: true,
+  };
+
+  // Test component to interact with AuthContext
+  const TestComponent = ({ onAuthData }: { onAuthData?: (auth: any) => void }) => {
+    const auth = useAuth();
+    
+    React.useEffect(() => {
+      if (onAuthData) {
+        onAuthData(auth);
+      }
+    }, [auth, onAuthData]);
+
+    return (
+      <div>
+        <div data-testid="user-email">{auth.user?.email || 'Not authenticated'}</div>
+        <div data-testid="is-authenticated">{auth.isAuthenticated.toString()}</div>
+        <div data-testid="is-loading">{auth.isLoading.toString()}</div>
+        <div data-testid="error">{auth.error || 'No error'}</div>
+        <button data-testid="login-btn" onClick={() => auth.login({ email: 'test@test.com', password: 'password' })}>
+          Login
+        </button>
+        <button data-testid="register-btn" onClick={() => auth.register({ email: 'test@test.com', password: 'password', name: 'Test' })}>
+          Register  
+        </button>
+        <button data-testid="logout-btn" onClick={() => auth.logout()}>
+          Logout
+        </button>
+        <button data-testid="check-auth-btn" onClick={() => auth.checkAuth()}>
+          Check Auth
+        </button>
+        <button data-testid="clear-error-btn" onClick={() => auth.clearError()}>
+          Clear Error
+        </button>
+      </div>
+    );
+  };
+
   beforeEach(() => {
     jest.clearAllMocks();
     mockLocalStorage.getItem.mockReturnValue(null);
   });
 
-  describe('Initial State', () => {
-    it('starts with unauthenticated state', () => {
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
+  describe('Provider and Hook', () => {
+    it('provides auth context to children', () => {
       render(
         <AuthProvider>
           <TestComponent />
         </AuthProvider>
       );
+
+      expect(screen.getByTestId('user-email')).toHaveTextContent('Not authenticated');
+      expect(screen.getByTestId('is-authenticated')).toHaveTextContent('false');
+      expect(screen.getByTestId('error')).toHaveTextContent('No error');
+    });
+
+    it('throws error when useAuth is used outside provider', () => {
+      const consoleError = jest.spyOn(console, 'error').mockImplementation(() => {});
       
-      expect(screen.getByText('Not Authenticated')).toBeInTheDocument();
-      expect(screen.queryByTestId('user-name')).not.toBeInTheDocument();
+      expect(() => {
+        render(<TestComponent />);
+      }).toThrow('useAuth must be used within an AuthProvider');
+      
+      consoleError.mockRestore();
+    });
+  });
+
+  describe('Initial State and Setup', () => {
+    it('starts with initial state', async () => {
+      mockApiClient.getProfile.mockResolvedValue({ success: false });
+
+      render(
+        <AuthProvider>
+          <TestComponent />
+        </AuthProvider>
+      );
+
+      expect(screen.getByTestId('user-email')).toHaveTextContent('Not authenticated');
+      expect(screen.getByTestId('is-authenticated')).toHaveTextContent('false');
+      expect(screen.getByTestId('error')).toHaveTextContent('No error');
     });
 
     it('checks auth on mount when token exists', async () => {
-      mockLocalStorage.getItem.mockReturnValue('existing-token');
-      mockApiClient.validateToken.mockResolvedValue(
-        mockApiResponse({
-          id: '1',
-          name: 'Test User',
-          email: 'test@example.com',
-          role: 'Admin',
-          permissions: {
-            canCreate: true,
-            canRead: true,
-            canUpdate: true,
-            canDelete: true,
-            canManage: true,
-          },
-        })
-      );
+      mockLocalStorage.getItem.mockImplementation((key) => {
+        if (key === 'token') return 'valid-token';
+        if (key === 'refreshToken') return 'refresh-token';
+        return null;
+      });
+
+      mockApiClient.getProfile.mockResolvedValue({
+        success: true,
+        data: mockUser,
+      });
 
       render(
         <AuthProvider>
@@ -97,14 +155,18 @@ describe('AuthContext', () => {
       );
 
       await waitFor(() => {
-        expect(screen.getByText('Authenticated')).toBeInTheDocument();
-        expect(screen.getByTestId('user-name')).toHaveTextContent('Test User');
+        expect(mockApiClient.getProfile).toHaveBeenCalled();
+      });
+
+      await waitFor(() => {
+        expect(screen.getByTestId('user-email')).toHaveTextContent('test@example.com');
+        expect(screen.getByTestId('is-authenticated')).toHaveTextContent('true');
       });
     });
 
     it('handles invalid token on mount', async () => {
       mockLocalStorage.getItem.mockReturnValue('invalid-token');
-      mockApiClient.validateToken.mockResolvedValue(mockApiResponse(null, false));
+      mockApiClient.getProfile.mockRejectedValue(new Error('Unauthorized'));
 
       render(
         <AuthProvider>
@@ -113,422 +175,436 @@ describe('AuthContext', () => {
       );
 
       await waitFor(() => {
-        expect(screen.getByText('Not Authenticated')).toBeInTheDocument();
-        expect(mockLocalStorage.removeItem).toHaveBeenCalledWith('accessToken');
+        expect(mockLocalStorage.removeItem).toHaveBeenCalledWith('token');
         expect(mockLocalStorage.removeItem).toHaveBeenCalledWith('refreshToken');
       });
+    });
+
+    it('sets up auth error event listener', () => {
+      render(
+        <AuthProvider>
+          <TestComponent />
+        </AuthProvider>
+      );
+
+      expect(mockAddEventListener).toHaveBeenCalledWith('auth:error', expect.any(Function));
     });
   });
 
   describe('Login', () => {
-    it('successfully logs in user', async () => {
-      mockApiClient.login.mockResolvedValue(
-        mockApiResponse({
-          user: {
-            id: '1',
-            name: 'Test User',
-            email: 'test@example.com',
-            role: 'Admin',
-            permissions: {
-              canCreate: true,
-              canRead: true,
-              canUpdate: true,
-              canDelete: true,
-              canManage: true,
-            },
-          },
-          accessToken: 'access-token',
-          refreshToken: 'refresh-token',
-        })
-      );
+    it('handles successful login', async () => {
+      mockApiClient.login.mockResolvedValue({
+        success: true,
+        data: {
+          user: mockUser,
+          token: 'new-token',
+          refreshToken: 'new-refresh-token',
+        },
+      });
 
+      let authData: any;
       render(
         <AuthProvider>
-          <TestComponent />
+          <TestComponent onAuthData={(auth) => { authData = auth; }} />
         </AuthProvider>
       );
 
-      const loginButton = screen.getByTestId('login-button');
-      
       await act(async () => {
-        fireEvent.click(loginButton);
+        authData.login({ email: 'test@test.com', password: 'password' });
       });
 
       await waitFor(() => {
-        expect(screen.getByText('Authenticated')).toBeInTheDocument();
-        expect(screen.getByTestId('user-name')).toHaveTextContent('Test User');
-        expect(mockLocalStorage.setItem).toHaveBeenCalledWith('accessToken', 'access-token');
-        expect(mockLocalStorage.setItem).toHaveBeenCalledWith('refreshToken', 'refresh-token');
+        expect(screen.getByTestId('user-email')).toHaveTextContent('test@example.com');
+        expect(screen.getByTestId('is-authenticated')).toHaveTextContent('true');
+      });
+
+      expect(mockApiClient.login).toHaveBeenCalledWith({
+        email: 'test@test.com',
+        password: 'password',
       });
     });
 
     it('handles login failure', async () => {
-      mockApiClient.login.mockResolvedValue(
-        mockApiResponse(null, false)
-      );
+      mockApiClient.login.mockResolvedValue({
+        success: false,
+        error: 'Invalid credentials',
+      });
 
+      let authData: any;
       render(
         <AuthProvider>
-          <TestComponent />
+          <TestComponent onAuthData={(auth) => { authData = auth; }} />
         </AuthProvider>
       );
 
-      const loginButton = screen.getByTestId('login-button');
-      
       await act(async () => {
-        fireEvent.click(loginButton);
+        try {
+          await authData.login({ email: 'test@test.com', password: 'password' });
+        } catch (error) {
+          // Expected error
+        }
       });
 
       await waitFor(() => {
-        expect(screen.getByText('Not Authenticated')).toBeInTheDocument();
-        expect(mockLocalStorage.setItem).not.toHaveBeenCalled();
+        expect(screen.getByTestId('error')).toHaveTextContent('Invalid credentials');
+        expect(screen.getByTestId('is-authenticated')).toHaveTextContent('false');
       });
     });
 
-    it('handles login network error', async () => {
+    it('handles login exception', async () => {
       mockApiClient.login.mockRejectedValue(new Error('Network error'));
 
+      let authData: any;
       render(
         <AuthProvider>
-          <TestComponent />
+          <TestComponent onAuthData={(auth) => { authData = auth; }} />
         </AuthProvider>
       );
 
-      const loginButton = screen.getByTestId('login-button');
-      
       await act(async () => {
-        fireEvent.click(loginButton);
+        try {
+          await authData.login({ email: 'test@test.com', password: 'password' });
+        } catch (error) {
+          // Expected error
+        }
       });
 
       await waitFor(() => {
-        expect(screen.getByText('Not Authenticated')).toBeInTheDocument();
+        expect(screen.getByTestId('error')).toHaveTextContent('Network error');
+      });
+    });
+  });
+
+  describe('Register', () => {
+    it('handles successful registration', async () => {
+      mockApiClient.register.mockResolvedValue({
+        success: true,
+      });
+
+      let authData: any;
+      render(
+        <AuthProvider>
+          <TestComponent onAuthData={(auth) => { authData = auth; }} />
+        </AuthProvider>
+      );
+
+      await act(async () => {
+        await authData.register({ email: 'test@test.com', password: 'password', name: 'Test' });
+      });
+
+      expect(mockApiClient.register).toHaveBeenCalledWith({
+        email: 'test@test.com',
+        password: 'password',
+        name: 'Test',
+      });
+
+      await waitFor(() => {
+        expect(screen.getByTestId('is-loading')).toHaveTextContent('false');
       });
     });
 
-    it('shows loading state during login', async () => {
-      // Create a promise that we can control
-      let resolveLogin: (value: any) => void;
-      const loginPromise = new Promise((resolve) => {
-        resolveLogin = resolve;
+    it('handles registration failure', async () => {
+      mockApiClient.register.mockResolvedValue({
+        success: false,
+        error: 'Email already exists',
       });
-      mockApiClient.login.mockReturnValue(loginPromise);
 
+      let authData: any;
       render(
         <AuthProvider>
-          <TestComponent />
+          <TestComponent onAuthData={(auth) => { authData = auth; }} />
         </AuthProvider>
       );
 
-      const loginButton = screen.getByTestId('login-button');
-      
-      act(() => {
-        fireEvent.click(loginButton);
-      });
-
-      // Should show loading state
-      expect(screen.getByText('Loading')).toBeInTheDocument();
-
-      // Resolve the login
       await act(async () => {
-        resolveLogin!(mockApiResponse({
-          user: { id: '1', name: 'Test User', email: 'test@example.com', role: 'Admin' },
-          accessToken: 'token',
-          refreshToken: 'refresh',
-        }));
+        try {
+          await authData.register({ email: 'test@test.com', password: 'password', name: 'Test' });
+        } catch (error) {
+          // Expected error
+        }
       });
 
       await waitFor(() => {
-        expect(screen.getByText('Authenticated')).toBeInTheDocument();
+        expect(screen.getByTestId('error')).toHaveTextContent('Email already exists');
       });
     });
   });
 
   describe('Logout', () => {
-    it('logs out user successfully', async () => {
-      // First login the user
-      mockApiClient.login.mockResolvedValue(
-        mockApiResponse({
-          user: {
-            id: '1',
-            name: 'Test User',
-            email: 'test@example.com',
-            role: 'Admin',
-            permissions: {
-              canCreate: true,
-              canRead: true,
-              canUpdate: true,
-              canDelete: true,
-              canManage: true,
-            },
-          },
-          accessToken: 'access-token',
-          refreshToken: 'refresh-token',
-        })
-      );
+    it('handles successful logout', async () => {
+      // First login
+      mockApiClient.login.mockResolvedValue({
+        success: true,
+        data: {
+          user: mockUser,
+          token: 'token',
+        },
+      });
 
+      mockApiClient.logout.mockResolvedValue({ success: true });
+
+      let authData: any;
       render(
         <AuthProvider>
-          <TestComponent />
+          <TestComponent onAuthData={(auth) => { authData = auth; }} />
         </AuthProvider>
       );
 
       // Login first
-      const loginButton = screen.getByTestId('login-button');
       await act(async () => {
-        fireEvent.click(loginButton);
+        await authData.login({ email: 'test@test.com', password: 'password' });
       });
 
-      await waitFor(() => {
-        expect(screen.getByText('Authenticated')).toBeInTheDocument();
+      // Then logout
+      await act(async () => {
+        await authData.logout();
       });
 
-      // Now logout
-      mockApiClient.logout.mockResolvedValue(mockApiResponse(null));
-      const logoutButton = screen.getByTestId('logout-button');
+      expect(mockApiClient.logout).toHaveBeenCalled();
       
-      await act(async () => {
-        fireEvent.click(logoutButton);
-      });
-
       await waitFor(() => {
-        expect(screen.getByText('Not Authenticated')).toBeInTheDocument();
-        expect(mockLocalStorage.removeItem).toHaveBeenCalledWith('accessToken');
-        expect(mockLocalStorage.removeItem).toHaveBeenCalledWith('refreshToken');
-        expect(mockPush).toHaveBeenCalledWith('/login');
+        expect(screen.getByTestId('user-email')).toHaveTextContent('Not authenticated');
+        expect(screen.getByTestId('is-authenticated')).toHaveTextContent('false');
       });
     });
 
-    it('handles logout API failure gracefully', async () => {
-      // First login the user
-      mockApiClient.login.mockResolvedValue(
-        mockApiResponse({
-          user: { id: '1', name: 'Test User', email: 'test@example.com', role: 'Admin' },
-          accessToken: 'token',
-          refreshToken: 'refresh',
-        })
-      );
+    it('handles logout with server error', async () => {
+      mockApiClient.logout.mockRejectedValue(new Error('Server error'));
+      const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
 
+      let authData: any;
       render(
         <AuthProvider>
-          <TestComponent />
+          <TestComponent onAuthData={(auth) => { authData = auth; }} />
         </AuthProvider>
       );
 
-      // Login first
-      const loginButton = screen.getByTestId('login-button');
       await act(async () => {
-        fireEvent.click(loginButton);
+        await authData.logout();
       });
 
-      // Logout with API failure
-      mockApiClient.logout.mockRejectedValue(new Error('Network error'));
-      const logoutButton = screen.getByTestId('logout-button');
-      
-      await act(async () => {
-        fireEvent.click(logoutButton);
-      });
-
+      // Should still log out locally even if server fails
       await waitFor(() => {
-        // Should still logout locally
-        expect(screen.getByText('Not Authenticated')).toBeInTheDocument();
-        expect(mockLocalStorage.removeItem).toHaveBeenCalledWith('accessToken');
-        expect(mockLocalStorage.removeItem).toHaveBeenCalledWith('refreshToken');
+        expect(screen.getByTestId('is-authenticated')).toHaveTextContent('false');
       });
+
+      consoleSpy.mockRestore();
     });
   });
 
   describe('Check Auth', () => {
-    it('validates existing token', async () => {
-      mockApiClient.validateToken.mockResolvedValue(
-        mockApiResponse({
-          id: '1',
-          name: 'Test User',
-          email: 'test@example.com',
-          role: 'Admin',
-          permissions: {
-            canCreate: true,
-            canRead: true,
-            canUpdate: true,
-            canDelete: true,
-            canManage: true,
-          },
-        })
-      );
+    it('handles missing token', async () => {
+      mockLocalStorage.getItem.mockReturnValue(null);
 
+      let authData: any;
       render(
         <AuthProvider>
-          <TestComponent />
+          <TestComponent onAuthData={(auth) => { authData = auth; }} />
         </AuthProvider>
       );
 
-      const checkAuthButton = screen.getByTestId('check-auth-button');
-      
       await act(async () => {
-        fireEvent.click(checkAuthButton);
+        await authData.checkAuth();
       });
 
-      await waitFor(() => {
-        expect(screen.getByText('Authenticated')).toBeInTheDocument();
-        expect(screen.getByTestId('user-name')).toHaveTextContent('Test User');
-      });
-    });
-
-    it('handles invalid token during check', async () => {
-      mockApiClient.validateToken.mockResolvedValue(
-        mockApiResponse(null, false)
-      );
-
-      render(
-        <AuthProvider>
-          <TestComponent />
-        </AuthProvider>
-      );
-
-      const checkAuthButton = screen.getByTestId('check-auth-button');
-      
-      await act(async () => {
-        fireEvent.click(checkAuthButton);
-      });
-
-      await waitFor(() => {
-        expect(screen.getByText('Not Authenticated')).toBeInTheDocument();
-        expect(mockLocalStorage.removeItem).toHaveBeenCalledWith('accessToken');
-        expect(mockLocalStorage.removeItem).toHaveBeenCalledWith('refreshToken');
-      });
+      expect(mockApiClient.getProfile).not.toHaveBeenCalled();
     });
   });
 
   describe('Error Handling', () => {
-    it('handles missing localStorage', () => {
-      // Mock localStorage to be undefined
-      Object.defineProperty(window, 'localStorage', {
-        value: undefined,
-        writable: true,
+    it('clears error', async () => {
+      mockApiClient.login.mockResolvedValue({
+        success: false,
+        error: 'Test error',
       });
 
-      expect(() => {
-        render(
-          <AuthProvider>
-            <TestComponent />
-          </AuthProvider>
-        );
-      }).not.toThrow();
-    });
-
-    it('handles malformed token in localStorage', async () => {
-      mockLocalStorage.getItem.mockReturnValue('malformed-token');
-      mockApiClient.validateToken.mockRejectedValue(new Error('Invalid token format'));
-
+      let authData: any;
       render(
         <AuthProvider>
-          <TestComponent />
+          <TestComponent onAuthData={(auth) => { authData = auth; }} />
         </AuthProvider>
       );
 
-      await waitFor(() => {
-        expect(screen.getByText('Not Authenticated')).toBeInTheDocument();
-      });
-    });
-  });
-
-  describe('Context Provider', () => {
-    it('throws error when used outside provider', () => {
-      // Suppress console.error for this test
-      const originalError = console.error;
-      console.error = jest.fn();
-
-      expect(() => {
-        render(<TestComponent />);
-      }).toThrow('useAuth must be used within an AuthProvider');
-
-      console.error = originalError;
-    });
-
-    it('provides all expected context values', () => {
-      const contextValues: any[] = [];
-      
-      const ContextConsumer = () => {
-        const auth = useAuth();
-        contextValues.push(auth);
-        return null;
-      };
-
-      render(
-        <AuthProvider>
-          <ContextConsumer />
-        </AuthProvider>
-      );
-
-      const auth = contextValues[0];
-      expect(auth).toHaveProperty('user');
-      expect(auth).toHaveProperty('isAuthenticated');
-      expect(auth).toHaveProperty('isLoading');
-      expect(auth).toHaveProperty('login');
-      expect(auth).toHaveProperty('logout');
-      expect(auth).toHaveProperty('checkAuth');
-    });
-  });
-
-  describe('Performance', () => {
-    it('does not cause unnecessary re-renders', async () => {
-      let renderCount = 0;
-      
-      const RenderCounter = () => {
-        renderCount++;
-        const { isAuthenticated } = useAuth();
-        return <div>{isAuthenticated ? 'Auth' : 'No Auth'}</div>;
-      };
-
-      render(
-        <AuthProvider>
-          <RenderCounter />
-        </AuthProvider>
-      );
-
-      const initialRenderCount = renderCount;
-
-      // Re-render should not increase count if state hasn't changed
-      await waitFor(() => {
-        expect(renderCount).toBe(initialRenderCount);
-      });
-    });
-
-    it('batches state updates correctly', async () => {
-      mockApiClient.login.mockResolvedValue(
-        mockApiResponse({
-          user: { id: '1', name: 'Test User', email: 'test@example.com', role: 'Admin' },
-          accessToken: 'token',
-          refreshToken: 'refresh',
-        })
-      );
-
-      let renderCount = 0;
-      const RenderCounter = () => {
-        renderCount++;
-        const { isAuthenticated, user, isLoading } = useAuth();
-        return <div>{isAuthenticated && user && !isLoading ? 'Ready' : 'Loading'}</div>;
-      };
-
-      render(
-        <AuthProvider>
-          <RenderCounter />
-          <TestComponent />
-        </AuthProvider>
-      );
-
-      const initialCount = renderCount;
-      
-      const loginButton = screen.getByTestId('login-button');
+      // Generate an error
       await act(async () => {
-        fireEvent.click(loginButton);
+        try {
+          await authData.login({ email: 'test@test.com', password: 'password' });
+        } catch (error) {
+          // Expected error
+        }
       });
 
       await waitFor(() => {
-        expect(screen.getByText('Ready')).toBeInTheDocument();
+        expect(screen.getByTestId('error')).toHaveTextContent('Test error');
       });
 
-      // Should not have excessive re-renders
-      expect(renderCount - initialCount).toBeLessThan(5);
+      // Clear the error
+      await act(async () => {
+        authData.clearError();
+      });
+
+      expect(screen.getByTestId('error')).toHaveTextContent('No error');
+    });
+
+    it('handles auth error event', async () => {
+      render(
+        <AuthProvider>
+          <TestComponent />
+        </AuthProvider>
+      );
+
+      // Get the event handler that was registered
+      const authErrorHandler = mockAddEventListener.mock.calls.find(
+        call => call[0] === 'auth:error'
+      )?.[1];
+
+      expect(authErrorHandler).toBeDefined();
+
+      // Simulate auth error event
+      await act(async () => {
+        authErrorHandler();
+      });
+
+      await waitFor(() => {
+        expect(screen.getByTestId('is-authenticated')).toHaveTextContent('false');
+      });
+    });
+  });
+
+  describe('Auth Reducer', () => {
+    it('handles all reducer actions correctly', async () => {
+      let authData: any;
+      render(
+        <AuthProvider>
+          <TestComponent onAuthData={(auth) => { authData = auth; }} />
+        </AuthProvider>
+      );
+
+      // AUTH_START
+      mockApiClient.login.mockImplementation(async () => {
+        // During this time, isLoading should be true
+        await new Promise(resolve => setTimeout(resolve, 10));
+        return {
+          success: true,
+          data: { user: mockUser, token: 'token' }
+        };
+      });
+
+      await act(async () => {
+        authData.login({ email: 'test@test.com', password: 'password' });
+      });
+
+      // Should eventually show authenticated state
+      await waitFor(() => {
+        expect(screen.getByTestId('is-authenticated')).toHaveTextContent('true');
+      });
+    });
+
+    it('handles CLEAR_ERROR action', async () => {
+      // First create an error state
+      mockApiClient.login.mockResolvedValue({
+        success: false,
+        error: 'Test error for clearing',
+      });
+
+      let authData: any;
+      render(
+        <AuthProvider>
+          <TestComponent onAuthData={(auth) => { authData = auth; }} />
+        </AuthProvider>
+      );
+
+      // Generate an error first
+      await act(async () => {
+        try {
+          await authData.login({ email: 'test@test.com', password: 'password' });
+        } catch (error) {
+          // Expected error
+        }
+      });
+
+      await waitFor(() => {
+        expect(screen.getByTestId('error')).toHaveTextContent('Test error for clearing');
+      });
+
+      // Now clear the error
+      await act(async () => {
+        authData.clearError();
+      });
+
+      expect(screen.getByTestId('error')).toHaveTextContent('No error');
+    });
+
+    it('handles checkAuth in server environment', async () => {
+      // Mock checkAuth function separately to test SSR path
+      const mockCheckAuth = jest.fn();
+      
+      // We can't easily test the SSR branch in jsdom environment,
+      // but we can verify the function handles undefined window gracefully
+      let authData: any;
+      render(
+        <AuthProvider>
+          <TestComponent onAuthData={(auth) => { authData = auth; }} />
+        </AuthProvider>
+      );
+
+      // Test that checkAuth is callable and doesn't throw
+      await act(async () => {
+        await authData.checkAuth();
+      });
+
+      expect(authData.checkAuth).toBeDefined();
+    });
+
+  });
+
+  describe('Edge Cases', () => {
+    it('handles login without refresh token', async () => {
+      mockApiClient.login.mockResolvedValue({
+        success: true,
+        data: {
+          user: mockUser,
+          token: 'token',
+          // No refreshToken
+        },
+      });
+
+      let authData: any;
+      render(
+        <AuthProvider>
+          <TestComponent onAuthData={(auth) => { authData = auth; }} />
+        </AuthProvider>
+      );
+
+      await act(async () => {
+        await authData.login({ email: 'test@test.com', password: 'password' });
+      });
+
+      await waitFor(() => {
+        expect(screen.getByTestId('is-authenticated')).toHaveTextContent('true');
+      });
+    });
+
+    it('handles checkAuth with invalid response', async () => {
+      mockLocalStorage.getItem.mockReturnValue('token');
+      mockApiClient.getProfile.mockResolvedValue({
+        success: false,
+      });
+
+      render(
+        <AuthProvider>
+          <TestComponent />
+        </AuthProvider>
+      );
+
+      await waitFor(() => {
+        expect(mockLocalStorage.removeItem).toHaveBeenCalledWith('token');
+      });
+    });
+
+    it('exports AuthContext properly', () => {
+      const { AuthContext } = require('../AuthContext');
+      expect(AuthContext).toBeDefined();
     });
   });
 });

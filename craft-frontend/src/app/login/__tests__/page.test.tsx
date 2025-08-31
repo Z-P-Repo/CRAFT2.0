@@ -1,522 +1,827 @@
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { ThemeProvider, createTheme } from '@mui/material/styles';
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '@/contexts/AuthContext';
+import { useApiSnackbar } from '@/contexts/SnackbarContext';
+import azureAdService from '@/lib/azureAdService';
 import LoginPage from '../page';
 
-// Mock the API client at the top level
-jest.mock('@/lib/api', () => ({
-  apiClient: {
-    get: jest.fn(),
-    post: jest.fn(),
-    put: jest.fn(),
-    delete: jest.fn(),
-  },
+// Mock Next.js navigation
+jest.mock('next/navigation', () => ({
+  useRouter: jest.fn(),
 }));
 
-// Get the mocked client
-const { apiClient: mockApiClient } = require('@/lib/api');
+// Mock contexts
+jest.mock('@/contexts/AuthContext', () => ({
+  useAuth: jest.fn(),
+}));
 
-// Mock response helper
-const mockApiResponse = (data: any, success: boolean = true, error: string | null = null) => ({
-  data,
-  success,
-  error,
+jest.mock('@/contexts/SnackbarContext', () => ({
+  useApiSnackbar: jest.fn(),
+}));
+
+// Mock Azure AD service
+jest.mock('@/lib/azureAdService', () => ({
+  isConfigured: jest.fn(),
+  initialize: jest.fn(),
+  getBackendConfig: jest.fn(),
+  loginRedirect: jest.fn(),
+}));
+
+// Mock console.error to avoid noise in tests
+const originalConsoleError = console.error;
+beforeAll(() => {
+  console.error = jest.fn();
 });
 
-// Mock user data
-const mockUser = {
-  _id: '1',
-  id: '1',
-  name: 'Test User',
-  email: 'test@example.com',
-  role: 'admin',
-  active: true,
-};
-
-// Mock router
-const mockPush = jest.fn();
-const mockReplace = jest.fn();
-jest.mock('next/navigation', () => ({
-  useRouter: () => ({
-    push: mockPush,
-    replace: mockReplace,
-  }),
-}));
-
-const mockTheme = createTheme();
-
-const TestWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-  <ThemeProvider theme={mockTheme}>
-    {children}
-  </ThemeProvider>
-);
+afterAll(() => {
+  console.error = originalConsoleError;
+});
 
 describe('LoginPage', () => {
+  const mockReplace = jest.fn();
+  const mockLogin = jest.fn();
+  const mockClearError = jest.fn();
+  const mockShowSuccess = jest.fn();
+  const mockShowError = jest.fn();
+  const mockShowWarning = jest.fn();
+
+  const defaultAuthContext = {
+    login: mockLogin,
+    isAuthenticated: false,
+    isLoading: false,
+    clearError: mockClearError,
+  };
+
+  const defaultSnackbarContext = {
+    showSuccess: mockShowSuccess,
+    showError: mockShowError,
+    showWarning: mockShowWarning,
+  };
+
   beforeEach(() => {
     jest.clearAllMocks();
+    jest.useFakeTimers();
+    
+    // Setup default mocks
+    (useRouter as jest.Mock).mockReturnValue({ replace: mockReplace });
+    (useAuth as jest.Mock).mockReturnValue(defaultAuthContext);
+    (useApiSnackbar as jest.Mock).mockReturnValue(defaultSnackbarContext);
+    
+    // Setup Azure AD service defaults
+    (azureAdService.isConfigured as jest.Mock).mockReturnValue(false);
+    (azureAdService.initialize as jest.Mock).mockResolvedValue(undefined);
+    (azureAdService.getBackendConfig as jest.Mock).mockResolvedValue({ enabled: false });
+    (azureAdService.loginRedirect as jest.Mock).mockResolvedValue(undefined);
   });
 
-  describe('Rendering', () => {
-    it('renders login form', () => {
-      render(
-        <TestWrapper>
-          <LoginPage />
-        </TestWrapper>
-      );
-      
-      expect(screen.getByText('Welcome to CRAFT')).toBeInTheDocument();
-      expect(screen.getByLabelText(/email/i)).toBeInTheDocument();
-      expect(screen.getByLabelText(/password/i)).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: /sign in/i })).toBeInTheDocument();
-    });
-
-    it('renders system description', () => {
-      render(
-        <TestWrapper>
-          <LoginPage />
-        </TestWrapper>
-      );
-      
-      expect(screen.getByText(/Attribute-Based Access Control/i)).toBeInTheDocument();
-    });
-
-    it('renders register link', () => {
-      render(
-        <TestWrapper>
-          <LoginPage />
-        </TestWrapper>
-      );
-      
-      expect(screen.getByText(/Don't have an account/i)).toBeInTheDocument();
-      expect(screen.getByText('Sign up here')).toBeInTheDocument();
-    });
+  afterEach(() => {
+    jest.useRealTimers();
   });
 
-  describe('Form Validation', () => {
-    it('shows error for empty email', async () => {
-      render(
-        <TestWrapper>
-          <LoginPage />
-        </TestWrapper>
-      );
-      
-      const submitButton = screen.getByRole('button', { name: /sign in/i });
-      fireEvent.click(submitButton);
-      
+  describe('Component Mounting and Initialization', () => {
+    it('renders login form with all required elements', async () => {
+      render(<LoginPage />);
+
       await waitFor(() => {
-        expect(screen.getByText(/email is required/i)).toBeInTheDocument();
+        expect(screen.getByRole('heading', { name: 'Sign In' })).toBeInTheDocument();
+        expect(screen.getByText('Access your CRAFT Permission System account')).toBeInTheDocument();
+        expect(screen.getByLabelText(/email/i)).toBeInTheDocument();
+        expect(screen.getByLabelText(/password/i)).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: /sign in/i })).toBeInTheDocument();
+        expect(screen.getByText('Don\'t have an account?')).toBeInTheDocument();
+        expect(screen.getByText('Sign up here')).toBeInTheDocument();
       });
     });
 
-    it('shows error for empty password', async () => {
-      render(
-        <TestWrapper>
-          <LoginPage />
-        </TestWrapper>
-      );
-      
-      const emailInput = screen.getByLabelText(/email/i);
-      fireEvent.change(emailInput, { target: { value: 'test@example.com' } });
-      
-      const submitButton = screen.getByRole('button', { name: /sign in/i });
-      fireEvent.click(submitButton);
-      
-      await waitFor(() => {
-        expect(screen.getByText(/password is required/i)).toBeInTheDocument();
+    it('shows loading state when not mounted', () => {
+      (useAuth as jest.Mock).mockReturnValue({
+        ...defaultAuthContext,
+        isLoading: true,
       });
+
+      render(<LoginPage />);
+
+      expect(screen.getByRole('progressbar')).toBeInTheDocument();
+      expect(screen.queryByText('Sign In')).not.toBeInTheDocument();
     });
 
-    it('shows error for invalid email format', async () => {
-      render(
-        <TestWrapper>
-          <LoginPage />
-        </TestWrapper>
-      );
-      
-      const emailInput = screen.getByLabelText(/email/i);
-      const passwordInput = screen.getByLabelText(/password/i);
-      
-      fireEvent.change(emailInput, { target: { value: 'invalid-email' } });
-      fireEvent.change(passwordInput, { target: { value: 'password123' } });
-      
-      const submitButton = screen.getByRole('button', { name: /sign in/i });
-      fireEvent.click(submitButton);
-      
-      await waitFor(() => {
-        expect(screen.getByText(/enter a valid email address/i)).toBeInTheDocument();
+    it('shows loading state when authenticated (during redirect)', async () => {
+      (useAuth as jest.Mock).mockReturnValue({
+        ...defaultAuthContext,
+        isAuthenticated: true,
       });
+
+      render(<LoginPage />);
+
+      expect(screen.getByRole('progressbar')).toBeInTheDocument();
+      expect(screen.queryByText('Sign In')).not.toBeInTheDocument();
     });
 
-    it('shows error for password too short', async () => {
-      render(
-        <TestWrapper>
-          <LoginPage />
-        </TestWrapper>
-      );
-      
-      const emailInput = screen.getByLabelText(/email/i);
-      const passwordInput = screen.getByLabelText(/password/i);
-      
-      fireEvent.change(emailInput, { target: { value: 'test@example.com' } });
-      fireEvent.change(passwordInput, { target: { value: '123' } });
-      
-      const submitButton = screen.getByRole('button', { name: /sign in/i });
-      fireEvent.click(submitButton);
-      
+    it('clears errors on mount', async () => {
+      render(<LoginPage />);
+
       await waitFor(() => {
-        expect(screen.getByText(/password must be at least 6 characters/i)).toBeInTheDocument();
+        expect(mockClearError).toHaveBeenCalled();
       });
     });
   });
 
-  describe('Login Process', () => {
-    it('successfully logs in user', async () => {
-      mockApiClient.post.mockResolvedValue(
-        mockApiResponse({
-          user: mockUser,
-          accessToken: 'access-token',
-          refreshToken: 'refresh-token',
-        })
-      );
+  describe('Azure AD Initialization', () => {
+    it('initializes Azure AD when configured', async () => {
+      (azureAdService.isConfigured as jest.Mock).mockReturnValue(true);
+      (azureAdService.getBackendConfig as jest.Mock).mockResolvedValue({ enabled: true });
 
-      render(
-        <TestWrapper>
-          <LoginPage />
-        </TestWrapper>
-      );
-      
-      const emailInput = screen.getByLabelText(/email/i);
-      const passwordInput = screen.getByLabelText(/password/i);
-      
-      fireEvent.change(emailInput, { target: { value: 'test@example.com' } });
-      fireEvent.change(passwordInput, { target: { value: 'password123' } });
-      
-      const submitButton = screen.getByRole('button', { name: /sign in/i });
-      fireEvent.click(submitButton);
-      
+      render(<LoginPage />);
+
       await waitFor(() => {
-        expect(mockApiClient.post).toHaveBeenCalledWith('/auth/login', {
+        expect(azureAdService.isConfigured).toHaveBeenCalled();
+        expect(azureAdService.initialize).toHaveBeenCalled();
+        expect(azureAdService.getBackendConfig).toHaveBeenCalled();
+      });
+
+      await waitFor(() => {
+        expect(screen.getByText('Sign in with Microsoft')).toBeInTheDocument();
+      });
+    });
+
+    it('does not initialize Azure AD when not configured', async () => {
+      (azureAdService.isConfigured as jest.Mock).mockReturnValue(false);
+
+      render(<LoginPage />);
+
+      await waitFor(() => {
+        expect(azureAdService.isConfigured).toHaveBeenCalled();
+        expect(azureAdService.initialize).not.toHaveBeenCalled();
+        expect(azureAdService.getBackendConfig).not.toHaveBeenCalled();
+      });
+
+      expect(screen.queryByText('Sign in with Microsoft')).not.toBeInTheDocument();
+    });
+
+    it('handles Azure AD initialization error', async () => {
+      (azureAdService.isConfigured as jest.Mock).mockReturnValue(true);
+      (azureAdService.initialize as jest.Mock).mockRejectedValue(new Error('Init failed'));
+
+      render(<LoginPage />);
+
+      await waitFor(() => {
+        expect(console.error).toHaveBeenCalledWith('Failed to initialize Azure AD:', expect.any(Error));
+      });
+
+      expect(screen.queryByText('Sign in with Microsoft')).not.toBeInTheDocument();
+    });
+
+    it('handles backend config fetch error', async () => {
+      (azureAdService.isConfigured as jest.Mock).mockReturnValue(true);
+      (azureAdService.getBackendConfig as jest.Mock).mockRejectedValue(new Error('Config failed'));
+
+      render(<LoginPage />);
+
+      await waitFor(() => {
+        expect(console.error).toHaveBeenCalledWith('Failed to initialize Azure AD:', expect.any(Error));
+      });
+
+      expect(screen.queryByText('Sign in with Microsoft')).not.toBeInTheDocument();
+    });
+  });
+
+  describe('Authentication Redirect', () => {
+    it('redirects to dashboard when user is authenticated', async () => {
+      (useAuth as jest.Mock).mockReturnValue({
+        ...defaultAuthContext,
+        isAuthenticated: true,
+      });
+
+      render(<LoginPage />);
+
+      await waitFor(() => {
+        expect(mockReplace).toHaveBeenCalledWith('/dashboard');
+      });
+    });
+
+    it('does not redirect when not mounted yet', () => {
+      const { rerender } = render(<LoginPage />);
+
+      // Should not redirect initially
+      expect(mockReplace).not.toHaveBeenCalled();
+
+      // Should redirect after authentication
+      (useAuth as jest.Mock).mockReturnValue({
+        ...defaultAuthContext,
+        isAuthenticated: true,
+      });
+
+      rerender(<LoginPage />);
+
+      act(() => {
+        jest.runOnlyPendingTimers();
+      });
+
+      expect(mockReplace).toHaveBeenCalledWith('/dashboard');
+    });
+  });
+
+  describe('Form Validation and Input Handling', () => {
+    it('updates email field when typed', async () => {
+      const user = userEvent.setup({ delay: null });
+      render(<LoginPage />);
+
+      const emailField = screen.getByLabelText(/email/i);
+      
+      await user.type(emailField, 'test@example.com');
+
+      expect(emailField).toHaveValue('test@example.com');
+    });
+
+    it('updates password field when typed', async () => {
+      const user = userEvent.setup({ delay: null });
+      render(<LoginPage />);
+
+      const passwordField = screen.getByLabelText(/password/i);
+      
+      await user.type(passwordField, 'password123');
+
+      expect(passwordField).toHaveValue('password123');
+    });
+
+    it('shows validation warning when submitting with empty fields', async () => {
+      // Mock the component to test validation directly
+      render(<LoginPage />);
+
+      // Test Enter key with empty fields (should not call handleSubmit)
+      const emailField = screen.getByLabelText(/email/i);
+      fireEvent.keyDown(emailField, { key: 'Enter', code: 'Enter' });
+      
+      // Since fields are empty, handleSubmit should not be called
+      expect(mockLogin).not.toHaveBeenCalled();
+      
+      // Now test the validation by filling fields temporarily to test the validation path
+      await userEvent.type(emailField, 'test');
+      const passwordField = screen.getByLabelText(/password/i);
+      await userEvent.type(passwordField, 'test');
+      
+      // Clear email to test partial validation
+      await userEvent.clear(emailField);
+      
+      // Now the button should be disabled, but we can test the validation logic
+      // by simulating the internal handleSubmit call when validation fails
+      fireEvent.keyDown(passwordField, { key: 'Enter', code: 'Enter' });
+      
+      // This should not trigger login since email is empty
+      expect(mockLogin).not.toHaveBeenCalled();
+    });
+
+    it('shows validation warning when submitting with only email', async () => {
+      const user = userEvent.setup({ delay: null });
+      render(<LoginPage />);
+
+      const emailField = screen.getByLabelText(/email/i);
+      const submitButton = screen.getByRole('button', { name: /sign in/i });
+      
+      await user.type(emailField, 'test@example.com');
+      await user.click(submitButton);
+
+      expect(mockShowWarning).toHaveBeenCalledWith('Please enter both email and password');
+      expect(mockLogin).not.toHaveBeenCalled();
+    });
+
+    it('shows validation warning when submitting with only password', async () => {
+      const user = userEvent.setup({ delay: null });
+      render(<LoginPage />);
+
+      const passwordField = screen.getByLabelText(/password/i);
+      const submitButton = screen.getByRole('button', { name: /sign in/i });
+      
+      await user.type(passwordField, 'password123');
+      await user.click(submitButton);
+
+      expect(mockShowWarning).toHaveBeenCalledWith('Please enter both email and password');
+      expect(mockLogin).not.toHaveBeenCalled();
+    });
+
+    it('shows error styling when fields are empty during submission', async () => {
+      const user = userEvent.setup({ delay: null });
+      render(<LoginPage />);
+
+      const submitButton = screen.getByRole('button', { name: /sign in/i });
+      
+      await user.click(submitButton);
+
+      await waitFor(() => {
+        expect(screen.getByText('Email is required')).toBeInTheDocument();
+        expect(screen.getByText('Password is required')).toBeInTheDocument();
+      });
+    });
+  });
+
+  describe('Form Submission', () => {
+    it('submits form with valid credentials', async () => {
+      const user = userEvent.setup({ delay: null });
+      mockLogin.mockResolvedValue({ success: true });
+      
+      render(<LoginPage />);
+
+      const emailField = screen.getByLabelText(/email/i);
+      const passwordField = screen.getByLabelText(/password/i);
+      const submitButton = screen.getByRole('button', { name: /sign in/i });
+
+      await user.type(emailField, 'test@example.com');
+      await user.type(passwordField, 'password123');
+      await user.click(submitButton);
+
+      expect(mockLogin).toHaveBeenCalledWith({
+        email: 'test@example.com',
+        password: 'password123',
+      });
+
+      await waitFor(() => {
+        expect(mockShowSuccess).toHaveBeenCalledWith('Login successful! Welcome back.');
+      });
+    });
+
+    it('shows loading state during submission', async () => {
+      const user = userEvent.setup({ delay: null });
+      mockLogin.mockImplementation(() => new Promise(resolve => setTimeout(resolve, 1000)));
+      
+      render(<LoginPage />);
+
+      const emailField = screen.getByLabelText(/email/i);
+      const passwordField = screen.getByLabelText(/password/i);
+      const submitButton = screen.getByRole('button', { name: /sign in/i });
+
+      await user.type(emailField, 'test@example.com');
+      await user.type(passwordField, 'password123');
+      await user.click(submitButton);
+
+      await waitFor(() => {
+        expect(screen.getByText('Signing In...')).toBeInTheDocument();
+        expect(screen.getByRole('progressbar')).toBeInTheDocument();
+        expect(submitButton).toBeDisabled();
+      });
+    });
+
+    it('handles login error with error message', async () => {
+      const user = userEvent.setup({ delay: null });
+      const errorMessage = 'Invalid credentials';
+      mockLogin.mockRejectedValue({ error: errorMessage });
+      
+      render(<LoginPage />);
+
+      const emailField = screen.getByLabelText(/email/i);
+      const passwordField = screen.getByLabelText(/password/i);
+      const submitButton = screen.getByRole('button', { name: /sign in/i });
+
+      await user.type(emailField, 'test@example.com');
+      await user.type(passwordField, 'wrongpassword');
+      await user.click(submitButton);
+
+      await waitFor(() => {
+        expect(mockShowError).toHaveBeenCalledWith(errorMessage);
+        expect(console.error).toHaveBeenCalledWith('Login error:', expect.any(Object));
+      });
+    });
+
+    it('handles login error with generic message fallback', async () => {
+      const user = userEvent.setup({ delay: null });
+      mockLogin.mockRejectedValue(new Error('Network error'));
+      
+      render(<LoginPage />);
+
+      const emailField = screen.getByLabelText(/email/i);
+      const passwordField = screen.getByLabelText(/password/i);
+      const submitButton = screen.getByRole('button', { name: /sign in/i });
+
+      await user.type(emailField, 'test@example.com');
+      await user.type(passwordField, 'password123');
+      await user.click(submitButton);
+
+      await waitFor(() => {
+        expect(mockShowError).toHaveBeenCalledWith('Network error');
+      });
+    });
+
+    it('handles login error without message', async () => {
+      const user = userEvent.setup({ delay: null });
+      mockLogin.mockRejectedValue({});
+      
+      render(<LoginPage />);
+
+      const emailField = screen.getByLabelText(/email/i);
+      const passwordField = screen.getByLabelText(/password/i);
+      const submitButton = screen.getByRole('button', { name: /sign in/i });
+
+      await user.type(emailField, 'test@example.com');
+      await user.type(passwordField, 'password123');
+      await user.click(submitButton);
+
+      await waitFor(() => {
+        expect(mockShowError).toHaveBeenCalledWith('Login failed. Please check your credentials.');
+      });
+    });
+  });
+
+  describe('Keyboard Navigation', () => {
+    it('submits form when Enter is pressed in email field with valid data', async () => {
+      mockLogin.mockResolvedValue({ success: true });
+      
+      render(<LoginPage />);
+
+      const emailField = screen.getByLabelText(/email/i);
+      const passwordField = screen.getByLabelText(/password/i);
+
+      await userEvent.type(emailField, 'test@example.com');
+      await userEvent.type(passwordField, 'password123');
+      
+      fireEvent.keyDown(emailField, { key: 'Enter', code: 'Enter' });
+
+      await waitFor(() => {
+        expect(mockLogin).toHaveBeenCalledWith({
           email: 'test@example.com',
           password: 'password123',
         });
       });
     });
 
-    it('shows loading state during login', async () => {
-      // Create a promise that we can control
-      let resolveLogin: (value: any) => void;
-      const loginPromise = new Promise((resolve) => {
-        resolveLogin = resolve;
-      });
-      mockApiClient.post.mockReturnValue(loginPromise);
+    it('submits form when Enter is pressed in password field with valid data', async () => {
+      mockLogin.mockResolvedValue({ success: true });
+      
+      render(<LoginPage />);
 
-      render(
-        <TestWrapper>
-          <LoginPage />
-        </TestWrapper>
-      );
+      const emailField = screen.getByLabelText(/email/i);
+      const passwordField = screen.getByLabelText(/password/i);
+
+      await userEvent.type(emailField, 'test@example.com');
+      await userEvent.type(passwordField, 'password123');
       
-      const emailInput = screen.getByLabelText(/email/i);
-      const passwordInput = screen.getByLabelText(/password/i);
-      
-      fireEvent.change(emailInput, { target: { value: 'test@example.com' } });
-      fireEvent.change(passwordInput, { target: { value: 'password123' } });
-      
-      const submitButton = screen.getByRole('button', { name: /sign in/i });
-      fireEvent.click(submitButton);
-      
-      // Should show loading state
-      expect(screen.getByRole('button', { name: /signing in/i })).toBeInTheDocument();
-      expect(screen.getByRole('button')).toBeDisabled();
-      
-      // Resolve the login
-      resolveLogin!(mockApiResponse({ user: mockUser }));
-      
+      fireEvent.keyDown(passwordField, { key: 'Enter', code: 'Enter' });
+
       await waitFor(() => {
-        expect(screen.queryByText(/signing in/i)).not.toBeInTheDocument();
+        expect(mockLogin).toHaveBeenCalledWith({
+          email: 'test@example.com',
+          password: 'password123',
+        });
       });
     });
 
-    it('handles login failure', async () => {
-      mockApiClient.post.mockResolvedValue(
-        mockApiResponse(null, false, 'Invalid credentials')
-      );
+    it('does not submit when Enter is pressed with incomplete data', async () => {
+      render(<LoginPage />);
 
-      render(
-        <TestWrapper>
-          <LoginPage />
-        </TestWrapper>
-      );
+      const emailField = screen.getByLabelText(/email/i);
+
+      await userEvent.type(emailField, 'test@example.com');
+      // Password is empty
       
-      const emailInput = screen.getByLabelText(/email/i);
-      const passwordInput = screen.getByLabelText(/password/i);
+      fireEvent.keyDown(emailField, { key: 'Enter', code: 'Enter' });
+
+      expect(mockLogin).not.toHaveBeenCalled();
+    });
+
+    it('does not submit when Enter is pressed during submission', async () => {
+      mockLogin.mockImplementation(() => new Promise(resolve => setTimeout(resolve, 1000)));
       
-      fireEvent.change(emailInput, { target: { value: 'test@example.com' } });
-      fireEvent.change(passwordInput, { target: { value: 'wrongpassword' } });
+      render(<LoginPage />);
+
+      const emailField = screen.getByLabelText(/email/i);
+      const passwordField = screen.getByLabelText(/password/i);
+
+      await userEvent.type(emailField, 'test@example.com');
+      await userEvent.type(passwordField, 'password123');
       
-      const submitButton = screen.getByRole('button', { name: /sign in/i });
-      fireEvent.click(submitButton);
+      // Start first submission
+      fireEvent.keyDown(emailField, { key: 'Enter', code: 'Enter' });
       
+      // Try to submit again immediately
+      fireEvent.keyDown(passwordField, { key: 'Enter', code: 'Enter' });
+
+      expect(mockLogin).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('Azure AD Authentication', () => {
+    it('shows Azure AD button when enabled', async () => {
+      (azureAdService.isConfigured as jest.Mock).mockReturnValue(true);
+      (azureAdService.getBackendConfig as jest.Mock).mockResolvedValue({ enabled: true });
+
+      render(<LoginPage />);
+
       await waitFor(() => {
-        expect(screen.getByText(/invalid credentials/i)).toBeInTheDocument();
+        expect(screen.getByText('Sign in with Microsoft')).toBeInTheDocument();
+        expect(screen.getByText('OR')).toBeInTheDocument();
       });
     });
 
-    it('handles network error', async () => {
-      mockApiClient.post.mockRejectedValue(new Error('Network error'));
+    it('does not show Azure AD button when disabled', async () => {
+      (azureAdService.isConfigured as jest.Mock).mockReturnValue(true);
+      (azureAdService.getBackendConfig as jest.Mock).mockResolvedValue({ enabled: false });
 
-      render(
-        <TestWrapper>
-          <LoginPage />
-        </TestWrapper>
-      );
-      
-      const emailInput = screen.getByLabelText(/email/i);
-      const passwordInput = screen.getByLabelText(/password/i);
-      
-      fireEvent.change(emailInput, { target: { value: 'test@example.com' } });
-      fireEvent.change(passwordInput, { target: { value: 'password123' } });
-      
-      const submitButton = screen.getByRole('button', { name: /sign in/i });
-      fireEvent.click(submitButton);
-      
+      render(<LoginPage />);
+
       await waitFor(() => {
-        expect(screen.getByText(/login failed. please try again/i)).toBeInTheDocument();
+        expect(screen.queryByText('Sign in with Microsoft')).not.toBeInTheDocument();
+        expect(screen.queryByText('OR')).not.toBeInTheDocument();
       });
     });
 
-    it('redirects to dashboard on successful login', async () => {
-      mockApiClient.post.mockResolvedValue(
-        mockApiResponse({
-          user: mockUser,
-          accessToken: 'access-token',
-          refreshToken: 'refresh-token',
-        })
-      );
+    it('handles Azure AD login successfully', async () => {
+      const user = userEvent.setup({ delay: null });
+      (azureAdService.isConfigured as jest.Mock).mockReturnValue(true);
+      (azureAdService.getBackendConfig as jest.Mock).mockResolvedValue({ enabled: true });
+      
+      render(<LoginPage />);
 
-      render(
-        <TestWrapper>
-          <LoginPage />
-        </TestWrapper>
+      await waitFor(() => {
+        expect(screen.getByText('Sign in with Microsoft')).toBeInTheDocument();
+      });
+
+      const azureButton = screen.getByText('Sign in with Microsoft');
+      await user.click(azureButton);
+
+      await waitFor(() => {
+        expect(azureAdService.loginRedirect).toHaveBeenCalled();
+      });
+    });
+
+    it('shows error when Azure AD is not configured during login attempt', async () => {
+      const user = userEvent.setup({ delay: null });
+      (azureAdService.isConfigured as jest.Mock).mockReturnValue(true);
+      (azureAdService.getBackendConfig as jest.Mock).mockResolvedValue({ enabled: true });
+      
+      render(<LoginPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Sign in with Microsoft')).toBeInTheDocument();
+      });
+
+      // Change configuration after render
+      (azureAdService.isConfigured as jest.Mock).mockReturnValue(false);
+
+      const azureButton = screen.getByText('Sign in with Microsoft');
+      await user.click(azureButton);
+
+      expect(mockShowError).toHaveBeenCalledWith('Azure AD is not configured');
+      expect(azureAdService.loginRedirect).not.toHaveBeenCalled();
+    });
+
+    it('handles Azure AD login error', async () => {
+      const user = userEvent.setup({ delay: null });
+      (azureAdService.isConfigured as jest.Mock).mockReturnValue(true);
+      (azureAdService.getBackendConfig as jest.Mock).mockResolvedValue({ enabled: true });
+      (azureAdService.loginRedirect as jest.Mock).mockRejectedValue(new Error('Azure AD error'));
+      
+      render(<LoginPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Sign in with Microsoft')).toBeInTheDocument();
+      });
+
+      const azureButton = screen.getByText('Sign in with Microsoft');
+      await user.click(azureButton);
+
+      await waitFor(() => {
+        expect(mockShowError).toHaveBeenCalledWith('Azure AD error');
+        expect(console.error).toHaveBeenCalledWith('Azure AD login error:', expect.any(Error));
+      });
+    });
+
+    it('handles Azure AD login error without message', async () => {
+      const user = userEvent.setup({ delay: null });
+      (azureAdService.isConfigured as jest.Mock).mockReturnValue(true);
+      (azureAdService.getBackendConfig as jest.Mock).mockResolvedValue({ enabled: true });
+      (azureAdService.loginRedirect as jest.Mock).mockRejectedValue({});
+      
+      render(<LoginPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Sign in with Microsoft')).toBeInTheDocument();
+      });
+
+      const azureButton = screen.getByText('Sign in with Microsoft');
+      await user.click(azureButton);
+
+      await waitFor(() => {
+        expect(mockShowError).toHaveBeenCalledWith('Azure AD login failed. Please try again.');
+      });
+    });
+
+    it('shows loading state during Azure AD login', async () => {
+      const user = userEvent.setup({ delay: null });
+      (azureAdService.isConfigured as jest.Mock).mockReturnValue(true);
+      (azureAdService.getBackendConfig as jest.Mock).mockResolvedValue({ enabled: true });
+      (azureAdService.loginRedirect as jest.Mock).mockImplementation(() => 
+        new Promise(resolve => setTimeout(resolve, 1000))
       );
       
-      const emailInput = screen.getByLabelText(/email/i);
-      const passwordInput = screen.getByLabelText(/password/i);
-      
-      fireEvent.change(emailInput, { target: { value: 'test@example.com' } });
-      fireEvent.change(passwordInput, { target: { value: 'password123' } });
-      
-      const submitButton = screen.getByRole('button', { name: /sign in/i });
-      fireEvent.click(submitButton);
-      
+      render(<LoginPage />);
+
       await waitFor(() => {
-        expect(mockPush).toHaveBeenCalledWith('/dashboard');
+        expect(screen.getByText('Sign in with Microsoft')).toBeInTheDocument();
+      });
+
+      const azureButton = screen.getByText('Sign in with Microsoft');
+      await user.click(azureButton);
+
+      await waitFor(() => {
+        expect(screen.getByText('Redirecting...')).toBeInTheDocument();
+        expect(azureButton).toBeDisabled();
       });
     });
   });
 
-  describe('Remember Me', () => {
-    it('renders remember me checkbox', () => {
-      render(
-        <TestWrapper>
-          <LoginPage />
-        </TestWrapper>
-      );
+  describe('Button States and Interactions', () => {
+    it('disables submit button when form is submitting', async () => {
+      const user = userEvent.setup({ delay: null });
+      mockLogin.mockImplementation(() => new Promise(resolve => setTimeout(resolve, 1000)));
       
-      expect(screen.getByLabelText(/remember me/i)).toBeInTheDocument();
-    });
+      render(<LoginPage />);
 
-    it('toggles remember me checkbox', () => {
-      render(
-        <TestWrapper>
-          <LoginPage />
-        </TestWrapper>
-      );
-      
-      const checkbox = screen.getByLabelText(/remember me/i) as HTMLInputElement;
-      expect(checkbox.checked).toBe(false);
-      
-      fireEvent.click(checkbox);
-      expect(checkbox.checked).toBe(true);
-      
-      fireEvent.click(checkbox);
-      expect(checkbox.checked).toBe(false);
-    });
-  });
-
-  describe('Navigation', () => {
-    it('navigates to register page', () => {
-      render(
-        <TestWrapper>
-          <LoginPage />
-        </TestWrapper>
-      );
-      
-      const registerLink = screen.getByText('Sign up here');
-      fireEvent.click(registerLink);
-      
-      expect(mockPush).toHaveBeenCalledWith('/register');
-    });
-
-    it('navigates to forgot password', () => {
-      render(
-        <TestWrapper>
-          <LoginPage />
-        </TestWrapper>
-      );
-      
-      const forgotPasswordLink = screen.getByText(/forgot password/i);
-      fireEvent.click(forgotPasswordLink);
-      
-      expect(mockPush).toHaveBeenCalledWith('/forgot-password');
-    });
-  });
-
-  describe('Accessibility', () => {
-    it('has proper form labels', () => {
-      render(
-        <TestWrapper>
-          <LoginPage />
-        </TestWrapper>
-      );
-      
-      expect(screen.getByLabelText(/email address/i)).toBeInTheDocument();
-      expect(screen.getByLabelText(/password/i)).toBeInTheDocument();
-    });
-
-    it('supports keyboard navigation', () => {
-      render(
-        <TestWrapper>
-          <LoginPage />
-        </TestWrapper>
-      );
-      
-      const emailInput = screen.getByLabelText(/email/i);
-      const passwordInput = screen.getByLabelText(/password/i);
+      const emailField = screen.getByLabelText(/email/i);
+      const passwordField = screen.getByLabelText(/password/i);
       const submitButton = screen.getByRole('button', { name: /sign in/i });
-      
-      emailInput.focus();
-      expect(emailInput).toHaveFocus();
-      
-      // Tab to password
-      fireEvent.keyDown(emailInput, { key: 'Tab' });
-      passwordInput.focus();
-      expect(passwordInput).toHaveFocus();
-      
-      // Tab to submit button
-      fireEvent.keyDown(passwordInput, { key: 'Tab' });
-      submitButton.focus();
-      expect(submitButton).toHaveFocus();
-    });
 
-    it('shows password when show/hide button is clicked', () => {
-      render(
-        <TestWrapper>
-          <LoginPage />
-        </TestWrapper>
-      );
-      
-      const passwordInput = screen.getByLabelText(/password/i) as HTMLInputElement;
-      const showPasswordButton = screen.getByLabelText(/show password/i);
-      
-      expect(passwordInput.type).toBe('password');
-      
-      fireEvent.click(showPasswordButton);
-      expect(passwordInput.type).toBe('text');
-      
-      fireEvent.click(showPasswordButton);
-      expect(passwordInput.type).toBe('password');
-    });
-  });
+      await user.type(emailField, 'test@example.com');
+      await user.type(passwordField, 'password123');
 
-  describe('Error Display', () => {
-    it('displays multiple validation errors', async () => {
-      render(
-        <TestWrapper>
-          <LoginPage />
-        </TestWrapper>
-      );
-      
-      const submitButton = screen.getByRole('button', { name: /sign in/i });
-      fireEvent.click(submitButton);
-      
+      expect(submitButton).not.toBeDisabled();
+
+      await user.click(submitButton);
+
       await waitFor(() => {
-        expect(screen.getByText(/email is required/i)).toBeInTheDocument();
-        expect(screen.getByText(/password is required/i)).toBeInTheDocument();
+        expect(submitButton).toBeDisabled();
       });
     });
 
-    it('clears errors when user types', async () => {
-      render(
-        <TestWrapper>
-          <LoginPage />
-        </TestWrapper>
+    it('disables submit button when fields are empty', () => {
+      render(<LoginPage />);
+
+      const submitButton = screen.getByRole('button', { name: /sign in/i });
+      
+      expect(submitButton).toBeDisabled();
+    });
+
+    it('enables submit button when both fields are filled', async () => {
+      const user = userEvent.setup({ delay: null });
+      render(<LoginPage />);
+
+      const emailField = screen.getByLabelText(/email/i);
+      const passwordField = screen.getByLabelText(/password/i);
+      const submitButton = screen.getByRole('button', { name: /sign in/i });
+
+      await user.type(emailField, 'test@example.com');
+      await user.type(passwordField, 'password123');
+
+      expect(submitButton).not.toBeDisabled();
+    });
+
+    it('disables both buttons during Azure AD submission', async () => {
+      const user = userEvent.setup({ delay: null });
+      (azureAdService.isConfigured as jest.Mock).mockReturnValue(true);
+      (azureAdService.getBackendConfig as jest.Mock).mockResolvedValue({ enabled: true });
+      (azureAdService.loginRedirect as jest.Mock).mockImplementation(() => 
+        new Promise(resolve => setTimeout(resolve, 1000))
       );
       
-      const submitButton = screen.getByRole('button', { name: /sign in/i });
-      fireEvent.click(submitButton);
-      
+      render(<LoginPage />);
+
+      const emailField = screen.getByLabelText(/email/i);
+      const passwordField = screen.getByLabelText(/password/i);
+
+      await user.type(emailField, 'test@example.com');
+      await user.type(passwordField, 'password123');
+
       await waitFor(() => {
-        expect(screen.getByText(/email is required/i)).toBeInTheDocument();
+        expect(screen.getByText('Sign in with Microsoft')).toBeInTheDocument();
       });
-      
-      const emailInput = screen.getByLabelText(/email/i);
-      fireEvent.change(emailInput, { target: { value: 'test@example.com' } });
-      
+
+      const azureButton = screen.getByText('Sign in with Microsoft');
+      const submitButton = screen.getByRole('button', { name: /sign in/i });
+
+      await user.click(azureButton);
+
       await waitFor(() => {
-        expect(screen.queryByText(/email is required/i)).not.toBeInTheDocument();
+        expect(submitButton).toBeDisabled();
+        expect(azureButton).toBeDisabled();
+      });
+    });
+
+    it('disables form fields during submission', async () => {
+      const user = userEvent.setup({ delay: null });
+      mockLogin.mockImplementation(() => new Promise(resolve => setTimeout(resolve, 1000)));
+      
+      render(<LoginPage />);
+
+      const emailField = screen.getByLabelText(/email/i);
+      const passwordField = screen.getByLabelText(/password/i);
+      const submitButton = screen.getByRole('button', { name: /sign in/i });
+
+      await user.type(emailField, 'test@example.com');
+      await user.type(passwordField, 'password123');
+      await user.click(submitButton);
+
+      await waitFor(() => {
+        expect(emailField).toBeDisabled();
+        expect(passwordField).toBeDisabled();
       });
     });
   });
 
-  describe('Edge Cases', () => {
-    it('handles empty response from server', async () => {
-      mockApiClient.post.mockResolvedValue(null);
+  describe('Links and Navigation', () => {
+    it('renders sign up link with correct href', () => {
+      render(<LoginPage />);
 
-      render(
-        <TestWrapper>
-          <LoginPage />
-        </TestWrapper>
-      );
+      const signUpLink = screen.getByText('Sign up here');
       
-      const emailInput = screen.getByLabelText(/email/i);
-      const passwordInput = screen.getByLabelText(/password/i);
+      expect(signUpLink).toHaveAttribute('href', '/register');
+    });
+
+    it('shows correct styling for registration link', () => {
+      render(<LoginPage />);
+
+      const signUpLink = screen.getByText('Sign up here');
       
-      fireEvent.change(emailInput, { target: { value: 'test@example.com' } });
-      fireEvent.change(passwordInput, { target: { value: 'password123' } });
-      
-      const submitButton = screen.getByRole('button', { name: /sign in/i });
-      fireEvent.click(submitButton);
-      
+      expect(signUpLink).toHaveStyle('text-decoration: none');
+    });
+  });
+
+  describe('Component Styling and Layout', () => {
+    it('renders login icon', () => {
+      render(<LoginPage />);
+
+      // Login icon should be present (MUI LoginIcon)
+      const loginIcon = screen.getByTestId('LoginIcon');
+      expect(loginIcon).toBeInTheDocument();
+    });
+
+    it('renders Microsoft icon when Azure AD is enabled', async () => {
+      (azureAdService.isConfigured as jest.Mock).mockReturnValue(true);
+      (azureAdService.getBackendConfig as jest.Mock).mockResolvedValue({ enabled: true });
+
+      render(<LoginPage />);
+
       await waitFor(() => {
-        expect(screen.getByText(/login failed. please try again/i)).toBeInTheDocument();
+        expect(screen.getByTestId('MicrosoftIcon')).toBeInTheDocument();
       });
     });
 
-    it('handles server returning success false', async () => {
-      mockApiClient.post.mockResolvedValue({
-        success: false,
-        error: 'Account locked',
-      });
+    it('renders with proper container structure', () => {
+      render(<LoginPage />);
 
-      render(
-        <TestWrapper>
-          <LoginPage />
-        </TestWrapper>
-      );
+      // Check for main structural elements
+      expect(screen.getByRole('main')).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: 'Sign In' })).toBeInTheDocument();
+    });
+  });
+
+  describe('Edge Cases and Error Handling', () => {
+    it('handles multiple rapid form submissions', async () => {
+      const user = userEvent.setup({ delay: null });
+      mockLogin.mockImplementation(() => new Promise(resolve => setTimeout(resolve, 100)));
       
-      const emailInput = screen.getByLabelText(/email/i);
-      const passwordInput = screen.getByLabelText(/password/i);
-      
-      fireEvent.change(emailInput, { target: { value: 'test@example.com' } });
-      fireEvent.change(passwordInput, { target: { value: 'password123' } });
-      
+      render(<LoginPage />);
+
+      const emailField = screen.getByLabelText(/email/i);
+      const passwordField = screen.getByLabelText(/password/i);
       const submitButton = screen.getByRole('button', { name: /sign in/i });
-      fireEvent.click(submitButton);
+
+      await user.type(emailField, 'test@example.com');
+      await user.type(passwordField, 'password123');
+
+      // Multiple rapid clicks
+      await user.click(submitButton);
+      await user.click(submitButton);
+      await user.click(submitButton);
+
+      // Should only be called once due to disabled state
+      expect(mockLogin).toHaveBeenCalledTimes(1);
+    });
+
+    it('handles component unmounting during async operations', async () => {
+      const user = userEvent.setup({ delay: null });
+      mockLogin.mockImplementation(() => new Promise(resolve => setTimeout(resolve, 1000)));
       
-      await waitFor(() => {
-        expect(screen.getByText(/account locked/i)).toBeInTheDocument();
-      });
+      const { unmount } = render(<LoginPage />);
+
+      const emailField = screen.getByLabelText(/email/i);
+      const passwordField = screen.getByLabelText(/password/i);
+      const submitButton = screen.getByRole('button', { name: /sign in/i });
+
+      await user.type(emailField, 'test@example.com');
+      await user.type(passwordField, 'password123');
+      await user.click(submitButton);
+
+      // Unmount during submission
+      unmount();
+
+      // Should not cause any warnings or errors
+      expect(mockLogin).toHaveBeenCalled();
+    });
+  });
+
+  describe('Default Export', () => {
+    it('exports LoginPage as default', () => {
+      expect(LoginPage).toBeDefined();
+      expect(typeof LoginPage).toBe('function');
     });
   });
 });

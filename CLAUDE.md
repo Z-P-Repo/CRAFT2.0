@@ -17,6 +17,11 @@ When user prompts "update", update all .md files:
 2. Update documentation with latest features and changes
 3. Ensure consistency across all markdown documentation
 
+### "test"
+When user prompts "test", run the comprehensive test coverage command:
+- Command: `npm run test:coverage`
+- This will run all tests with full coverage reporting
+
 ## Project Structure
 - Frontend: `/craft-frontend` (Next.js 15, TypeScript, Material-UI, Azure AD MSAL)
 - Backend: `/craft-backend` (Node.js, Express, TypeScript, MongoDB, Azure AD SSO)

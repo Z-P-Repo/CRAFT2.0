@@ -371,3 +371,83 @@ export interface Permission {
   granted: boolean;
   reason?: string;
 }
+
+// Activity tracking types
+export interface Activity {
+  _id?: string;
+  id?: string;
+  type: ActivityType;
+  category: ActivityCategory;
+  action: string;
+  resource: {
+    type: string;
+    id: string;
+    name: string;
+  };
+  actor: {
+    id: string;
+    name: string;
+    email: string;
+    type: 'user' | 'system' | 'service';
+  };
+  target?: {
+    type: string;
+    id: string;
+    name: string;
+  };
+  metadata?: {
+    changes?: Record<string, { from: any; to: any }>;
+    ipAddress?: string;
+    userAgent?: string;
+    sessionId?: string;
+    duration?: number;
+    status?: 'success' | 'failure' | 'pending';
+    errorMessage?: string;
+    additionalData?: Record<string, any>;
+  };
+  description: string;
+  timestamp: string;
+  severity: ActivitySeverity;
+  tags?: string[];
+}
+
+export type ActivityType = 
+  | 'authentication'
+  | 'authorization' 
+  | 'policy_management'
+  | 'user_management'
+  | 'resource_management'
+  | 'system_configuration'
+  | 'audit'
+  | 'security_event'
+  | 'data_modification'
+  | 'access_request'
+  | 'workflow'
+  | 'integration'
+  | 'maintenance';
+
+export type ActivityCategory = 
+  | 'security'
+  | 'administration'
+  | 'compliance'
+  | 'operation'
+  | 'configuration'
+  | 'integration'
+  | 'monitoring'
+  | 'user_activity';
+
+export type ActivitySeverity = 'low' | 'medium' | 'high' | 'critical';
+
+export interface ActivityFilter {
+  type?: ActivityType[];
+  category?: ActivityCategory[];
+  severity?: ActivitySeverity[];
+  actor?: string;
+  resource?: string;
+  dateRange?: {
+    start: string;
+    end: string;
+  };
+  search?: string;
+  tags?: string[];
+}

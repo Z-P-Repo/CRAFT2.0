@@ -8,6 +8,7 @@ import resourceRoutes from './resourceRoutes';
 import actionRoutes from './actionRoutes';
 import attributeRoutes from './attributeRoutes';
 import policyRoutes from './policyRoutes';
+import activityRoutes from './activityRoutes';
 import { databaseConnection } from '@/config/database';
 import { config } from '@/config/environment';
 
@@ -43,6 +44,7 @@ router.get('/info', (req: Request, res: Response) => {
       actions: `${config.apiPrefix}/actions`,
       attributes: `${config.apiPrefix}/attributes`,
       policies: `${config.apiPrefix}/policies`,
+      activities: `${config.apiPrefix}/activities`,
     },
   });
 });
@@ -56,5 +58,6 @@ router.use('/resources', resourceRoutes);
 router.use('/actions', actionRoutes);
 router.use('/attributes', attributeRoutes);
 router.use('/policies', policyRoutes);
+router.use('/activities', activityRoutes);
 
 export default router;

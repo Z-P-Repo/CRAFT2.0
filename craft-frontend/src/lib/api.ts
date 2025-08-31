@@ -1,5 +1,5 @@
 import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios';
-import { ApiResponse, LoginCredentials, RegisterData, User, ApiClientConfig } from '@/types';
+import { ApiResponse, LoginCredentials, RegisterData, User, ApiClientConfig, Activity, ActivityFilter } from '@/types';
 
 class ApiClient {
   private client: AxiosInstance;
@@ -258,6 +258,54 @@ class ApiClient {
       method: 'GET',
       url: '/health',
       baseURL: this.baseURL.replace('/api/v1', ''), // Health endpoint is at root
+    });
+  }
+
+  // Activity Management
+  async getActivities(params?: {
+    page?: number;
+    limit?: number;
+    filters?: ActivityFilter;
+  }): Promise<ApiResponse<Activity[]>> {
+    return this.request({
+      method: 'GET',
+      url: '/activities',
+      params,
+    });
+  }
+
+  async getActivity(id: string): Promise<ApiResponse<Activity>> {
+    return this.request({
+      method: 'GET',
+      url: `/activities/${id}`,
+    });
+  }
+
+  async createActivity(activity: Omit<Activity, '_id' | 'id' | 'timestamp'>): Promise<ApiResponse<Activity>> {
+    return this.request({
+      method: 'POST',
+      url: '/activities',
+      data: activity,
+    });
+  }
+
+  async getActivityStats(): Promise<ApiResponse<{
+    total: number;
+    byCategory: Record<string, number>;
+    bySeverity: Record<string, number>;
+    recentCount: number;
+  }>> {
+    return this.request({
+      method: 'GET',
+      url: '/activities/stats',
+    });
+  }
+
+  async exportActivities(filters?: ActivityFilter): Promise<ApiResponse<{ downloadUrl: string }>> {
+    return this.request({
+      method: 'POST',
+      url: '/activities/export',
+      data: { filters },
     });
   }
 }
