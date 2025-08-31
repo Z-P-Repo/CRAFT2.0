@@ -515,56 +515,53 @@ export default function ActivityPage() {
         )}
 
         {/* Statistics Cards */}
-        <Grid container spacing={3} sx={{ mb: 3 }}>
-          <Grid item={true} xs={12} sm={6} md={3}>
-            <Card>
-              <CardContent sx={{ textAlign: 'center' }}>
-                <Typography variant="h3" color="primary.main" gutterBottom>
-                  {loading ? <Skeleton width={60} /> : stats.total}
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  Total Activities
-                </Typography>
-              </CardContent>
-            </Card>
-          </Grid>
-          <Grid item={true} xs={12} sm={6} md={3}>
-            <Card>
-              <CardContent sx={{ textAlign: 'center' }}>
-                <Typography variant="h3" color="success.main" gutterBottom>
-                  {loading ? <Skeleton width={60} /> : stats.recentActivities}
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  Last 24 Hours
-                </Typography>
-              </CardContent>
-            </Card>
-          </Grid>
-          <Grid item={true} xs={12} sm={6} md={3}>
-            <Card>
-              <CardContent sx={{ textAlign: 'center' }}>
-                <Typography variant="h3" color="warning.main" gutterBottom>
-                  {loading ? <Skeleton width={60} /> : (stats.severities.high || 0) + (stats.severities.critical || 0)}
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  High Priority
-                </Typography>
-              </CardContent>
-            </Card>
-          </Grid>
-          <Grid item={true} xs={12} sm={6} md={3}>
-            <Card>
-              <CardContent sx={{ textAlign: 'center' }}>
-                <Typography variant="h3" color="info.main" gutterBottom>
-                  {loading ? <Skeleton width={60} /> : Object.keys(stats.categories).length}
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  Categories
-                </Typography>
-              </CardContent>
-            </Card>
-          </Grid>
-        </Grid>
+        <Box sx={{ 
+          display: 'grid', 
+          gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: 'repeat(4, 1fr)' },
+          gap: 3,
+          mb: 3 
+        }}>
+          <Card>
+            <CardContent sx={{ textAlign: 'center' }}>
+              <Typography variant="h3" color="primary.main" gutterBottom>
+                {loading ? <Skeleton width={60} /> : stats.total}
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Total Activities
+              </Typography>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent sx={{ textAlign: 'center' }}>
+              <Typography variant="h3" color="success.main" gutterBottom>
+                {loading ? <Skeleton width={60} /> : stats.recentActivities}
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Last 24 Hours
+              </Typography>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent sx={{ textAlign: 'center' }}>
+              <Typography variant="h3" color="warning.main" gutterBottom>
+                {loading ? <Skeleton width={60} /> : (stats.severities.high || 0) + (stats.severities.critical || 0)}
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                High Priority
+              </Typography>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent sx={{ textAlign: 'center' }}>
+              <Typography variant="h3" color="info.main" gutterBottom>
+                {loading ? <Skeleton width={60} /> : Object.keys(stats.categories).length}
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Categories
+              </Typography>
+            </CardContent>
+          </Card>
+        </Box>
 
         {/* Filters */}
         <Paper elevation={1} sx={{ mb: 3 }}>
@@ -694,7 +691,7 @@ export default function ActivityPage() {
                         </TableCell>
                         <TableCell>
                           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                            <CategoryIcon sx={{ fontSize: 16, color: 'primary.main' }} />
+                            <CategoryIcon />
                             <Chip 
                               label={activity.category} 
                               size="small" 
@@ -882,16 +879,16 @@ export default function ActivityPage() {
               Sort Activities
             </Typography>
             <List>
-              <ListItem button onClick={() => { /* Sort by timestamp */ handleSortClose(); }}>
+              <ListItem component="button" onClick={() => { /* Sort by timestamp */ handleSortClose(); }}>
                 <ListItemText primary="Most Recent" />
               </ListItem>
-              <ListItem button onClick={() => { /* Sort by severity */ handleSortClose(); }}>
+              <ListItem component="button" onClick={() => { /* Sort by severity */ handleSortClose(); }}>
                 <ListItemText primary="By Severity" />
               </ListItem>
-              <ListItem button onClick={() => { /* Sort by category */ handleSortClose(); }}>
+              <ListItem component="button" onClick={() => { /* Sort by category */ handleSortClose(); }}>
                 <ListItemText primary="By Category" />
               </ListItem>
-              <ListItem button onClick={() => { /* Sort by actor */ handleSortClose(); }}>
+              <ListItem component="button" onClick={() => { /* Sort by actor */ handleSortClose(); }}>
                 <ListItemText primary="By Actor" />
               </ListItem>
             </List>
