@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   Typography,
   Box,
@@ -153,7 +153,7 @@ export default function ObjectsPage() {
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
 
   // Mock data for now - in real implementation this would come from API
-  const mockObjects: ExtendedResourceObject[] = [
+  const mockObjects: ExtendedResourceObject[] = useMemo(() => [
     {
       _id: '1',
       id: 'object-customer-db',
@@ -208,7 +208,7 @@ export default function ObjectsPage() {
       updatedAt: '2024-01-20T16:45:00Z',
       lastAccessed: '2024-01-21T09:15:00Z'
     }
-  ];
+  ], []);
 
   const handleClickOpen = (object?: ExtendedResourceObject) => {
     setSelectedObject(object || null);
@@ -525,36 +525,12 @@ export default function ObjectsPage() {
     } finally {
       setLoading(false);
     }
-  }, [page, rowsPerPage, sortBy, sortOrder, searchTerm]);
+  }, [page, rowsPerPage, sortBy, sortOrder, searchTerm, mockObjects]);
 
   useEffect(() => {
     fetchObjects();
   }, [fetchObjects]);
 
-  // Add window focus refresh - refresh data when user returns to the page
-  useEffect(() => {
-    const handleFocus = () => {
-      // Only refresh if the page has been loaded before and user is returning
-      if (!loading) {
-        fetchObjects();
-      }
-    };
-
-    window.addEventListener('focus', handleFocus);
-    return () => window.removeEventListener('focus', handleFocus);
-  }, [fetchObjects, loading]);
-
-  // Add periodic refresh every 30 seconds when page is active
-  useEffect(() => {
-    const interval = setInterval(() => {
-      // Only refresh if page is visible and not currently loading
-      if (document.visibilityState === 'visible' && !loading) {
-        fetchObjects();
-      }
-    }, 30000); // 30 seconds
-
-    return () => clearInterval(interval);
-  }, [fetchObjects, loading]);
 
   const getTypeColor = (type: string) => {
     switch (type) {

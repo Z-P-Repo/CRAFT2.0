@@ -120,22 +120,23 @@ CRAFT2.0/
 - Mobile-friendly responsive design
 
 ### 🏗️ ABAC Components
-- **Policies**: Define access control rules with step-by-step wizard (view-only access for Basic users)
+- **Policies**: Define access control rules with enhanced 5-step wizard and separated resource attribute selection (view-only access for Basic users)
 - **Subjects**: Manage users, groups, roles with comprehensive attributes and real-time policy count tracking (view-only access for Basic users)
 - **Resources**: Protected resources and assets with attribute support and policy dependency visualization (view-only access for Basic users)
 - **Actions**: Operations that can be performed with categorization and policy usage tracking (view-only access for Basic users)
-- **Attributes**: Contextual information with multi-category support (Subject/Resource) and policy count display (view-only access for Basic users)
+- **Attributes**: Contextual information with conditional scope selection for subjects/resources, multi-select dropdowns, and category filtering (view-only access for Basic users)
 - **Users**: Complete user management with three-tier role system and role change restrictions
 
 ### 📋 Policy Management
-- **Step-by-step Creation**: 4-step wizard for policy creation
+- **Enhanced Step-by-step Creation**: 5-step wizard for policy creation with separated Action & Resource selection
+- **Resource Attribute Selection**: Dedicated resource attribute selection interface matching subject selection pattern
 - **Dedicated View/Edit Pages**: Full-page policy management instead of modals
 - **Advanced Filtering**: Search, filter by status/effect, and sorting
 - **Bulk Operations**: Select and delete multiple policies
 - **Human-readable Rules**: Natural language policy display
 - **Comprehensive Pagination**: Full pagination support across all entities
 - **Policy Dependency Tracking**: Real-time policy count display across all entity management pages with consistent ID-based entity mapping
-- **Auto-Refresh Capabilities**: Automatic data synchronization with window focus and periodic updates
+- **Rate Limiting Protection**: Built-in API rate limiting to prevent 429 errors and server overload
 - **Deletion Protection**: Prevents deletion of entities currently referenced in active policies
 - **Schema Consistency**: Fixed entity-policy mapping to ensure accurate policy counts and deletion protection
 - **Standardized Delete Modals**: Clean, professional delete confirmation dialogs with close icons and consistent design across all modules
@@ -147,9 +148,11 @@ CRAFT2.0/
 - Simulate different contexts
 
 ### 🔧 Technical Stack
-- **Frontend**: Next.js 15, React 18, Material-UI, TypeScript
+- **Frontend**: Next.js 15.4.6, React 18, Material-UI v6, TypeScript
 - **Backend**: Node.js, Express, MongoDB, Mongoose, TypeScript
-- **Authentication**: JWT, bcrypt
+- **Authentication**: JWT, bcrypt, Azure AD SSO
+- **Testing**: Jest, React Testing Library with comprehensive test coverage
+- **Performance**: Built-in rate limiting, request throttling, and API optimization
 - **Documentation**: Comprehensive markdown docs
 
 ## 🛠️ Development Workflow
@@ -437,10 +440,20 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 **Built with ❤️ using Next.js, Node.js, and MongoDB**
 
-*Last updated: August 29, 2025*  
+*Last updated: September 1, 2025*  
 🤖 *Generated and maintained with [Claude Code](https://claude.ai/code)*
 
 ## ⭐ Latest Updates
+
+### Version 1.2.0 - Enhanced Policy Management & Performance Optimization
+- **✅ Enhanced Policy Creation**: Upgraded from 4-step to 5-step wizard with separated Action & Resource selection
+- **🎯 Resource Attribute Selection**: Dedicated resource attribute selection interface matching subject selection pattern
+- **🔄 Attribute Scope Management**: Added conditional subject/resource selection in attribute creation with multi-select dropdowns
+- **⚡ Performance Optimization**: Comprehensive fixes for infinite API calls and implemented global rate limiting
+- **🛡️ Rate Limiting Protection**: Built-in API client rate limiting (250ms minimum) and 429 error handling with exponential backoff
+- **🧪 Testing Infrastructure**: Added comprehensive Jest and React Testing Library test coverage
+- **🔧 Build System Fixes**: Resolved all TypeScript compilation errors, React hooks dependencies, and ESLint issues
+- **🎨 UI/UX Improvements**: Standardized delete modals, attribute filtering by category, and consistent design patterns
 
 ### Version 1.1.0 - Azure AD SSO Integration
 - **🔐 Azure AD Single Sign-On**: Complete OAuth 2.0/OpenID Connect integration

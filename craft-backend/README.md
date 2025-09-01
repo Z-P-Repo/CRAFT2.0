@@ -2,7 +2,7 @@
 
 A robust, scalable Node.js backend API for the CRAFT (Attribute-Based Access Control) Permission System. Built with Express.js, TypeScript, MongoDB, and comprehensive security features.
 
-![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)
+![Version](https://img.shields.io/badge/version-1.2.0-blue.svg)
 ![Node.js](https://img.shields.io/badge/Node.js-18+-green.svg)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue.svg)
 ![Express](https://img.shields.io/badge/Express-4.19-black.svg)
@@ -19,13 +19,13 @@ A robust, scalable Node.js backend API for the CRAFT (Attribute-Based Access Con
 - **🔒 Permission Control** - Basic users have view-only access; Admin/Super Admin have full CRUD access
 - **📁 Resource Management** - Handle files, databases, APIs, and system resources
 - **⚡ Action Framework** - Categorized system actions with risk assessment
-- **🏷️ Attribute System** - Multi-category attribute management (Subject/Resource) for ABAC
+- **🏷️ Enhanced Attribute System** - Multi-category attribute management (Subject/Resource) with conditional scope selection and category filtering
 - **📊 Policy Dependency Tracking** - Real-time policy count display and dependency visualization across all entities
 - **🔒 Deletion Protection** - Prevents deletion of entities (subjects, actions, resources, attributes) currently referenced in active policies
 - **🎨 Standardized UI Integration** - Backend supports frontend's standardized delete confirmation dialogs with consistent error responses and system protection features
 - **🧪 Policy Evaluation** - Real-time policy testing and validation
 - **📊 Comprehensive Logging** - Structured logging with Winston
-- **🛡️ Security Features** - Rate limiting, CORS, helmet, and input validation
+- **🛡️ Enhanced Security Features** - Advanced rate limiting, CORS, helmet, input validation, and 429 error protection
 - **📄 API Documentation** - Complete OpenAPI/Swagger documentation
 
 ## 📋 Prerequisites
@@ -337,5 +337,27 @@ For support and questions:
 
 ---
 
-*Last updated: August 29, 2025*  
+*Last updated: September 1, 2025*  
 🤖 *Generated and maintained with [Claude Code](https://claude.ai/code)*
+
+## 🔄 Recent Updates (Version 1.2.0)
+
+### Enhanced API Architecture
+- **Schema Consistency**: Fixed entity-policy mapping to ensure accurate policy counts and deletion protection across all endpoints
+- **Policy Dependency Tracking**: Improved real-time policy count display with consistent ID-based entity mapping
+- **Deletion Protection**: Enhanced backend validation preventing deletion of entities referenced in active policies
+
+### Security & Performance
+- **Rate Limiting Protection**: Enhanced server-side rate limiting to prevent API overload and 429 errors
+- **Request Throttling**: Improved API performance with optimized request handling
+- **Error Response Consistency**: Standardized error messages for frontend integration
+
+### Testing & Build System
+- **TypeScript Compilation**: Resolved all compilation errors and type definition issues
+- **Build Optimization**: Enhanced build process with tsc-alias for path resolution
+- **Code Quality**: Improved ESLint compliance and code consistency
+
+### Database & Models
+- **Schema Updates**: Enhanced attribute models to support conditional scope selection
+- **Policy Tracking**: Improved policy dependency tracking across all entity models
+- **Data Validation**: Enhanced input validation and sanitization

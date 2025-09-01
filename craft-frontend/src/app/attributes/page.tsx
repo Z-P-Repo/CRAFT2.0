@@ -116,6 +116,10 @@ interface Attribute {
     isCustom: boolean;
     version: string;
     externalId?: string;
+    scope?: {
+      subjects?: string[];
+      resources?: string[];
+    };
   };
   mapping: {
     sourceField?: string;
@@ -154,6 +158,15 @@ export default function AttributesPage() {
   const [dateValues, setDateValues] = useState<string[]>([]);
   const [dateInputType, setDateInputType] = useState<'single' | 'range' | 'period'>('single');
   const [description, setDescription] = useState('');
+  
+  // Conditional selections for attribute scope
+  const [selectedSubjectsForAttribute, setSelectedSubjectsForAttribute] = useState<string[]>([]);
+  const [selectedResourcesForAttribute, setSelectedResourcesForAttribute] = useState<string[]>([]);
+  
+  // Dropdown data for subjects and resources
+  const [subjects, setSubjects] = useState<any[]>([]);
+  const [resources, setResources] = useState<any[]>([]);
+  
   // Search, Filter, Sort states
   const [searchTerm, setSearchTerm] = useState('');
   const [filterCategory, setFilterCategory] = useState<string[]>([]);
@@ -191,6 +204,16 @@ export default function AttributesPage() {
     setSelectedCategories(attribute?.categories ? attribute.categories : []);
     setSelectedDataType(attribute?.dataType || '');
     setDescription(attribute?.description || '');
+    
+    // Initialize scope data if attribute exists
+    if (attribute?.metadata?.scope) {
+      setSelectedSubjectsForAttribute(attribute.metadata.scope.subjects || []);
+      setSelectedResourcesForAttribute(attribute.metadata.scope.resources || []);
+    } else {
+      // Reset to defaults for new attributes
+      setSelectedSubjectsForAttribute([]);
+      setSelectedResourcesForAttribute([]);
+    }
     
     // Initialize values immediately if attribute exists
     if (attribute && attribute.constraints && attribute.constraints.enumValues && attribute.constraints.enumValues.length > 0) {
@@ -333,6 +356,9 @@ export default function AttributesPage() {
     setStringValues([]);
     setDateValues([]);
     setDateInputType('single');
+    // Reset scope-related states
+    setSelectedSubjectsForAttribute([]);
+    setSelectedResourcesForAttribute([]);
   };
 
   const parsePermittedValues = (input: string, dataType: string) => {
@@ -712,7 +738,12 @@ export default function AttributesPage() {
           tags: [],
           isSystem: false,
           isCustom: true,
-          version: '1.0.0'
+          version: '1.0.0',
+          scope: {
+            appliesTo: (selectedSubjectsForAttribute.length > 0 || selectedResourcesForAttribute.length > 0) ? 'specific' : 'all',
+            subjects: selectedSubjectsForAttribute,
+            resources: selectedResourcesForAttribute
+          }
         }
       };
 
@@ -758,8 +789,8 @@ export default function AttributesPage() {
     }
   };
 
-  // Fetch attributes from API
-  const fetchAttributes = async () => {
+  // Fetch attributes from API - removed dependencies that cause infinite loops
+  const fetchAttributes = useCallback(async () => {
     try {
       setLoading(true);
 
@@ -790,7 +821,33 @@ export default function AttributesPage() {
     } finally {
       setLoading(false);
     }
-  };
+    // ESLint disable to prevent infinite loop - snackbar causes issues
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page, rowsPerPage, sortBy, sortOrder, searchTerm, filterCategory, filterDataType]);
+
+  // Fetch subjects and resources for attribute scope selection
+  const fetchDropdownData = useCallback(async () => {
+    try {
+      const [subjectsResponse, resourcesResponse] = await Promise.all([
+        apiClient.get('/subjects', { page: 1, limit: 1000 }),
+        apiClient.get('/resources', { page: 1, limit: 1000 })
+      ]);
+
+      if (subjectsResponse.success && subjectsResponse.data) {
+        setSubjects(Array.isArray(subjectsResponse.data) ? subjectsResponse.data : []);
+      }
+      if (resourcesResponse.success && resourcesResponse.data) {
+        setResources(Array.isArray(resourcesResponse.data) ? resourcesResponse.data : []);
+      }
+    } catch (error) {
+      console.error('Error fetching dropdown data:', error);
+    }
+  }, []);
+
+  // Fetch dropdown data on component mount
+  useEffect(() => {
+    fetchDropdownData();
+  }, [fetchDropdownData]);
 
   // Unified effect with debouncing for search, immediate for others
   useEffect(() => {
@@ -806,32 +863,8 @@ export default function AttributesPage() {
       fetchAttributes();
       return () => {}; // Empty cleanup function for consistency
     }
-  }, [searchTerm, page, rowsPerPage, filterCategory, filterDataType, sortBy, sortOrder]);
+  }, [searchTerm, page, rowsPerPage, filterCategory, filterDataType, sortBy, sortOrder, fetchAttributes]);
 
-  // Add window focus refresh - refresh data when user returns to the page
-  useEffect(() => {
-    const handleFocus = () => {
-      // Only refresh if the page has been loaded before and user is returning
-      if (!loading) {
-        fetchAttributes();
-      }
-    };
-
-    window.addEventListener('focus', handleFocus);
-    return () => window.removeEventListener('focus', handleFocus);
-  }, [loading]);
-
-  // Add periodic refresh every 30 seconds when page is active
-  useEffect(() => {
-    const interval = setInterval(() => {
-      // Only refresh if page is visible and not currently loading
-      if (document.visibilityState === 'visible' && !loading) {
-        fetchAttributes();
-      }
-    }, 30000); // 30 seconds
-
-    return () => clearInterval(interval);
-  }, [loading]);
 
   const getStatusColor = (active: boolean) => {
     return active ? 'success' : 'error';
@@ -1700,6 +1733,138 @@ export default function AttributesPage() {
                 </Select>
               </FormControl>
             </Box>
+
+            {/* Conditional Subject/Resource Selection */}
+            {(selectedCategories.includes('subject') || selectedCategories.includes('resource')) && (
+              <Box>
+                <Typography variant="subtitle2" sx={{ mb: 1.5, fontWeight: 600 }}>
+                  Attribute Scope
+                </Typography>
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                  Select which {selectedCategories.includes('subject') && selectedCategories.includes('resource') 
+                    ? 'subjects and resources' 
+                    : selectedCategories.includes('subject') 
+                      ? 'subjects' 
+                      : 'resources'} this attribute applies to. Leave empty to apply to all.
+                </Typography>
+                
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                  {selectedCategories.includes('subject') && (
+                    <FormControl fullWidth>
+                      <InputLabel>Applies to Subjects (optional)</InputLabel>
+                      <Select
+                        multiple
+                        value={selectedSubjectsForAttribute}
+                        onChange={(e) => setSelectedSubjectsForAttribute(typeof e.target.value === 'string' ? e.target.value.split(',') : e.target.value)}
+                        label="Applies to Subjects (optional)"
+                        disabled={isFieldDisabled()}
+                        renderValue={(selected) => (
+                          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                            {selected.length === 0 ? (
+                              <Typography variant="body2" color="text.secondary">All subjects</Typography>
+                            ) : (
+                              selected.map((subjectId) => {
+                                const subject = subjects.find(s => s.id === subjectId);
+                                return (
+                                  <Chip 
+                                    key={subjectId} 
+                                    label={subject?.displayName || subjectId} 
+                                    size="small" 
+                                    color="primary"
+                                  />
+                                );
+                              })
+                            )}
+                          </Box>
+                        )}
+                      >
+                        {subjects.map((subject) => (
+                          <MenuItem key={subject.id} value={subject.id}>
+                            <Checkbox checked={selectedSubjectsForAttribute.indexOf(subject.id) > -1} />
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, width: '100%' }}>
+                              <Avatar
+                                sx={{
+                                  width: 28,
+                                  height: 28,
+                                  bgcolor: subject.type === 'user' ? 'primary.main' : 
+                                           subject.type === 'group' ? 'secondary.main' : 'warning.main',
+                                  fontSize: '12px',
+                                  fontWeight: 600
+                                }}
+                              >
+                                {subject.displayName?.charAt(0).toUpperCase() || '?'}
+                              </Avatar>
+                              <Box sx={{ flexGrow: 1 }}>
+                                <Typography variant="body2" fontWeight="500">
+                                  {subject.displayName}
+                                </Typography>
+                                <Typography variant="caption" color="text.secondary">
+                                  {subject.type} • {subject.department}
+                                </Typography>
+                              </Box>
+                            </Box>
+                          </MenuItem>
+                        ))}
+                      </Select>
+                    </FormControl>
+                  )}
+
+                  {selectedCategories.includes('resource') && (
+                    <FormControl fullWidth>
+                      <InputLabel>Applies to Resources (optional)</InputLabel>
+                      <Select
+                        multiple
+                        value={selectedResourcesForAttribute}
+                        onChange={(e) => setSelectedResourcesForAttribute(typeof e.target.value === 'string' ? e.target.value.split(',') : e.target.value)}
+                        label="Applies to Resources (optional)"
+                        disabled={isFieldDisabled()}
+                        renderValue={(selected) => (
+                          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                            {selected.length === 0 ? (
+                              <Typography variant="body2" color="text.secondary">All resources</Typography>
+                            ) : (
+                              selected.map((resourceId) => {
+                                const resource = resources.find(r => r.id === resourceId);
+                                return (
+                                  <Chip 
+                                    key={resourceId} 
+                                    label={resource?.displayName || resourceId} 
+                                    size="small" 
+                                    color="secondary"
+                                  />
+                                );
+                              })
+                            )}
+                          </Box>
+                        )}
+                      >
+                        {resources.map((resource) => (
+                          <MenuItem key={resource.id} value={resource.id}>
+                            <Checkbox checked={selectedResourcesForAttribute.indexOf(resource.id) > -1} />
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, width: '100%' }}>
+                              <SettingsIcon 
+                                sx={{ 
+                                  color: 'secondary.main',
+                                  fontSize: 24 
+                                }} 
+                              />
+                              <Box sx={{ flexGrow: 1 }}>
+                                <Typography variant="body2" fontWeight="500">
+                                  {resource.displayName}
+                                </Typography>
+                                <Typography variant="caption" color="text.secondary">
+                                  {resource.description || resource.uri}
+                                </Typography>
+                              </Box>
+                            </Box>
+                          </MenuItem>
+                        ))}
+                      </Select>
+                    </FormControl>
+                  )}
+                </Box>
+              </Box>
+            )}
 
             {selectedDataType && (
               <Box>

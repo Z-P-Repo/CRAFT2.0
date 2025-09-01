@@ -15,13 +15,13 @@ A modern, responsive React-based dashboard for managing the CRAFT (Attribute-Bas
 - **👥 User Registration** - Public registration with default Basic role assignment
 - **🛡️ User Management** - Complete user management system with three-tier role hierarchy (Super Admin, Admin, Basic)
 - **🔒 Role-Based Access Control** - Basic users have view-only access; Admin/Super Admin have full CRUD access
-- **📋 Policy Management** - Create, edit, and manage ABAC policies with 4-step wizard and dedicated view/edit pages (Admin/Super Admin only)
+- **📋 Policy Management** - Create, edit, and manage ABAC policies with enhanced 5-step wizard, separated Action & Resource selection, and dedicated view/edit pages (Admin/Super Admin only)
 - **👥 Subject Management** - Handle users, groups, and roles with detailed profiles (view-only for Basic users)
 - **📁 Resource Management** - Manage system resources, files, databases, and APIs (view-only for Basic users)
 - **⚡ Action Management** - Define and categorize system actions with risk levels (view-only for Basic users)
-- **🏷️ Attribute Management** - Configure multi-category ABAC attributes (Subject/Resource) for context-aware decisions (view-only for Basic users)
+- **🏷️ Attribute Management** - Enhanced multi-category ABAC attributes (Subject/Resource) with conditional scope selection, multi-select dropdowns, and category filtering (view-only for Basic users)
 - **📈 Policy Dependency Tracking** - Real-time policy count display with tooltips showing up to 5 policy names across all entity management pages
-- **🔄 Auto-Refresh Capabilities** - Automatic data synchronization using window focus events and 30-second periodic updates
+- **⚡ Performance Optimization** - Comprehensive fixes for infinite API calls, global rate limiting (250ms minimum), and 429 error handling with exponential backoff
 - **🛡️ Deletion Protection UI** - User-friendly error messages when attempting to delete entities referenced in active policies
 - **🗑️ Standardized Delete Modals** - Clean, professional delete confirmation dialogs with close icons, system item warnings, and consistent design across all modules (Subjects, Resources, Actions, Attributes, Users)
 - **📋 Activity Monitoring** - Comprehensive activity logging and audit trail system with real-time activity feed, advanced filtering, and detailed activity views
@@ -160,7 +160,7 @@ src/
 - **Resources** (`/resources`): Resource management with policy dependency tracking and manual refresh button (view-only for Basic users)
 - **Actions** (`/actions`): Action definitions with policy count badges and deletion protection (view-only for Basic users)
 - **Policies** (`/policies`): Access policy management with comprehensive pagination and filtering (view-only for Basic users)
-  - **Policy Creation** (`/policies/create`): 4-step wizard for policy creation (Admin/Super Admin only)
+  - **Policy Creation** (`/policies/create`): Enhanced 5-step wizard for policy creation with separated Action & Resource selection (Admin/Super Admin only)
   - **Policy View** (`/policies/[id]`): Dedicated policy viewing page (all users)
   - **Policy Edit** (`/policies/[id]/edit`): Dedicated policy editing page (Admin/Super Admin only)
 - **Attributes** (`/attributes`): Multi-category attribute system with policy count tooltips and auto-refresh (view-only for Basic users)
@@ -189,13 +189,13 @@ src/
 ## 🔧 API Integration
 
 ### API Client Features
-- Automatic request/response interceptors
-- JWT token management
-- Error handling and retry logic with policy dependency error support
-- Request ID tracking
-- Automatic token refresh
+- Automatic request/response interceptors with global rate limiting
+- JWT token management and automatic refresh
+- Advanced error handling and retry logic with 429 rate limit protection
+- Request ID tracking and request queue management
+- Exponential backoff for failed requests with proper retry delays
 - Real-time policy count fetching with consistent ID-based entity mapping
-- Optimized entity dependency queries
+- Optimized entity dependency queries with request throttling
 - Fixed schema consistency between frontend policy creation and backend policy tracking
 
 ### Available API Methods
@@ -395,5 +395,29 @@ await trackUser('updated', 'user-456', 'John Doe');
 
 ---
 
-*Last updated: August 31, 2025*  
+*Last updated: September 1, 2025*  
 🤖 *Generated and maintained with [Claude Code](https://claude.ai/code)*
+
+## 🔄 Recent Updates (Version 1.2.0)
+
+### Enhanced Policy Management
+- **5-Step Wizard**: Upgraded policy creation from 4 to 5 steps with dedicated Action & Resource selection
+- **Resource Attribute Selection**: Added dedicated resource attribute selection interface matching subject selection pattern
+- **Create/Edit Flow Consistency**: Synchronized create and edit policy flows for identical user experience
+
+### Attribute System Enhancements  
+- **Conditional Scope Selection**: Added subject/resource selection when creating attributes based on category
+- **Multi-Select Dropdowns**: Converted two-step approach to direct multi-select for better UX
+- **Category Filtering**: Subject attributes no longer appear in resource dropdowns and vice versa
+
+### Performance & Stability Fixes
+- **Infinite API Call Resolution**: Comprehensive fixes for React hooks dependency issues causing infinite loops
+- **Global Rate Limiting**: Implemented 250ms minimum delay between identical API requests
+- **429 Error Handling**: Added automatic retry with exponential backoff for rate limit errors
+- **Request Throttling**: Page-level rate limiting with 500ms minimum between requests
+
+### Testing & Build Improvements
+- **Test Coverage**: Added comprehensive Jest and React Testing Library test suites
+- **Build Fixes**: Resolved all TypeScript compilation errors and ESLint warnings
+- **Display Name Fixes**: Fixed React component display name issues in test files
+- **Hook Dependencies**: Resolved React hooks exhaustive-deps warnings

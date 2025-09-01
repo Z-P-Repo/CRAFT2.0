@@ -161,7 +161,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         mounted = false;
       };
     }
-  }, []); // Empty dependency to run only once
+  }, [checkAuth]); // Include checkAuth dependency
 
   const login = async (credentials: LoginCredentials): Promise<void> => {
     try {

@@ -150,7 +150,8 @@ interface Attribute {
 const steps = [
   'Basic Information',
   'Subject Selection',
-  'Actions & Resources',
+  'Action Selection',
+  'Resource Selection', 
   'Review & Create'
 ];
 
@@ -185,6 +186,8 @@ export default function CreatePolicyPage() {
   const [selectedResources, setSelectedResources] = useState<string[]>([]);
   const [selectedAttributes, setSelectedAttributes] = useState<Attribute[]>([]);
   const [selectedSubjectAttributes, setSelectedSubjectAttributes] = useState<{ [key: string]: any }>({});
+  const [selectedResourceAttributes, setSelectedResourceAttributes] = useState<Attribute[]>([]);
+  const [selectedResourceAttributeValues, setSelectedResourceAttributeValues] = useState<{ [key: string]: any }>({});
   const [selectedAction, setSelectedAction] = useState<'draft' | 'publish' | null>(null);
 
   // Dropdown data
@@ -192,6 +195,7 @@ export default function CreatePolicyPage() {
   const [actions, setActions] = useState<ActionObject[]>([]);
   const [resources, setResources] = useState<ResourceObject[]>([]);
   const [attributes, setAttributes] = useState<Attribute[]>([]);
+  const [resourceAttributes, setResourceAttributes] = useState<Attribute[]>([]);
   const [loadingDropdownData, setLoadingDropdownData] = useState(false);
 
   // Create attribute modal states (original modal)
@@ -210,6 +214,9 @@ export default function CreatePolicyPage() {
   const [dateInputType, setDateInputType] = useState<'single' | 'range' | 'period'>('single');
   const [attributeDescription, setAttributeDescription] = useState('');
   const [isAttributeUsedInPolicies, setIsAttributeUsedInPolicies] = useState(false);
+  // Conditional selections for attribute scope
+  const [selectedSubjectsForAttribute, setSelectedSubjectsForAttribute] = useState<string[]>([]);
+  const [selectedResourcesForAttribute, setSelectedResourcesForAttribute] = useState<string[]>([]);
   const [existingValues, setExistingValues] = useState<any[]>([]);
   
   // Create value modal (keep existing)
@@ -237,7 +244,13 @@ export default function CreatePolicyPage() {
         setResources(Array.isArray(resourcesResponse.data) ? resourcesResponse.data : []);
       }
       if (attributesResponse.success && attributesResponse.data) {
-        setAttributes(Array.isArray(attributesResponse.data) ? attributesResponse.data : []);
+        const attributesData = Array.isArray(attributesResponse.data) ? attributesResponse.data : [];
+        setAttributes(attributesData);
+        // Filter resource attributes to only show those with 'resource' category
+        const resourceAttributesData = attributesData.filter(attr => 
+          attributeHasCategory(attr, 'resource')
+        );
+        setResourceAttributes(resourceAttributesData);
       }
     } catch (error) {
       console.error('Error fetching dropdown data:', error);
@@ -245,11 +258,13 @@ export default function CreatePolicyPage() {
     } finally {
       setLoadingDropdownData(false);
     }
-  }, []); // Remove snackbar dependency to prevent infinite loop
+    // ESLint disable to prevent infinite loop - snackbar causes issues
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Empty dependency - only run once on mount
 
   useEffect(() => {
     fetchDropdownData();
-  }, []); // Remove fetchDropdownData dependency - only run once on mount
+  }, [fetchDropdownData]); // Include fetchDropdownData dependency
 
   // Form validation
   const isStepValid = useCallback((step: number) => {
@@ -260,7 +275,9 @@ export default function CreatePolicyPage() {
       case 1:
         return selectedSubject !== '';
       case 2:
-        return selectedActions.length > 0 && selectedResources.length > 0;
+        return selectedActions.length > 0;
+      case 3:
+        return selectedResources.length > 0;
       default:
         return true;
     }
@@ -318,6 +335,40 @@ export default function CreatePolicyPage() {
     });
   };
 
+  // Handle resource attribute value selection changes
+  const handleResourceAttributeValueSelection = (attributeId: string, value: any) => {
+    setSelectedResourceAttributeValues(prev => ({
+      ...prev,
+      [attributeId]: value
+    }));
+  };
+
+  // Handle resource attribute dropdown selection
+  const handleResourceAttributeDropdownSelection = (event: any, newValue: Attribute[]) => {
+    setSelectedResourceAttributes(newValue);
+    // Reset values for removed attributes
+    const removedAttributes = selectedResourceAttributes.filter(
+      oldAttr => !newValue.find(newAttr => newAttr.id === oldAttr.id)
+    );
+    removedAttributes.forEach(attr => {
+      setSelectedResourceAttributeValues(prev => {
+        const updated = { ...prev };
+        delete updated[attr.id];
+        return updated;
+      });
+    });
+  };
+
+  // Remove resource attribute from selection
+  const handleRemoveResourceAttribute = (attributeId: string) => {
+    setSelectedResourceAttributes(prev => prev.filter(attr => attr.id !== attributeId));
+    setSelectedResourceAttributeValues(prev => {
+      const updated = { ...prev };
+      delete updated[attributeId];
+      return updated;
+    });
+  };
+
   // Create new attribute
   // Helper functions for original modal
   const canOnlyAddValues = () => {
@@ -365,6 +416,9 @@ export default function CreatePolicyPage() {
     setDateInputType('single');
     setExistingValues([]);
     setIsAttributeUsedInPolicies(false);
+    // Reset new scope-related states
+    setSelectedSubjectsForAttribute([]);
+    setSelectedResourcesForAttribute([]);
   };
 
   const validateAttributeDisplayName = (value: string) => {
@@ -466,7 +520,12 @@ export default function CreatePolicyPage() {
           tags: ['custom'],
           isSystem: false,
           isCustom: true,
-          version: '1.0.0'
+          version: '1.0.0',
+          scope: {
+            appliesTo: (selectedSubjectsForAttribute.length > 0 || selectedResourcesForAttribute.length > 0) ? 'specific' : 'all',
+            subjects: selectedSubjectsForAttribute,
+            resources: selectedResourcesForAttribute
+          }
         },
         active: true
       };
@@ -533,7 +592,7 @@ export default function CreatePolicyPage() {
 
   // Submit form (common logic)
   const submitPolicy = async (status: 'Draft' | 'Active') => {
-    if (!isStepValid(0) || !isStepValid(1) || !isStepValid(2)) {
+    if (!isStepValid(0) || !isStepValid(1) || !isStepValid(2) || !isStepValid(3)) {
       snackbar.showError('Please complete all required fields');
       return;
     }
@@ -546,6 +605,21 @@ export default function CreatePolicyPage() {
           
           // Build subject attributes for rule
           const subjectAttributes = Object.entries(selectedSubjectAttributes)
+            .filter(([_, value]) => value !== '' && value !== null && value !== undefined)
+            .map(([attrId, value]) => {
+              const attribute = attributes.find(attr => attr.id === attrId);
+              if (!attribute) return null;
+              
+              return {
+                name: attribute.name,
+                operator: Array.isArray(value) ? 'in' : 'equals',
+                value: value
+              };
+            })
+            .filter(Boolean);
+
+          // Build resource attributes for rule
+          const resourceAttributes = Object.entries(selectedResourceAttributeValues)
             .filter(([_, value]) => value !== '' && value !== null && value !== undefined)
             .map(([attrId, value]) => {
               const attribute = attributes.find(attr => attr.id === attrId);
@@ -575,7 +649,7 @@ export default function CreatePolicyPage() {
             },
             object: {
               type: resourceId,
-              attributes: []
+              attributes: resourceAttributes
             },
             conditions: []
           };
@@ -1123,92 +1197,464 @@ export default function CreatePolicyPage() {
           <Card sx={{ p: 4 }}>
             <Box sx={{ mb: 3 }}>
               <Typography variant="h5" fontWeight="600" gutterBottom>
-                Actions & Resources
+                Action Selection
               </Typography>
               <Typography variant="body2" color="text.secondary">
-                Define what actions can be performed on which resources
+                Select the actions that can be performed under this policy
               </Typography>
             </Box>
 
-            <Grid container spacing={4}>
-              <Grid size={{ xs: 12, md: 6 }}>
-                <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <ActionIcon color="primary" />
-                  Actions
-                </Typography>
-                <Paper sx={{ p: 2, maxHeight: 400, overflow: 'auto' }}>
-                  {actions.map((action) => (
-                    <Box key={action.id} sx={{ mb: 1 }}>
-                      <FormControlLabel
-                        control={
-                          <Switch
-                            checked={selectedActions.includes(action.id)}
-                            onChange={(e) => {
-                              if (e.target.checked) {
-                                setSelectedActions(prev => [...prev, action.id]);
-                              } else {
-                                setSelectedActions(prev => prev.filter(id => id !== action.id));
-                              }
-                            }}
-                          />
-                        }
-                        label={
-                          <Box>
-                            <Typography variant="body2" fontWeight="500">
-                              {action.displayName}
-                            </Typography>
-                            <Typography variant="caption" color="text.secondary">
-                              {action.description}
-                            </Typography>
-                          </Box>
-                        }
+            <Paper sx={{ p: 3, maxHeight: 500, overflow: 'auto' }}>
+              {actions.map((action) => (
+                <Box key={action.id} sx={{ mb: 2 }}>
+                  <FormControlLabel
+                    control={
+                      <Switch
+                        checked={selectedActions.includes(action.id)}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setSelectedActions(prev => [...prev, action.id]);
+                          } else {
+                            setSelectedActions(prev => prev.filter(id => id !== action.id));
+                          }
+                        }}
+                        size="medium"
                       />
-                    </Box>
-                  ))}
-                </Paper>
-              </Grid>
+                    }
+                    label={
+                      <Box sx={{ ml: 1 }}>
+                        <Typography variant="body1" fontWeight="500" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <ActionIcon color="primary" fontSize="small" />
+                          {action.displayName}
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+                          {action.description}
+                        </Typography>
+                      </Box>
+                    }
+                    sx={{ alignItems: 'flex-start', mb: 1 }}
+                  />
+                </Box>
+              ))}
+            </Paper>
 
-              <Grid size={{ xs: 12, md: 6 }}>
-                <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <ResourceIcon color="primary" />
-                  Resources
+            {selectedActions.length > 0 && (
+              <Box sx={{ mt: 2 }}>
+                <Typography variant="subtitle2" gutterBottom>
+                  Selected Actions ({selectedActions.length}):
                 </Typography>
-                <Paper sx={{ p: 2, maxHeight: 400, overflow: 'auto' }}>
-                  {resources.map((resource) => (
-                    <Box key={resource.id} sx={{ mb: 1 }}>
-                      <FormControlLabel
-                        control={
-                          <Switch
-                            checked={selectedResources.includes(resource.id)}
-                            onChange={(e) => {
-                              if (e.target.checked) {
-                                setSelectedResources(prev => [...prev, resource.id]);
-                              } else {
-                                setSelectedResources(prev => prev.filter(id => id !== resource.id));
-                              }
-                            }}
-                          />
-                        }
-                        label={
-                          <Box>
-                            <Typography variant="body2" fontWeight="500">
-                              {resource.displayName}
-                            </Typography>
-                            <Typography variant="caption" color="text.secondary">
-                              {resource.description || resource.uri}
-                            </Typography>
-                          </Box>
-                        }
+                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                  {selectedActions.map(actionId => {
+                    const action = actions.find(a => a.id === actionId);
+                    return action ? (
+                      <Chip 
+                        key={actionId} 
+                        label={action.displayName} 
+                        color="primary"
+                        variant="outlined"
+                        onDelete={() => {
+                          setSelectedActions(prev => prev.filter(id => id !== actionId));
+                        }}
                       />
-                    </Box>
-                  ))}
-                </Paper>
-              </Grid>
-            </Grid>
+                    ) : null;
+                  })}
+                </Box>
+              </Box>
+            )}
           </Card>
         );
 
       case 3:
+        return (
+          <Card sx={{ p: 4 }}>
+            <Box sx={{ mb: 3 }}>
+              <Typography variant="h5" fontWeight="600" gutterBottom>
+                Resource Selection
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Select resources and configure their access conditions
+              </Typography>
+            </Box>
+
+            <Paper elevation={0} sx={{ p: 3, border: '1px solid', borderColor: 'grey.200', borderRadius: 2 }}>
+                <Grid container spacing={3}>
+                  <Grid size={{ xs: 12, md: 5 }}>
+                    <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+                      <ResourceIcon color="primary" />
+                      Resources
+                    </Typography>
+                    
+                    <Box sx={{ maxHeight: 400, overflow: 'auto', border: '1px solid', borderColor: 'grey.200', borderRadius: 1, p: 2, bgcolor: 'grey.50' }}>
+                      {resources.map((resource) => (
+                        <Box key={resource.id} sx={{ mb: 1.5, last: { mb: 0 } }}>
+                          <FormControlLabel
+                            control={
+                              <Switch
+                                size="small"
+                                checked={selectedResources.includes(resource.id)}
+                                onChange={(e) => {
+                                  if (e.target.checked) {
+                                    setSelectedResources(prev => [...prev, resource.id]);
+                                  } else {
+                                    setSelectedResources(prev => prev.filter(id => id !== resource.id));
+                                  }
+                                }}
+                              />
+                            }
+                            label={
+                              <Box sx={{ ml: 1 }}>
+                                <Typography variant="body2" fontWeight="500">
+                                  {resource.displayName}
+                                </Typography>
+                                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.25 }}>
+                                  {resource.description || resource.uri}
+                                </Typography>
+                              </Box>
+                            }
+                            sx={{ alignItems: 'flex-start', m: 0, width: '100%' }}
+                          />
+                        </Box>
+                      ))}
+                    </Box>
+                    
+                    {selectedResources.length > 0 && (
+                      <Box sx={{ mt: 2 }}>
+                        <Typography variant="subtitle2" gutterBottom>
+                          Selected Resources ({selectedResources.length}):
+                        </Typography>
+                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                          {selectedResources.map(resourceId => {
+                            const resource = resources.find(r => r.id === resourceId);
+                            return resource ? (
+                              <Chip 
+                                key={resourceId}
+                                label={resource.displayName}
+                                size="small"
+                                color="secondary"
+                                variant="filled"
+                                onDelete={() => {
+                                  setSelectedResources(prev => prev.filter(id => id !== resourceId));
+                                }}
+                              />
+                            ) : null;
+                          })}
+                        </Box>
+                      </Box>
+                    )}
+                  </Grid>
+
+                  <Grid size={{ xs: 12, md: 7 }}>
+                    {selectedResources.length > 0 ? (
+                      <Box>
+                        <Typography variant="h6" sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+                          <AttributeIcon color="primary" />
+                          Resource Attribute Conditions
+                        </Typography>
+
+                        <Box sx={{ mb: 3 }}>
+                          <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
+                            Select resource attributes to configure conditions (optional):
+                          </Typography>
+                          <Autocomplete
+                            multiple
+                            size="small"
+                            options={resourceAttributes}
+                            value={selectedResourceAttributes}
+                            onChange={handleResourceAttributeDropdownSelection}
+                            getOptionLabel={(option) => option.displayName}
+                            isOptionEqualToValue={(option, value) => option.id === value.id}
+                            renderInput={(params) => (
+                              <TextField
+                                {...params}
+                                placeholder="Select resource attributes to configure..."
+                                sx={{ bgcolor: 'white' }}
+                              />
+                            )}
+                            renderTags={(value, getTagProps) =>
+                              value.map((option, index) => {
+                                const { key, ...tagProps } = getTagProps({ index });
+                                return (
+                                  <Chip
+                                    key={key}
+                                    {...tagProps}
+                                    variant="filled"
+                                    color="primary"
+                                    size="small"
+                                    label={option.displayName}
+                                    sx={{ fontSize: '0.75rem' }}
+                                  />
+                                );
+                              })
+                            }
+                            renderOption={(props, option) => {
+                              const { key, ...otherProps } = props;
+                              return (
+                                <Box component="li" key={key} {...otherProps} sx={{ '&:hover': { bgcolor: 'grey.50' } }}>
+                                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, py: 0.5, width: '100%' }}>
+                                    <Box sx={{ 
+                                      width: 6, 
+                                      height: 6, 
+                                      borderRadius: '50%', 
+                                      bgcolor: option.isRequired ? 'error.main' : 'success.main',
+                                      flexShrink: 0
+                                    }} />
+                                    <Box sx={{ flex: 1, minWidth: 0 }}>
+                                      <Typography variant="body2" fontWeight="500" noWrap>
+                                        {option.displayName}
+                                        {option.isRequired && (
+                                          <Chip 
+                                            label="Required" 
+                                            size="small" 
+                                            color="error"
+                                            sx={{ ml: 1, height: 16, fontSize: '0.6rem' }}
+                                          />
+                                        )}
+                                      </Typography>
+                                      {option.description && (
+                                        <Typography variant="caption" color="text.secondary" noWrap>
+                                          {option.description}
+                                        </Typography>
+                                      )}
+                                    </Box>
+                                  </Box>
+                                </Box>
+                              );
+                            }}
+                            sx={{
+                              '& .MuiOutlinedInput-root': {
+                                bgcolor: 'white'
+                              }
+                            }}
+                          />
+                        </Box>
+
+                        {/* Selected Resource Attributes Configuration */}
+                        {selectedResourceAttributes.length > 0 && (
+                          <Box>
+                            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                              Configure conditions for selected attributes ({selectedResourceAttributes.length}):
+                            </Typography>
+                            <Grid container spacing={2}>
+                              {selectedResourceAttributes.map((attribute) => {
+                                const isArrayOrObject = (attribute.dataType as string) === 'object' || 
+                                  (attribute.dataType as string) === 'array' ||
+                                  (attribute.dataType === 'string' && attribute.constraints.enumValues && 
+                                   Array.isArray(attribute.constraints.enumValues) && attribute.isMultiValue);
+                                
+                                return (
+                                  <Grid key={attribute.id} size={{ xs: 12, md: 6 }}>
+                                    <Card 
+                                      variant="outlined"
+                                      sx={{ 
+                                        p: 2,
+                                        bgcolor: 'white',
+                                        border: '1px solid',
+                                        borderColor: 'grey.200',
+                                        '&:hover': {
+                                          borderColor: 'primary.main',
+                                          boxShadow: 1
+                                        }
+                                      }}
+                                    >
+                                      <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', mb: 1.5 }}>
+                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                          <Box sx={{ 
+                                            width: 6, 
+                                            height: 6, 
+                                            borderRadius: '50%', 
+                                            bgcolor: attribute.isRequired ? 'error.main' : 'success.main' 
+                                          }} />
+                                          <Typography variant="body2" fontWeight="600" color="text.primary">
+                                            {attribute.displayName}
+                                          </Typography>
+                                          {attribute.isRequired && (
+                                            <Chip 
+                                              label="Required" 
+                                              size="small" 
+                                              color="error"
+                                              sx={{ height: 16, fontSize: '0.6rem' }}
+                                            />
+                                          )}
+                                        </Box>
+                                        <IconButton
+                                          size="small"
+                                          onClick={() => handleRemoveResourceAttribute(attribute.id)}
+                                          sx={{ color: 'text.secondary', ml: 1 }}
+                                        >
+                                          <CloseIcon fontSize="small" />
+                                        </IconButton>
+                                      </Box>
+
+                                      <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 1.5, lineHeight: 1.3 }}>
+                                        {attribute.description || `Configure ${attribute.displayName.toLowerCase()} condition`}
+                                      </Typography>
+
+                                      {attribute.constraints.enumValues && attribute.constraints.enumValues.length > 0 ? (
+                                        attribute.isMultiValue ? (
+                                          <Autocomplete
+                                            multiple
+                                            size="small"
+                                            options={attribute.constraints.enumValues}
+                                            value={selectedResourceAttributeValues[attribute.id] || []}
+                                            onChange={(_, newValue) => handleResourceAttributeValueSelection(attribute.id, newValue)}
+                                            renderInput={(params) => (
+                                              <TextField
+                                                {...params}
+                                                placeholder="Select values..."
+                                                size="small"
+                                                sx={{ bgcolor: 'grey.50' }}
+                                              />
+                                            )}
+                                            renderTags={(value, getTagProps) =>
+                                              value.map((option, index) => (
+                                                <Chip
+                                                  key={option}
+                                                  label={option}
+                                                  {...getTagProps({ index })}
+                                                  size="small"
+                                                  color="primary"
+                                                  variant="outlined"
+                                                  sx={{ fontSize: '0.7rem' }}
+                                                />
+                                              ))
+                                            }
+                                            renderOption={(props, option) => {
+                                              const { key, ...otherProps } = props;
+                                              return (
+                                                <Box component="li" key={key} {...otherProps}>
+                                                  <Chip 
+                                                    label={option} 
+                                                    size="small" 
+                                                    color="primary"
+                                                    variant="outlined"
+                                                    sx={{ fontSize: '0.7rem' }}
+                                                  />
+                                                </Box>
+                                              );
+                                            }}
+                                            sx={{
+                                              '& .MuiOutlinedInput-root': {
+                                                bgcolor: 'grey.50'
+                                              }
+                                            }}
+                                          />
+                                        ) : (
+                                          <FormControl fullWidth size="small">
+                                            <Select
+                                              value={selectedResourceAttributeValues[attribute.id] || ''}
+                                              onChange={(e) => {
+                                                const value = e.target.value;
+                                                handleResourceAttributeValueSelection(attribute.id, value);
+                                              }}
+                                              displayEmpty
+                                              sx={{ bgcolor: 'grey.50' }}
+                                            >
+                                              {!attribute.isRequired && (
+                                                <MenuItem value="">
+                                                  <em>Not specified</em>
+                                                </MenuItem>
+                                              )}
+                                              {attribute.constraints.enumValues.map((value: any) => (
+                                                <MenuItem key={value} value={value}>
+                                                  {value}
+                                                </MenuItem>
+                                              ))}
+                                            </Select>
+                                          </FormControl>
+                                        )
+                                      ) : attribute.dataType === 'boolean' ? (
+                                        <FormControl fullWidth>
+                                          <FormControlLabel
+                                            control={
+                                              <Switch 
+                                                checked={selectedResourceAttributeValues[attribute.id] || false}
+                                                onChange={(e) => handleResourceAttributeValueSelection(attribute.id, e.target.checked)}
+                                                size="small"
+                                              />
+                                            }
+                                            label=""
+                                            sx={{ m: 0 }}
+                                          />
+                                        </FormControl>
+                                      ) : attribute.dataType === 'number' ? (
+                                        <TextField
+                                          fullWidth
+                                          type="number"
+                                          value={selectedResourceAttributeValues[attribute.id] || ''}
+                                          onChange={(e) => handleResourceAttributeValueSelection(attribute.id, Number(e.target.value))}
+                                          size="small"
+                                          placeholder="Enter number"
+                                          inputProps={{
+                                            min: attribute.constraints.minValue,
+                                            max: attribute.constraints.maxValue
+                                          }}
+                                          sx={{ bgcolor: 'grey.50' }}
+                                        />
+                                      ) : (
+                                        <TextField
+                                          fullWidth
+                                          value={selectedResourceAttributeValues[attribute.id] || ''}
+                                          onChange={(e) => handleResourceAttributeValueSelection(attribute.id, e.target.value)}
+                                          size="small"
+                                          multiline={attribute.isMultiValue}
+                                          rows={attribute.isMultiValue ? 2 : 1}
+                                          placeholder={`Enter ${attribute.displayName.toLowerCase()}`}
+                                          sx={{ bgcolor: 'grey.50' }}
+                                        />
+                                      )}
+                                    </Card>
+                                  </Grid>
+                                );
+                              })}
+                            </Grid>
+                          </Box>
+                        )}
+
+                        {/* Empty State */}
+                        {selectedResourceAttributes.length === 0 && (
+                          <Box sx={{
+                            p: 3,
+                            border: '2px dashed',
+                            borderColor: 'grey.300',
+                            borderRadius: 2,
+                            textAlign: 'center',
+                            bgcolor: 'grey.50'
+                          }}>
+                            <AttributeIcon sx={{ fontSize: 32, color: 'grey.400', mb: 1 }} />
+                            <Typography variant="body2" color="text.secondary" fontWeight="500" sx={{ mb: 0.5 }}>
+                              No resource attributes selected
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary">
+                              Use the dropdown above to select resource attributes for this policy
+                            </Typography>
+                          </Box>
+                        )}
+                      </Box>
+                    ) : (
+                      <Box sx={{
+                        p: 4,
+                        border: '2px dashed',
+                        borderColor: 'grey.300',
+                        borderRadius: 2,
+                        textAlign: 'center',
+                        bgcolor: 'grey.50'
+                      }}>
+                        <ResourceIcon sx={{ fontSize: 48, color: 'grey.400', mb: 2 }} />
+                        <Typography variant="body1" color="text.secondary" fontWeight="500" sx={{ mb: 1 }}>
+                          Resource Selection Required
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          Choose resources from the list to configure attribute conditions
+                        </Typography>
+                      </Box>
+                    )}
+                  </Grid>
+                </Grid>
+              </Paper>
+          </Card>
+        );
+
+      case 4:
         return (
           <Card sx={{ p: 4 }}>
             <Box sx={{ mb: 3 }}>
@@ -1281,7 +1727,27 @@ export default function CreatePolicyPage() {
                             ? `${resources.find(r => r.id === selectedResources[0])?.displayName} and ${resources.find(r => r.id === selectedResources[1])?.displayName}`
                             : `${selectedResources.slice(0, -1).map(id => resources.find(r => r.id === id)?.displayName).join(', ')}, and ${resources.find(r => r.id === selectedResources[selectedResources.length - 1])?.displayName}`
                         }
-                      </strong>.
+                      </strong>
+                      {Object.keys(selectedResourceAttributeValues).length > 0 && (
+                        <span>
+                          {' '}(where{' '}
+                          {Object.entries(selectedResourceAttributeValues)
+                            .filter(([_, value]) => value !== '' && value !== null && value !== undefined)
+                            .map(([attrId, value], index, array) => {
+                              const attr = resourceAttributes.find(a => a.id === attrId);
+                              if (!attr) return '';
+                              const formattedValue = Array.isArray(value) ? value.join(' or ') : value;
+                              const condition = `${attr.displayName.toLowerCase()} is ${formattedValue}`;
+                              if (index === array.length - 1 && array.length > 1) {
+                                return `and ${condition}`;
+                              }
+                              return condition;
+                            })
+                            .filter(Boolean)
+                            .join(', ')}
+                          )
+                        </span>
+                      )}.
                     </Typography>
                   </Box>
                 </Card>
@@ -1373,6 +1839,27 @@ export default function CreatePolicyPage() {
                             ) : null;
                           })}
                         </Box>
+                        {Object.keys(selectedResourceAttributeValues).length > 0 && (
+                          <Box sx={{ mt: 1 }}>
+                            <Typography variant="caption" color="text.secondary" display="block">
+                              Conditions:
+                            </Typography>
+                            {Object.entries(selectedResourceAttributeValues)
+                              .filter(([_, value]) => value !== '' && value !== null && value !== undefined)
+                              .map(([attrId, value]) => {
+                                const attr = resourceAttributes.find(a => a.id === attrId);
+                                return attr ? (
+                                  <Chip 
+                                    key={attrId}
+                                    label={`${attr.displayName}: ${Array.isArray(value) ? value.join(', ') : value}`}
+                                    size="small"
+                                    variant="outlined"
+                                    sx={{ mr: 0.5, mt: 0.5, fontSize: '0.65rem' }}
+                                  />
+                                ) : null;
+                              })}
+                          </Box>
+                        )}
                       </Box>
                     </Grid>
                   </Grid>
@@ -1657,6 +2144,136 @@ export default function CreatePolicyPage() {
                   </Select>
                 </FormControl>
               </Box>
+
+              {/* Conditional Subject/Resource Selection */}
+              {(selectedCategories.includes('subject') || selectedCategories.includes('resource')) && (
+                <Box>
+                  <Typography variant="subtitle2" sx={{ mb: 1.5, fontWeight: 600 }}>
+                    Attribute Scope
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                    Select which {selectedCategories.includes('subject') && selectedCategories.includes('resource') 
+                      ? 'subjects and resources' 
+                      : selectedCategories.includes('subject') 
+                        ? 'subjects' 
+                        : 'resources'} this attribute applies to. Leave empty to apply to all.
+                  </Typography>
+                  
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                    {selectedCategories.includes('subject') && (
+                      <FormControl fullWidth>
+                        <InputLabel>Applies to Subjects (optional)</InputLabel>
+                        <Select
+                          multiple
+                          value={selectedSubjectsForAttribute}
+                          onChange={(e) => setSelectedSubjectsForAttribute(typeof e.target.value === 'string' ? e.target.value.split(',') : e.target.value)}
+                          label="Applies to Subjects (optional)"
+                          renderValue={(selected) => (
+                            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                              {selected.length === 0 ? (
+                                <Typography variant="body2" color="text.secondary">All subjects</Typography>
+                              ) : (
+                                selected.map((subjectId) => {
+                                  const subject = subjects.find(s => s.id === subjectId);
+                                  return (
+                                    <Chip 
+                                      key={subjectId} 
+                                      label={subject?.displayName || subjectId} 
+                                      size="small" 
+                                      color="primary"
+                                    />
+                                  );
+                                })
+                              )}
+                            </Box>
+                          )}
+                        >
+                          {subjects.map((subject) => (
+                            <MenuItem key={subject.id} value={subject.id}>
+                              <Checkbox checked={selectedSubjectsForAttribute.indexOf(subject.id) > -1} />
+                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, width: '100%' }}>
+                                <Avatar
+                                  sx={{
+                                    width: 28,
+                                    height: 28,
+                                    bgcolor: subject.type === 'user' ? 'primary.main' : 
+                                             subject.type === 'group' ? 'secondary.main' : 'warning.main',
+                                    fontSize: '12px',
+                                    fontWeight: 600
+                                  }}
+                                >
+                                  {subject.displayName.charAt(0).toUpperCase()}
+                                </Avatar>
+                                <Box sx={{ flexGrow: 1 }}>
+                                  <Typography variant="body2" fontWeight="500">
+                                    {subject.displayName}
+                                  </Typography>
+                                  <Typography variant="caption" color="text.secondary">
+                                    {subject.type} • {subject.department}
+                                  </Typography>
+                                </Box>
+                              </Box>
+                            </MenuItem>
+                          ))}
+                        </Select>
+                      </FormControl>
+                    )}
+
+                    {selectedCategories.includes('resource') && (
+                      <FormControl fullWidth>
+                        <InputLabel>Applies to Resources (optional)</InputLabel>
+                        <Select
+                          multiple
+                          value={selectedResourcesForAttribute}
+                          onChange={(e) => setSelectedResourcesForAttribute(typeof e.target.value === 'string' ? e.target.value.split(',') : e.target.value)}
+                          label="Applies to Resources (optional)"
+                          renderValue={(selected) => (
+                            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                              {selected.length === 0 ? (
+                                <Typography variant="body2" color="text.secondary">All resources</Typography>
+                              ) : (
+                                selected.map((resourceId) => {
+                                  const resource = resources.find(r => r.id === resourceId);
+                                  return (
+                                    <Chip 
+                                      key={resourceId} 
+                                      label={resource?.displayName || resourceId} 
+                                      size="small" 
+                                      color="secondary"
+                                    />
+                                  );
+                                })
+                              )}
+                            </Box>
+                          )}
+                        >
+                          {resources.map((resource) => (
+                            <MenuItem key={resource.id} value={resource.id}>
+                              <Checkbox checked={selectedResourcesForAttribute.indexOf(resource.id) > -1} />
+                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, width: '100%' }}>
+                                <ResourceIcon 
+                                  sx={{ 
+                                    color: 'secondary.main',
+                                    fontSize: 24 
+                                  }} 
+                                />
+                                <Box sx={{ flexGrow: 1 }}>
+                                  <Typography variant="body2" fontWeight="500">
+                                    {resource.displayName}
+                                  </Typography>
+                                  <Typography variant="caption" color="text.secondary">
+                                    {resource.description || resource.uri}
+                                  </Typography>
+                                </Box>
+                              </Box>
+                            </MenuItem>
+                          ))}
+                        </Select>
+                      </FormControl>
+                    )}
+                  </Box>
+                </Box>
+              )}
 
               {selectedDataType && (
                 <Box>

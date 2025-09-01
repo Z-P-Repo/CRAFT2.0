@@ -21,10 +21,25 @@ When user prompts "update", update all .md files:
 When user prompts "test", run the comprehensive test coverage command:
 - Command: `npm run test:coverage`
 - This will run all tests with full coverage reporting
+- Tests use Jest and React Testing Library for comprehensive coverage
+
+### "deploy"
+When user prompts "deploy", prepare the application for production deployment:
+1. Run build commands for both projects
+2. Verify all tests pass
+3. Check environment configuration
+4. Ensure no build warnings or errors
 
 ## Project Structure
-- Frontend: `/craft-frontend` (Next.js 15, TypeScript, Material-UI, Azure AD MSAL)
-- Backend: `/craft-backend` (Node.js, Express, TypeScript, MongoDB, Azure AD SSO)
+- Frontend: `/craft-frontend` (Next.js 15.4.6, TypeScript, Material-UI v6, Azure AD MSAL, Jest Testing)
+- Backend: `/craft-backend` (Node.js, Express, TypeScript, MongoDB, Azure AD SSO, Rate Limiting)
+
+## Latest Features (v1.2.0)
+- Enhanced 5-step policy creation wizard with separated Action & Resource selection
+- Advanced rate limiting and 429 error handling with exponential backoff  
+- Comprehensive test coverage with Jest and React Testing Library
+- Attribute system with conditional scope selection and category filtering
+- Performance optimization with resolved infinite API call issues
 
 ## Build Commands
 - Frontend: `cd craft-frontend && npm run build`

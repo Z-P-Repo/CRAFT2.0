@@ -199,7 +199,7 @@ export default function ActionsPage() {
       fetchActions();
       return () => {}; // Empty cleanup function for consistency
     }
-  }, [fetchActions]);
+  }, [fetchActions, searchTerm]);
 
   const handleSearchChange = useCallback((value: string) => {
     setSearchTerm(value);

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Typography,
   Box,
@@ -120,16 +120,37 @@ export default function PoliciesPage() {
   const [filterAnchorEl, setFilterAnchorEl] = useState<HTMLElement | null>(null);
   const [sortAnchorEl, setSortAnchorEl] = useState<HTMLElement | null>(null);
 
-  // Fetch policies
+  // Rate limiting: track last request time
+  const lastRequestTimeRef = useRef<number>(0);
+  const requestTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Fetch policies with rate limiting
   const fetchPolicies = useCallback(async () => {
+    const now = Date.now();
+    const timeSinceLastRequest = now - lastRequestTimeRef.current;
+    const minInterval = 500; // Minimum 500ms between requests
+
+    // If we're making requests too frequently, delay this one
+    if (timeSinceLastRequest < minInterval) {
+      if (requestTimeoutRef.current) {
+        clearTimeout(requestTimeoutRef.current);
+      }
+      
+      requestTimeoutRef.current = setTimeout(() => {
+        fetchPolicies();
+      }, minInterval - timeSinceLastRequest);
+      return;
+    }
+
     try {
       setLoading(true);
+      lastRequestTimeRef.current = Date.now();
+      
       const params = new URLSearchParams({
         page: (page + 1).toString(),
         limit: rowsPerPage.toString(),
         sortBy,
         sortOrder,
-        _t: Date.now().toString(), // Cache busting
       });
       
       if (searchTerm) params.append('search', searchTerm);
@@ -144,15 +165,34 @@ export default function PoliciesPage() {
       }
     } catch (error: any) {
       console.error('Failed to fetch policies:', error);
-      snackbar.handleApiError(error, 'Failed to load policies');
+      
+      // Handle rate limiting specifically
+      if (error?.response?.status === 429) {
+        snackbar.showWarning('Too many requests. Please wait a moment before trying again.');
+        // Wait longer before allowing next request
+        lastRequestTimeRef.current = Date.now() + 2000; // 2 second delay
+      } else {
+        snackbar.handleApiError(error, 'Failed to load policies');
+      }
     } finally {
       setLoading(false);
     }
+    // ESLint disable to prevent infinite loop - snackbar causes issues
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page, rowsPerPage, searchTerm, filterStatus, filterEffect, sortBy, sortOrder]);
 
   useEffect(() => {
     fetchPolicies();
   }, [fetchPolicies]);
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (requestTimeoutRef.current) {
+        clearTimeout(requestTimeoutRef.current);
+      }
+    };
+  }, []);
 
   // Navigation handlers
   const handleViewPolicy = useCallback((policy: Policy) => {
@@ -195,6 +235,8 @@ export default function PoliciesPage() {
     } finally {
       setDeleteLoading(false);
     }
+    // ESLint disable to prevent infinite loop - snackbar causes issues
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [deletePolicy, policies]);
 
   // Selection handlers
@@ -244,6 +286,8 @@ export default function PoliciesPage() {
     } finally {
       setBulkDeleteLoading(false);
     }
+    // ESLint disable to prevent infinite loop - snackbar causes issues
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedPolicies, policies]);
 
   // Filter and sort handlers

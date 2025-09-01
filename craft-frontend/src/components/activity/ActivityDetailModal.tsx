@@ -195,8 +195,10 @@ const ActivityDetailModal: React.FC<ActivityDetailModalProps> = ({
                   <Typography variant="body2">
                     <strong>Resource:</strong> {activity.resource.name} ({activity.resource.type})
                   </Typography>
-                  <Typography variant="body2">
-                    <strong>Status:</strong> {activity.metadata?.status || 'success'}
+                  <Typography variant="body2" sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                    <strong>Status:</strong> 
+                    {getStatusIcon()}
+                    {activity.metadata?.status || 'success'}
                   </Typography>
                 </Box>
               </CardContent>

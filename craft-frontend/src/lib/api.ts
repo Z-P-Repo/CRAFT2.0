@@ -4,6 +4,8 @@ import { ApiResponse, LoginCredentials, RegisterData, User, ApiClientConfig, Act
 class ApiClient {
   private client: AxiosInstance;
   private baseURL: string;
+  private requestQueue: Map<string, number> = new Map();
+  private rateLimitDelay = 250; // 250ms minimum between identical requests
 
   constructor(config: ApiClientConfig) {
     this.baseURL = config.baseURL;
@@ -20,10 +22,33 @@ class ApiClient {
     this.setupInterceptors();
   }
 
+  private checkRateLimit(url: string, method: string): Promise<void> {
+    const key = `${method}:${url}`;
+    const now = Date.now();
+    const lastRequest = this.requestQueue.get(key) || 0;
+    const timeSinceLastRequest = now - lastRequest;
+
+    if (timeSinceLastRequest < this.rateLimitDelay) {
+      const waitTime = this.rateLimitDelay - timeSinceLastRequest;
+      return new Promise(resolve => {
+        setTimeout(() => {
+          this.requestQueue.set(key, Date.now());
+          resolve();
+        }, waitTime);
+      });
+    }
+
+    this.requestQueue.set(key, now);
+    return Promise.resolve();
+  }
+
   private setupInterceptors(): void {
     // Request interceptor
     this.client.interceptors.request.use(
-      (config) => {
+      async (config) => {
+        // Apply rate limiting
+        await this.checkRateLimit(config.url || '', config.method || 'GET');
+
         // Add auth token if available
         const token = this.getToken();
         if (token) {
@@ -68,6 +93,22 @@ class ApiClient {
             this.handleAuthError();
             return Promise.reject(refreshError);
           }
+        }
+
+        // Handle 429 (Too Many Requests) errors with exponential backoff
+        if (error.response?.status === 429 && !originalRequest._rateLimitRetry) {
+          originalRequest._rateLimitRetry = true;
+          
+          const retryAfter = error.response.headers['retry-after'];
+          const delay = retryAfter ? parseInt(retryAfter) * 1000 : 2000; // Default 2s delay
+          
+          console.warn(`Rate limit hit, retrying after ${delay}ms`);
+          
+          return new Promise((resolve) => {
+            setTimeout(() => {
+              resolve(this.client(originalRequest));
+            }, delay);
+          });
         }
 
         return Promise.reject(error);
