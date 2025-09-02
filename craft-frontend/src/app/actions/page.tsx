@@ -189,17 +189,14 @@ export default function ActionsPage() {
   }, [page, rowsPerPage, sortBy, sortOrder, searchTerm]);
 
   useEffect(() => {
-    if (searchTerm !== '') {
-      const timeoutId = setTimeout(() => {
-        setPage(0);
-        fetchActions();
-      }, 500);
-      return () => clearTimeout(timeoutId);
-    } else {
+    const timeoutId = setTimeout(() => {
       fetchActions();
-      return () => {}; // Empty cleanup function for consistency
-    }
-  }, [fetchActions, searchTerm]);
+    }, 300); // Standard debounce delay
+    
+    return () => clearTimeout(timeoutId);
+    // ESLint disable to prevent infinite loop - fetchActions causes circular dependency
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchTerm, page, rowsPerPage, sortBy, sortOrder]);
 
   const handleSearchChange = useCallback((value: string) => {
     setSearchTerm(value);

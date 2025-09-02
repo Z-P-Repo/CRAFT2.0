@@ -849,21 +849,16 @@ export default function AttributesPage() {
     fetchDropdownData();
   }, [fetchDropdownData]);
 
-  // Unified effect with debouncing for search, immediate for others
+  // Unified effect with standard debouncing
   useEffect(() => {
-    if (searchTerm !== '') {
-      // Debounce search
-      const timeoutId = setTimeout(() => {
-        setPage(0); // Reset to first page when searching
-        fetchAttributes();
-      }, 500);
-      return () => clearTimeout(timeoutId);
-    } else {
-      // Immediate fetch for non-search changes
+    const timeoutId = setTimeout(() => {
       fetchAttributes();
-      return () => {}; // Empty cleanup function for consistency
-    }
-  }, [searchTerm, page, rowsPerPage, filterCategory, filterDataType, sortBy, sortOrder, fetchAttributes]);
+    }, 300); // Standard debounce delay
+    
+    return () => clearTimeout(timeoutId);
+    // ESLint disable to prevent infinite loop - fetchAttributes causes circular dependency
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchTerm, page, rowsPerPage, filterCategory, filterDataType, sortBy, sortOrder]);
 
 
   const getStatusColor = (active: boolean) => {

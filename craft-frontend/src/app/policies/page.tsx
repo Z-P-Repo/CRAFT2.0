@@ -126,25 +126,8 @@ export default function PoliciesPage() {
 
   // Fetch policies with rate limiting
   const fetchPolicies = useCallback(async () => {
-    const now = Date.now();
-    const timeSinceLastRequest = now - lastRequestTimeRef.current;
-    const minInterval = 500; // Minimum 500ms between requests
-
-    // If we're making requests too frequently, delay this one
-    if (timeSinceLastRequest < minInterval) {
-      if (requestTimeoutRef.current) {
-        clearTimeout(requestTimeoutRef.current);
-      }
-      
-      requestTimeoutRef.current = setTimeout(() => {
-        fetchPolicies();
-      }, minInterval - timeSinceLastRequest);
-      return;
-    }
-
     try {
       setLoading(true);
-      lastRequestTimeRef.current = Date.now();
       
       const params = new URLSearchParams({
         page: (page + 1).toString(),
@@ -182,14 +165,21 @@ export default function PoliciesPage() {
   }, [page, rowsPerPage, searchTerm, filterStatus, filterEffect, sortBy, sortOrder]);
 
   useEffect(() => {
-    fetchPolicies();
-  }, [fetchPolicies]);
+    const timeoutId = setTimeout(() => {
+      fetchPolicies();
+    }, 300); // Debounce API calls
+    
+    return () => clearTimeout(timeoutId);
+    // ESLint disable to prevent infinite loop - fetchPolicies causes circular dependency
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page, rowsPerPage, searchTerm, filterStatus, filterEffect, sortBy, sortOrder]);
 
   // Cleanup timeout on unmount
   useEffect(() => {
+    const currentTimeout = requestTimeoutRef.current;
     return () => {
-      if (requestTimeoutRef.current) {
-        clearTimeout(requestTimeoutRef.current);
+      if (currentTimeout) {
+        clearTimeout(currentTimeout);
       }
     };
   }, []);

@@ -158,8 +158,14 @@ export default function UsersPage() {
 
 
   useEffect(() => {
-    fetchUsers();
-  }, [fetchUsers]);
+    const timeoutId = setTimeout(() => {
+      fetchUsers();
+    }, 300); // Standard debounce delay
+    
+    return () => clearTimeout(timeoutId);
+    // ESLint disable to prevent infinite loop - fetchUsers causes circular dependency
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page, rowsPerPage, sortBy, sortOrder, searchTerm]);
 
   const handleSubmit = async () => {
     // Reset errors

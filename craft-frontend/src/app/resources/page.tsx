@@ -538,11 +538,19 @@ export default function ObjectsPage() {
     } finally {
       setLoading(false);
     }
-  }, [page, rowsPerPage, sortBy, sortOrder, searchTerm, mockObjects]);
+    // ESLint disable to prevent infinite loop - mockObjects causes circular dependency
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page, rowsPerPage, sortBy, sortOrder, searchTerm]);
 
   useEffect(() => {
-    fetchObjects();
-  }, [fetchObjects]);
+    const timeoutId = setTimeout(() => {
+      fetchObjects();
+    }, 300); // Standard debounce delay
+    
+    return () => clearTimeout(timeoutId);
+    // ESLint disable to prevent infinite loop - fetchObjects causes circular dependency
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page, rowsPerPage, sortBy, sortOrder, searchTerm]);
 
 
   const getTypeColor = (type: string) => {

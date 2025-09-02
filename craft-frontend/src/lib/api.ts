@@ -5,6 +5,7 @@ class ApiClient {
   private client: AxiosInstance;
   private baseURL: string;
   private requestQueue: Map<string, number> = new Map();
+  private pendingRequests: Map<string, Promise<any>> = new Map();
   private rateLimitDelay = 250; // 250ms minimum between identical requests
 
   constructor(config: ApiClientConfig) {
@@ -40,6 +41,27 @@ class ApiClient {
 
     this.requestQueue.set(key, now);
     return Promise.resolve();
+  }
+
+  private getRequestKey(url: string, method: string, params?: any): string {
+    const paramString = params ? JSON.stringify(params) : '';
+    return `${method}:${url}:${paramString}`;
+  }
+
+  private async deduplicateRequest<T>(key: string, requestFn: () => Promise<T>): Promise<T> {
+    // Check if identical request is already pending
+    if (this.pendingRequests.has(key)) {
+      return this.pendingRequests.get(key) as Promise<T>;
+    }
+
+    // Execute the request and cache the promise
+    const requestPromise = requestFn().finally(() => {
+      // Clean up the pending request when it completes
+      this.pendingRequests.delete(key);
+    });
+
+    this.pendingRequests.set(key, requestPromise);
+    return requestPromise;
   }
 
   private setupInterceptors(): void {
@@ -190,6 +212,7 @@ class ApiClient {
     }
   }
 
+
   // Authentication methods
   async login(credentials: LoginCredentials): Promise<ApiResponse<{
     token: string;
@@ -239,10 +262,7 @@ class ApiClient {
   }
 
   async getProfile(): Promise<ApiResponse<User>> {
-    return this.request<User>({
-      method: 'GET',
-      url: '/auth/profile',
-    });
+    return this.get<User>('/auth/profile');
   }
 
   async validateToken(): Promise<ApiResponse<User>> {
@@ -252,12 +272,16 @@ class ApiClient {
     });
   }
 
-  // Generic CRUD methods
+  // Generic CRUD methods with deduplication for GET requests
   async get<T = any>(url: string, params?: Record<string, any>): Promise<ApiResponse<T>> {
-    return this.request<T>({
-      method: 'GET',
-      url,
-      params,
+    const requestKey = this.getRequestKey(url, 'GET', params);
+    
+    return this.deduplicateRequest(requestKey, () => {
+      return this.request<T>({
+        method: 'GET',
+        url,
+        params,
+      });
     });
   }
 

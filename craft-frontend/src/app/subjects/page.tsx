@@ -321,8 +321,9 @@ export default function SubjectsPage() {
         snackbar.showError('Failed to delete some subjects. Please try again.');
       }
       
-      // Always refresh the data to sync with backend state
-      await fetchSubjects();
+      // Update local state instead of refetching
+      setSubjects(prev => prev.filter(subject => !selectedSubjects.includes(subject._id)));
+      setTotal(prev => Math.max(0, prev - selectedSubjects.length));
       
       // Clear selection regardless of error
       setSelectedSubjects([]);
@@ -434,8 +435,14 @@ export default function SubjectsPage() {
   }, [page, rowsPerPage, sortBy, sortOrder, searchTerm]);
 
   useEffect(() => {
-    fetchSubjects();
-  }, [fetchSubjects]);
+    const timeoutId = setTimeout(() => {
+      fetchSubjects();
+    }, 300); // Standard debounce delay
+    
+    return () => clearTimeout(timeoutId);
+    // ESLint disable to prevent infinite loop - fetchSubjects causes circular dependency
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page, rowsPerPage, sortBy, sortOrder, searchTerm]);
 
   const getTypeColor = (type: string) => {
     switch (type) {
@@ -482,8 +489,10 @@ export default function SubjectsPage() {
         const response = await apiClient.put(`/subjects/${selectedSubject._id}`, subjectData);
         
         if (response.success) {
-          // Refresh the data by calling fetchSubjects
-          await fetchSubjects();
+          // Update local state instead of refetching
+          setSubjects(prev => prev.map(subject => 
+            subject._id === selectedSubject?._id ? response.data : subject
+          ));
           snackbar.showSuccess(`Subject "${subjectData.displayName}" updated successfully`);
           handleClose();
         } else {
@@ -494,8 +503,9 @@ export default function SubjectsPage() {
         const response = await apiClient.post('/subjects', subjectData);
         
         if (response.success) {
-          // Refresh the data by calling fetchSubjects
-          await fetchSubjects();
+          // Add to local state instead of refetching
+          setSubjects(prev => [response.data, ...prev]);
+          setTotal(prev => prev + 1);
           snackbar.showSuccess(`Subject "${subjectData.displayName}" created successfully`);
           handleClose();
         } else {
