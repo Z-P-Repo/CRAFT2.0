@@ -299,7 +299,7 @@ export default function SubjectsPage() {
       
       if (response.success) {
         // Update local state by filtering out deleted subjects
-        setSubjects(prev => prev.filter(subj => !selectedSubjects.includes(subj.id)));
+        setSubjects(prev => prev.filter(subj => !selectedSubjects.includes(subj._id)));
         setTotal(prev => prev - selectedSubjects.length);
         
         // Clear selection
@@ -484,6 +484,10 @@ export default function SubjectsPage() {
         if (response.success) {
           // Refresh the data by calling fetchSubjects
           await fetchSubjects();
+          snackbar.showSuccess(`Subject "${subjectData.displayName}" updated successfully`);
+          handleClose();
+        } else {
+          snackbar.handleApiResponse(response, undefined, 'Failed to update subject');
         }
       } else {
         // Create new subject
@@ -492,13 +496,22 @@ export default function SubjectsPage() {
         if (response.success) {
           // Refresh the data by calling fetchSubjects
           await fetchSubjects();
+          snackbar.showSuccess(`Subject "${subjectData.displayName}" created successfully`);
+          handleClose();
+        } else {
+          snackbar.handleApiResponse(response, undefined, 'Failed to create subject');
         }
       }
       
-      handleClose();
-    } catch (error) {
-      console.error('Error saving subject:', error);
-      setError('Failed to save subject');
+    } catch (error: any) {
+      console.error('Failed to save subject:', error);
+      
+      // Handle specific duplicate error
+      if (error?.error && error.error.includes('already exists')) {
+        snackbar.showError(`Subject "${displayName.trim()}" already exists. Please choose a different name.`);
+      } else {
+        snackbar.handleApiError(error, 'Failed to save subject. Please try again.');
+      }
     } finally {
       setIsSubmitting(false);
     }

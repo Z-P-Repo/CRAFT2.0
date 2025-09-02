@@ -355,6 +355,10 @@ export default function ActionsPage() {
         if (response.success) {
           // Refresh the data by calling fetchActions
           await fetchActions();
+          snackbar.showSuccess(`Action "${actionData.displayName}" updated successfully`);
+          handleClose();
+        } else {
+          snackbar.handleApiResponse(response, undefined, 'Failed to update action');
         }
       } else {
         // Create new action
@@ -363,13 +367,22 @@ export default function ActionsPage() {
         if (response.success) {
           // Refresh the data by calling fetchActions
           await fetchActions();
+          snackbar.showSuccess(`Action "${actionData.displayName}" created successfully`);
+          handleClose();
+        } else {
+          snackbar.handleApiResponse(response, undefined, 'Failed to create action');
         }
       }
       
-      handleClose();
     } catch (error: any) {
       console.error('Failed to save action:', error);
-      setError('Failed to save action. Please try again.');
+      
+      // Handle specific duplicate error
+      if (error?.error && error.error.includes('already exists')) {
+        snackbar.showError(`Action "${displayName.trim()}" already exists. Please choose a different name.`);
+      } else {
+        snackbar.handleApiError(error, 'Failed to save action. Please try again.');
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -423,7 +436,7 @@ export default function ActionsPage() {
       
       if (response.success) {
         // Update local state by filtering out deleted actions
-        setActions(prev => prev.filter(action => !selectedActions.includes(action.id)));
+        setActions(prev => prev.filter(action => !selectedActions.includes(action._id)));
         setTotal(prev => prev - selectedActions.length);
         
         setSelectedActions([]);

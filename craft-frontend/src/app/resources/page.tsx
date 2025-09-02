@@ -361,7 +361,7 @@ export default function ObjectsPage() {
 
       if (response.success) {
         // Update local state by filtering out deleted objects
-        const updatedObjects = objects.filter(obj => obj.id && !selectedObjects.includes(obj.id));
+        const updatedObjects = objects.filter(obj => obj._id && !selectedObjects.includes(obj._id));
         setObjects(updatedObjects);
         // Only count objects that have id (and will be displayed)
         const objectsWithId = updatedObjects.filter(obj => obj.id);
@@ -453,25 +453,38 @@ export default function ObjectsPage() {
       if (selectedObject) {
         // Update existing object
         const response = await apiClient.put(`/resources/${selectedObject?._id}`, objectData);
-
+        
         if (response.success) {
           // Refresh the data by calling fetchObjects
           await fetchObjects();
+          snackbar.showSuccess(`Resource "${objectData.displayName}" updated successfully`);
+          handleClose();
+        } else {
+          snackbar.handleApiResponse(response, undefined, 'Failed to update resource');
         }
       } else {
-        // Create new object
+        // Create new resource
         const response = await apiClient.post('/resources', objectData);
-
+        
         if (response.success) {
           // Refresh the data by calling fetchObjects
           await fetchObjects();
+          snackbar.showSuccess(`Resource "${objectData.displayName}" created successfully`);
+          handleClose();
+        } else {
+          snackbar.handleApiResponse(response, undefined, 'Failed to create resource');
         }
       }
-
-      handleClose();
-    } catch (error) {
-      console.error('Error saving object:', error);
-      setError('Failed to save object');
+      
+    } catch (error: any) {
+      console.error('Failed to save resource:', error);
+      
+      // Handle specific duplicate error
+      if (error?.error && error.error.includes('already exists')) {
+        snackbar.showError(`Resource "${displayName.trim()}" already exists. Please choose a different name.`);
+      } else {
+        snackbar.handleApiError(error, 'Failed to save resource. Please try again.');
+      }
     } finally {
       setIsSubmitting(false);
     }

@@ -621,7 +621,7 @@ export default function AttributesPage() {
       
       if (response.success) {
         // Update local state by filtering out deleted attributes
-        setAttributes(prev => prev.filter(attr => !selectedAttributes.includes(attr.id)));
+        setAttributes(prev => prev.filter(attr => !selectedAttributes.includes(attr._id)));
         setTotal(prev => prev - selectedAttributes.length);
         
         // Clear selection
@@ -757,9 +757,10 @@ export default function AttributesPage() {
           setAttributes(prev => prev.map(attr =>
             attr._id === selectedAttribute._id ? response.data : attr
           ));
+          snackbar.showSuccess(`Attribute "${attributeData.displayName}" updated successfully`);
           handleClose();
         } else {
-          throw new Error(response.error || 'Failed to update attribute');
+          snackbar.handleApiResponse(response, undefined, 'Failed to update attribute');
         }
       } else {
         // Create new attribute
@@ -768,22 +769,21 @@ export default function AttributesPage() {
           // Add to local state
           setAttributes(prev => [response.data, ...prev]);
           setTotal(prev => prev + 1);
+          snackbar.showSuccess(`Attribute "${attributeData.displayName}" created successfully`);
           handleClose();
         } else {
-          throw new Error(response.error || 'Failed to create attribute');
+          snackbar.handleApiResponse(response, undefined, 'Failed to create attribute');
         }
       }
     } catch (error: any) {
-      console.error('Submit error:', error);
+      console.error('Failed to save attribute:', error);
       
-      let errorMessage = 'Failed to save attribute';
-      if (error.response?.data?.error) {
-        errorMessage += ': ' + error.response.data.error;
-      } else if (error.message) {
-        errorMessage += ': ' + error.message;
+      // Handle specific duplicate error
+      if (error?.error && error.error.includes('already exists')) {
+        snackbar.showError(`Attribute "${displayName.trim()}" already exists. Please choose a different name.`);
+      } else {
+        snackbar.handleApiError(error, 'Failed to save attribute. Please try again.');
       }
-      
-      alert(errorMessage);
     } finally {
       setIsSubmitting(false);
     }
