@@ -1258,6 +1258,21 @@ export default function AttributesPage() {
                                   </IconButton>
                                 )}
                               </Box>
+                            ) : attribute.dataType === 'boolean' ? (
+                              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, alignItems: 'center' }}>
+                                <Chip
+                                  label="true"
+                                  size="small"
+                                  variant="outlined"
+                                  sx={{ fontSize: '0.75rem' }}
+                                />
+                                <Chip
+                                  label="false"
+                                  size="small"
+                                  variant="outlined"
+                                  sx={{ fontSize: '0.75rem' }}
+                                />
+                              </Box>
                             ) : (
                               <Typography variant="body2" color="text.secondary" fontStyle="italic">
                                 Any value
