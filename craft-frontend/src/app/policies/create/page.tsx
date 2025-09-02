@@ -181,7 +181,7 @@ export default function CreatePolicyPage() {
   const [description, setDescription] = useState('');
 
   // Selection data
-  const [selectedSubject, setSelectedSubject] = useState<string>('');
+  const [selectedSubjects, setSelectedSubjects] = useState<string[]>([]);
   const [selectedActions, setSelectedActions] = useState<string[]>([]);
   const [selectedResources, setSelectedResources] = useState<string[]>([]);
   const [selectedAttributes, setSelectedAttributes] = useState<Attribute[]>([]);
@@ -273,7 +273,7 @@ export default function CreatePolicyPage() {
         const isValid = displayName.trim() !== '' && displayName.length >= 3 && displayName.length <= 100;
         return isValid;
       case 1:
-        return selectedSubject !== '';
+        return selectedSubjects.length > 0;
       case 2:
         return selectedActions.length > 0;
       case 3:
@@ -281,7 +281,7 @@ export default function CreatePolicyPage() {
       default:
         return true;
     }
-  }, [displayName, selectedSubject, selectedActions, selectedResources]);
+  }, [displayName, selectedSubjects, selectedActions, selectedResources]);
 
   // Validation for display name
   useEffect(() => {
@@ -635,12 +635,12 @@ export default function CreatePolicyPage() {
 
           const action = actions.find(a => a.id === actionId);
           const resource = resources.find(r => r.id === resourceId);
-          const subject = subjects.find(s => s.id === selectedSubject);
+          const subject = subjects.find(s => s.id === selectedSubjects[0]); // Use first selected subject for now
 
           return {
             id: `rule-${Date.now()}-${ruleIndex}`,
             subject: {
-              type: selectedSubject,
+              type: selectedSubjects[0], // Use first selected subject for now
               attributes: subjectAttributes
             },
             action: {
@@ -662,7 +662,7 @@ export default function CreatePolicyPage() {
         effect: 'Allow' as const,
         status,
         rules,
-        subjects: [selectedSubject],
+        subjects: selectedSubjects,
         resources: selectedResources,
         actions: selectedActions,
         conditions: []
@@ -778,50 +778,87 @@ export default function CreatePolicyPage() {
             <Paper elevation={0} sx={{ p: 3, border: '1px solid', borderColor: 'grey.200', borderRadius: 2 }}>
                 <Grid container spacing={3}>
                   <Grid size={{ xs: 12, md: 5 }}>
-                    <FormControl fullWidth required>
-                      <InputLabel>Select Subject</InputLabel>
-                      <Select
-                        value={selectedSubject}
-                        onChange={(e) => setSelectedSubject(e.target.value)}
-                        label="Select Subject"
-                        disabled={loadingDropdownData}
-                        sx={{ bgcolor: 'white' }}
-                      >
-                        {subjects.map((subject) => (
-                          <MenuItem key={subject.id} value={subject.id}>
+                    <Autocomplete
+                      multiple
+                      options={subjects}
+                      getOptionLabel={(option) => option.displayName}
+                      value={subjects.filter(subject => selectedSubjects.includes(subject.id))}
+                      onChange={(event, newValue) => {
+                        setSelectedSubjects(newValue.map(subject => subject.id));
+                      }}
+                      disabled={loadingDropdownData}
+                      filterOptions={(options, { inputValue }) => {
+                        return options.filter(option =>
+                          option.displayName.toLowerCase().includes(inputValue.toLowerCase()) ||
+                          option.email.toLowerCase().includes(inputValue.toLowerCase()) ||
+                          option.type.toLowerCase().includes(inputValue.toLowerCase()) ||
+                          option.department.toLowerCase().includes(inputValue.toLowerCase())
+                        );
+                      }}
+                      renderInput={(params) => (
+                        <TextField
+                          {...params}
+                          label="Select Subjects *"
+                          placeholder="Search subjects by name, email, type, or department"
+                          sx={{ bgcolor: 'white' }}
+                        />
+                      )}
+                      renderTags={(value, getTagProps) =>
+                        value.map((option, index) => {
+                          const { key, ...tagProps } = getTagProps({ index });
+                          return (
+                            <Chip
+                              key={key}
+                              {...tagProps}
+                              label={option.displayName}
+                              size="small"
+                              sx={{ fontSize: '0.75rem' }}
+                            />
+                          );
+                        })
+                      }
+                      renderOption={(props, option, { selected }) => {
+                        const { key, ...otherProps } = props;
+                        return (
+                          <Box component="li" key={key} {...otherProps}>
+                            <Checkbox
+                              checked={selected}
+                              sx={{ mr: 1 }}
+                            />
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, width: '100%', py: 0.5 }}>
                               <Avatar
                                 sx={{
                                   width: 36,
                                   height: 36,
-                                  bgcolor: subject.type === 'user' ? 'primary.main' : 
-                                           subject.type === 'group' ? 'secondary.main' : 'warning.main',
+                                  bgcolor: option.type === 'user' ? 'primary.main' : 
+                                           option.type === 'group' ? 'secondary.main' : 'warning.main',
                                   fontSize: '15px',
                                   fontWeight: 600
                                 }}
                               >
-                                {subject.displayName.charAt(0).toUpperCase()}
+                                {option.displayName.charAt(0).toUpperCase()}
                               </Avatar>
                               <Box sx={{ flexGrow: 1 }}>
                                 <Typography variant="body2" fontWeight="600">
-                                  {subject.displayName}
+                                  {option.displayName}
                                 </Typography>
                                 <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
-                                  {subject.email}
+                                  {option.email}
                                 </Typography>
                                 <Typography variant="caption" color="text.secondary">
-                                  {subject.type} • {subject.department}
+                                  {option.type} • {option.department}
                                 </Typography>
                               </Box>
                             </Box>
-                          </MenuItem>
-                        ))}
-                      </Select>
-                    </FormControl>
+                          </Box>
+                        );
+                      }}
+                      sx={{ width: '100%' }}
+                    />
                   </Grid>
                   
                   <Grid size={{ xs: 12, md: 7 }}>
-                    {selectedSubject ? (
+                    {selectedSubjects.length > 0 ? (
                       <Box>
                         <Box sx={{ mb: 2, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -854,11 +891,20 @@ export default function CreatePolicyPage() {
                             onChange={handleAttributeSelection}
                             getOptionLabel={(option) => option.displayName}
                             isOptionEqualToValue={(option, value) => option.id === value.id}
+                            filterOptions={(options, { inputValue }) => {
+                              return options.filter(option =>
+                                option.displayName.toLowerCase().includes(inputValue.toLowerCase()) ||
+                                option.name.toLowerCase().includes(inputValue.toLowerCase()) ||
+                                (option.description && option.description.toLowerCase().includes(inputValue.toLowerCase())) ||
+                                option.dataType.toLowerCase().includes(inputValue.toLowerCase()) ||
+                                (option.categories && option.categories.some(cat => cat.toLowerCase().includes(inputValue.toLowerCase())))
+                              );
+                            }}
                             renderInput={(params) => (
                               <TextField
                                 {...params}
                                 label="Select Attributes"
-                                placeholder="Choose attributes to configure conditions"
+                                placeholder="Search attributes by name, description, type, or category"
                                 variant="outlined"
                                 size="small"
                                 InputLabelProps={{}}
@@ -1204,63 +1250,76 @@ export default function CreatePolicyPage() {
               </Typography>
             </Box>
 
-            <Paper sx={{ p: 3, maxHeight: 500, overflow: 'auto' }}>
-              {actions.map((action) => (
-                <Box key={action.id} sx={{ mb: 2 }}>
-                  <FormControlLabel
-                    control={
-                      <Switch
-                        checked={selectedActions.includes(action.id)}
-                        onChange={(e) => {
-                          if (e.target.checked) {
-                            setSelectedActions(prev => [...prev, action.id]);
-                          } else {
-                            setSelectedActions(prev => prev.filter(id => id !== action.id));
-                          }
-                        }}
-                        size="medium"
-                      />
-                    }
-                    label={
-                      <Box sx={{ ml: 1 }}>
-                        <Typography variant="body1" fontWeight="500" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                          <ActionIcon color="primary" fontSize="small" />
-                          {action.displayName}
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-                          {action.description}
-                        </Typography>
-                      </Box>
-                    }
-                    sx={{ alignItems: 'flex-start', mb: 1 }}
+            <Paper elevation={0} sx={{ p: 3, border: '1px solid', borderColor: 'grey.200', borderRadius: 2 }}>
+              <Autocomplete
+                multiple
+                options={actions || []}
+                getOptionLabel={(option) => option.displayName}
+                value={actions.filter(action => selectedActions.includes(action.id))}
+                onChange={(event, newValue) => {
+                  setSelectedActions(newValue.map(action => action.id));
+                }}
+                filterOptions={(options, { inputValue }) => {
+                  return options.filter(option =>
+                    option.displayName.toLowerCase().includes(inputValue.toLowerCase()) ||
+                    option.name.toLowerCase().includes(inputValue.toLowerCase()) ||
+                    (option.description && option.description.toLowerCase().includes(inputValue.toLowerCase())) ||
+                    (option.category && option.category.toLowerCase().includes(inputValue.toLowerCase())) ||
+                    (option.riskLevel && option.riskLevel.toLowerCase().includes(inputValue.toLowerCase()))
+                  );
+                }}
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    label="Select Actions"
+                    placeholder="Search actions by name, description, category, or risk level"
+                    sx={{ bgcolor: 'white' }}
                   />
-                </Box>
-              ))}
+                )}
+                renderTags={(value, getTagProps) =>
+                  value.map((option, index) => {
+                    const { key, ...tagProps } = getTagProps({ index });
+                    return (
+                      <Chip
+                        key={key}
+                        {...tagProps}
+                        label={option.displayName}
+                        color="primary"
+                        size="small"
+                        sx={{ fontSize: '0.75rem' }}
+                      />
+                    );
+                  })
+                }
+                renderOption={(props, option, { selected }) => {
+                  const { key, ...otherProps } = props;
+                  return (
+                    <Box component="li" key={key} {...otherProps}>
+                      <Checkbox
+                        checked={selected}
+                        sx={{ mr: 1 }}
+                      />
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, width: '100%', py: 0.5 }}>
+                        <ActionIcon color="primary" fontSize="small" />
+                        <Box sx={{ flexGrow: 1 }}>
+                          <Typography variant="body2" fontWeight="600">
+                            {option.displayName}
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                            {option.description}
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary">
+                            {option.category} • {option.riskLevel} Risk
+                          </Typography>
+                        </Box>
+                      </Box>
+                    </Box>
+                  );
+                }}
+                sx={{ width: '100%' }}
+              />
             </Paper>
 
-            {selectedActions.length > 0 && (
-              <Box sx={{ mt: 2 }}>
-                <Typography variant="subtitle2" gutterBottom>
-                  Selected Actions ({selectedActions.length}):
-                </Typography>
-                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-                  {selectedActions.map(actionId => {
-                    const action = actions.find(a => a.id === actionId);
-                    return action ? (
-                      <Chip 
-                        key={actionId} 
-                        label={action.displayName} 
-                        color="primary"
-                        variant="outlined"
-                        onDelete={() => {
-                          setSelectedActions(prev => prev.filter(id => id !== actionId));
-                        }}
-                      />
-                    ) : null;
-                  })}
-                </Box>
-              </Box>
-            )}
           </Card>
         );
 
@@ -1279,68 +1338,76 @@ export default function CreatePolicyPage() {
             <Paper elevation={0} sx={{ p: 3, border: '1px solid', borderColor: 'grey.200', borderRadius: 2 }}>
                 <Grid container spacing={3}>
                   <Grid size={{ xs: 12, md: 5 }}>
-                    <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
-                      <ResourceIcon color="primary" />
-                      Resources
-                    </Typography>
-                    
-                    <Box sx={{ maxHeight: 400, overflow: 'auto', border: '1px solid', borderColor: 'grey.200', borderRadius: 1, p: 2, bgcolor: 'grey.50' }}>
-                      {resources.map((resource) => (
-                        <Box key={resource.id} sx={{ mb: 1.5, last: { mb: 0 } }}>
-                          <FormControlLabel
-                            control={
-                              <Switch
-                                size="small"
-                                checked={selectedResources.includes(resource.id)}
-                                onChange={(e) => {
-                                  if (e.target.checked) {
-                                    setSelectedResources(prev => [...prev, resource.id]);
-                                  } else {
-                                    setSelectedResources(prev => prev.filter(id => id !== resource.id));
-                                  }
-                                }}
+                    <Autocomplete
+                      multiple
+                      options={resources}
+                      getOptionLabel={(option) => option.displayName}
+                      value={resources.filter(resource => selectedResources.includes(resource.id))}
+                      onChange={(event, newValue) => {
+                        setSelectedResources(newValue.map(resource => resource.id));
+                      }}
+                      disabled={loadingDropdownData}
+                      filterOptions={(options, { inputValue }) => {
+                        return options.filter(option =>
+                          option.displayName.toLowerCase().includes(inputValue.toLowerCase()) ||
+                          option.name.toLowerCase().includes(inputValue.toLowerCase()) ||
+                          (option.description && option.description.toLowerCase().includes(inputValue.toLowerCase())) ||
+                          (option.uri && option.uri.toLowerCase().includes(inputValue.toLowerCase())) ||
+                          option.type.toLowerCase().includes(inputValue.toLowerCase())
+                        );
+                      }}
+                      renderInput={(params) => (
+                        <TextField
+                          {...params}
+                          label="Select Resources *"
+                          placeholder="Search resources by name, description, URI, or type"
+                          sx={{ bgcolor: 'white' }}
+                        />
+                      )}
+                      renderTags={(value, getTagProps) =>
+                        value.map((option, index) => {
+                          const { key, ...tagProps } = getTagProps({ index });
+                          return (
+                            <Chip
+                              key={key}
+                              {...tagProps}
+                              label={option.displayName}
+                              size="small"
+                              sx={{ fontSize: '0.75rem' }}
+                            />
+                          );
+                        })
+                      }
+                      renderOption={(props, option, { selected }) => {
+                        const { key, ...otherProps } = props;
+                        return (
+                          <Box component="li" key={key} {...otherProps}>
+                            <Checkbox
+                              checked={selected}
+                              sx={{ mr: 1 }}
+                            />
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, width: '100%', py: 0.5 }}>
+                              <ResourceIcon
+                                color="primary"
+                                sx={{ fontSize: 20 }}
                               />
-                            }
-                            label={
-                              <Box sx={{ ml: 1 }}>
-                                <Typography variant="body2" fontWeight="500">
-                                  {resource.displayName}
+                              <Box sx={{ flexGrow: 1 }}>
+                                <Typography variant="body2" fontWeight="600">
+                                  {option.displayName}
                                 </Typography>
-                                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.25 }}>
-                                  {resource.description || resource.uri}
+                                <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                                  {option.description || option.uri}
+                                </Typography>
+                                <Typography variant="caption" color="text.secondary">
+                                  {option.type}
                                 </Typography>
                               </Box>
-                            }
-                            sx={{ alignItems: 'flex-start', m: 0, width: '100%' }}
-                          />
-                        </Box>
-                      ))}
-                    </Box>
-                    
-                    {selectedResources.length > 0 && (
-                      <Box sx={{ mt: 2 }}>
-                        <Typography variant="subtitle2" gutterBottom>
-                          Selected Resources ({selectedResources.length}):
-                        </Typography>
-                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                          {selectedResources.map(resourceId => {
-                            const resource = resources.find(r => r.id === resourceId);
-                            return resource ? (
-                              <Chip 
-                                key={resourceId}
-                                label={resource.displayName}
-                                size="small"
-                                color="secondary"
-                                variant="filled"
-                                onDelete={() => {
-                                  setSelectedResources(prev => prev.filter(id => id !== resourceId));
-                                }}
-                              />
-                            ) : null;
-                          })}
-                        </Box>
-                      </Box>
-                    )}
+                            </Box>
+                          </Box>
+                        );
+                      }}
+                      sx={{ width: '100%' }}
+                    />
                   </Grid>
 
                   <Grid size={{ xs: 12, md: 7 }}>
@@ -1363,10 +1430,19 @@ export default function CreatePolicyPage() {
                             onChange={handleResourceAttributeDropdownSelection}
                             getOptionLabel={(option) => option.displayName}
                             isOptionEqualToValue={(option, value) => option.id === value.id}
+                            filterOptions={(options, { inputValue }) => {
+                              return options.filter(option =>
+                                option.displayName.toLowerCase().includes(inputValue.toLowerCase()) ||
+                                option.name.toLowerCase().includes(inputValue.toLowerCase()) ||
+                                (option.description && option.description.toLowerCase().includes(inputValue.toLowerCase())) ||
+                                option.dataType.toLowerCase().includes(inputValue.toLowerCase()) ||
+                                (option.categories && option.categories.some(cat => cat.toLowerCase().includes(inputValue.toLowerCase())))
+                              );
+                            }}
                             renderInput={(params) => (
                               <TextField
                                 {...params}
-                                placeholder="Select resource attributes to configure..."
+                                placeholder="Search resource attributes by name, description, type, or category"
                                 sx={{ bgcolor: 'white' }}
                               />
                             )}
@@ -1688,7 +1764,7 @@ export default function CreatePolicyPage() {
                         ALLOWS
                       </strong>{' '}
                       <strong style={{ color: '#1976d2' }}>
-                        {subjects.find(s => s.id === selectedSubject)?.displayName}
+                        {selectedSubjects.map(id => subjects.find(s => s.id === id)?.displayName).join(', ')}
                       </strong>
                       {Object.keys(selectedSubjectAttributes).length > 0 && (
                         <span>
@@ -1767,10 +1843,13 @@ export default function CreatePolicyPage() {
                           Subject
                         </Typography>
                         <Typography variant="body2" fontWeight="600">
-                          {subjects.find(s => s.id === selectedSubject)?.displayName}
+                          {selectedSubjects.map(id => subjects.find(s => s.id === id)?.displayName).join(', ')}
                         </Typography>
                         <Typography variant="caption" color="text.secondary">
-                          {subjects.find(s => s.id === selectedSubject)?.type} • {subjects.find(s => s.id === selectedSubject)?.department}
+                          {selectedSubjects.map(id => {
+                            const subject = subjects.find(s => s.id === id);
+                            return subject ? `${subject.type} • ${subject.department}` : '';
+                          }).join('; ')}
                         </Typography>
                         {Object.keys(selectedSubjectAttributes).length > 0 && (
                           <Box sx={{ mt: 1 }}>
