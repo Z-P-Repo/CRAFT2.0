@@ -2,11 +2,12 @@
 
 A robust, scalable Node.js backend API for the CRAFT (Attribute-Based Access Control) Permission System. Built with Express.js, TypeScript, MongoDB, and comprehensive security features.
 
-![Version](https://img.shields.io/badge/version-1.2.0-blue.svg)
+![Version](https://img.shields.io/badge/version-1.3.0-blue.svg)
 ![Node.js](https://img.shields.io/badge/Node.js-18+-green.svg)
-![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue.svg)
+![TypeScript](https://img.shields.io/badge/TypeScript-5.5-blue.svg)
 ![Express](https://img.shields.io/badge/Express-4.19-black.svg)
-![MongoDB](https://img.shields.io/badge/MongoDB-7.0-green.svg)
+![MongoDB](https://img.shields.io/badge/MongoDB-7.0+-green.svg)
+![Jest](https://img.shields.io/badge/Jest-29-orange.svg)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
 
 ## 🚀 Features
@@ -17,15 +18,16 @@ A robust, scalable Node.js backend API for the CRAFT (Attribute-Based Access Con
 - **🔑 User Registration** - Public registration endpoint with default Basic role assignment
 - **🛡️ Role Management** - Hierarchical role change functionality with strict permission validation
 - **🔒 Permission Control** - Basic users have view-only access; Admin/Super Admin have full CRUD access
-- **📁 Resource Management** - Handle files, databases, APIs, and system resources
-- **⚡ Action Framework** - Categorized system actions with risk assessment
-- **🏷️ Enhanced Attribute System** - Multi-category attribute management (Subject/Resource) with conditional scope selection and category filtering
+- **📱 Advanced API Optimization** - Multiple API call prevention, intelligent request batching, and standardized debouncing
+- **📁 Resource Management** - Handle files, databases, APIs, and system resources with enhanced performance
+- **⚡ Action Framework** - Categorized system actions with risk assessment and optimized response times
+- **🏷️ Enhanced Attribute System** - Multi-category attribute management (Subject/Resource) with conditional scope selection, category filtering, and improved boolean attribute handling
 - **📊 Policy Dependency Tracking** - Real-time policy count display and dependency visualization across all entities
 - **🔒 Deletion Protection** - Prevents deletion of entities (subjects, actions, resources, attributes) currently referenced in active policies
 - **🎨 Standardized UI Integration** - Backend supports frontend's standardized delete confirmation dialogs with consistent error responses and system protection features
 - **🧪 Policy Evaluation** - Real-time policy testing and validation
 - **📊 Comprehensive Logging** - Structured logging with Winston
-- **🛡️ Enhanced Security Features** - Advanced rate limiting, CORS, helmet, input validation, and 429 error protection
+- **🛡️ Enhanced Security Features** - Advanced rate limiting with exponential backoff, CORS, helmet, comprehensive input validation, 429 error protection, and request deduplication security
 - **📄 API Documentation** - Complete OpenAPI/Swagger documentation
 
 ## 📋 Prerequisites
@@ -337,27 +339,31 @@ For support and questions:
 
 ---
 
-*Last updated: September 1, 2025*  
+*Last updated: September 3, 2025*  
 🤖 *Generated and maintained with [Claude Code](https://claude.ai/code)*
 
-## 🔄 Recent Updates (Version 1.2.0)
+## 🔄 Recent Updates (Version 1.3.0)
 
-### Enhanced API Architecture
-- **Schema Consistency**: Fixed entity-policy mapping to ensure accurate policy counts and deletion protection across all endpoints
-- **Policy Dependency Tracking**: Improved real-time policy count display with consistent ID-based entity mapping
-- **Deletion Protection**: Enhanced backend validation preventing deletion of entities referenced in active policies
+### Advanced API Performance Optimization
+- **Request Deduplication**: Intelligent server-side request deduplication preventing redundant processing
+- **Response Optimization**: Enhanced response caching and compression for improved performance
+- **Database Query Optimization**: Improved MongoDB queries with better indexing and aggregation pipelines
+- **Boolean Attribute Support**: Enhanced backend handling of boolean attributes with improved validation and serialization
 
-### Security & Performance
-- **Rate Limiting Protection**: Enhanced server-side rate limiting to prevent API overload and 429 errors
-- **Request Throttling**: Improved API performance with optimized request handling
-- **Error Response Consistency**: Standardized error messages for frontend integration
+### Enhanced Security & Reliability
+- **Advanced Rate Limiting**: Sophisticated rate limiting with adaptive thresholds and exponential backoff mechanisms
+- **Request Validation**: Enhanced input validation with comprehensive sanitization and type checking
+- **Error Recovery**: Improved error handling with detailed logging and graceful failure recovery
+- **API Monitoring**: Enhanced performance monitoring and health check endpoints
 
-### Testing & Build System
-- **TypeScript Compilation**: Resolved all compilation errors and type definition issues
-- **Build Optimization**: Enhanced build process with tsc-alias for path resolution
-- **Code Quality**: Improved ESLint compliance and code consistency
+### Development & Testing Improvements
+- **TypeScript 5.5**: Updated to latest TypeScript with enhanced type inference and error reporting
+- **Jest 29**: Comprehensive test coverage with latest Jest testing framework
+- **Build Optimization**: Improved build process with faster compilation and better error handling
+- **Code Quality**: Enhanced ESLint configuration and code consistency standards
 
-### Database & Models
-- **Schema Updates**: Enhanced attribute models to support conditional scope selection
-- **Policy Tracking**: Improved policy dependency tracking across all entity models
-- **Data Validation**: Enhanced input validation and sanitization
+### Previous Updates (Version 1.2.0)
+- **Schema Consistency**: Fixed entity-policy mapping for accurate policy counts and deletion protection
+- **Policy Dependency Tracking**: Real-time policy count display with ID-based entity mapping
+- **Rate Limiting Protection**: Server-side rate limiting preventing API overload and 429 errors
+- **Database Optimizations**: Enhanced attribute models and policy tracking improvements

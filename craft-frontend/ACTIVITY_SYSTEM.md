@@ -237,21 +237,26 @@ Content-Type: application/json
 ## Performance Considerations
 
 ### Batch Processing
-- Activities are queued and sent in batches every 5 seconds
-- High/critical severity activities are sent immediately
-- Failed requests are retried with exponential backoff
+- Activities are queued and sent in batches every 5 seconds with intelligent deduplication
+- High/critical severity activities are sent immediately with priority handling
+- Failed requests are retried with exponential backoff and request deduplication
+- Request batching prevents multiple identical API calls and optimizes network performance
 
 ### Client-Side Optimizations
-- Virtualized table for large datasets
-- Debounced search input
-- Memoized filter computations
-- Lazy loading of activity details
+- Virtualized table for large datasets with enhanced scroll performance
+- Standardized 300ms search debouncing across all activity interfaces
+- Memoized filter computations with intelligent caching mechanisms
+- Lazy loading of activity details with request deduplication
+- Advanced local state management with comprehensive error recovery
+- Boolean attribute display optimizations for better visual performance
 
 ### Server-Side Recommendations
-- Index on timestamp, category, severity, and actor.id
-- Implement activity retention policies
-- Use background processing for heavy analytics
-- Consider archiving old activities
+- Enhanced indexing on timestamp, category, severity, and actor.id with compound indexes for better query performance
+- Implement activity retention policies with automated archiving and cleanup
+- Use background processing for heavy analytics with request deduplication
+- Consider archiving old activities with optimized compression and storage
+- Advanced rate limiting to prevent API overload and ensure consistent performance
+- Request deduplication at the server level to prevent redundant processing
 
 ## Configuration
 
@@ -285,9 +290,11 @@ activityService.setEnabled(process.env.NODE_ENV === 'production');
 - Audit logs are tamper-evident
 
 ### Performance Impact
-- Minimal performance overhead through async processing
-- Batch processing reduces server load
-- Client-side queuing prevents UI blocking
+- Minimal performance overhead through optimized async processing and request deduplication
+- Intelligent batch processing with request merging significantly reduces server load
+- Advanced client-side queuing with 300ms debouncing prevents UI blocking and redundant requests
+- Request deduplication ensures efficient network utilization and faster response times
+- Enhanced error handling and local state management improve overall system reliability
 
 ## Compliance Features
 

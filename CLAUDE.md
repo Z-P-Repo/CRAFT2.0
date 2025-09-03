@@ -20,8 +20,10 @@ When user prompts "update", update all .md files:
 ### "test"
 When user prompts "test", run the comprehensive test coverage command:
 - Command: `npm run test:coverage`
-- This will run all tests with full coverage reporting
-- Tests use Jest and React Testing Library for comprehensive coverage
+- This will run all tests with full coverage reporting including performance tests
+- Tests use Jest 29 and React Testing Library 16 for comprehensive coverage
+- Includes API optimization tests and debouncing verification
+- Tests cover request deduplication and error handling scenarios
 
 ### "deploy"
 When user prompts "deploy", prepare the application for production deployment:
@@ -31,10 +33,19 @@ When user prompts "deploy", prepare the application for production deployment:
 4. Ensure no build warnings or errors
 
 ## Project Structure
-- Frontend: `/craft-frontend` (Next.js 15.4.6, TypeScript, Material-UI v6, Azure AD MSAL, Jest Testing)
-- Backend: `/craft-backend` (Node.js, Express, TypeScript, MongoDB, Azure AD SSO, Rate Limiting)
+- Frontend: `/craft-frontend` (Next.js 15.4.6, TypeScript 5.5, Material-UI v7, Azure AD MSAL, Jest 29 Testing)
+- Backend: `/craft-backend` (Node.js 18+, Express 4.19, TypeScript 5.5, MongoDB 7.0+, Azure AD SSO, Advanced Rate Limiting)
 
-## Latest Features (v1.2.0)
+## Latest Features (v1.3.0)
+- Multiple API call optimization with intelligent request batching and deduplication
+- Standardized search debouncing (300ms) across all pages for optimal performance
+- Enhanced boolean attribute display with improved visual indicators
+- Comprehensive error handling and local state management improvements
+- Improved policy creation with advanced searchable dropdowns
+- Full Jest configuration with React Testing Library for robust testing
+- Enhanced UI/UX polish with refined interaction patterns
+
+## Previous Features (v1.2.0)
 - Enhanced 5-step policy creation wizard with separated Action & Resource selection
 - Advanced rate limiting and 429 error handling with exponential backoff  
 - Comprehensive test coverage with Jest and React Testing Library

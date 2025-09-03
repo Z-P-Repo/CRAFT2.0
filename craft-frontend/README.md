@@ -2,10 +2,12 @@
 
 A modern, responsive React-based dashboard for managing the CRAFT (Attribute-Based Access Control) Permission System. Built with Next.js 15, TypeScript, and Material-UI with a professional collapsible sidebar layout.
 
-![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)
-![Next.js](https://img.shields.io/badge/Next.js-15-black.svg)
-![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue.svg)
-![Material-UI](https://img.shields.io/badge/Material--UI-6.0-blue.svg)
+![Version](https://img.shields.io/badge/version-1.3.0-blue.svg)
+![Next.js](https://img.shields.io/badge/Next.js-15.4.6-black.svg)
+![TypeScript](https://img.shields.io/badge/TypeScript-5.5-blue.svg)
+![Material-UI](https://img.shields.io/badge/Material--UI-7.3-blue.svg)
+![React](https://img.shields.io/badge/React-19.0-blue.svg)
+![Jest](https://img.shields.io/badge/Jest-29-orange.svg)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
 
 ## 🚀 Features
@@ -21,7 +23,7 @@ A modern, responsive React-based dashboard for managing the CRAFT (Attribute-Bas
 - **⚡ Action Management** - Define and categorize system actions with risk levels (view-only for Basic users)
 - **🏷️ Attribute Management** - Enhanced multi-category ABAC attributes (Subject/Resource) with conditional scope selection, multi-select dropdowns, and category filtering (view-only for Basic users)
 - **📈 Policy Dependency Tracking** - Real-time policy count display with tooltips showing up to 5 policy names across all entity management pages
-- **⚡ Performance Optimization** - Comprehensive fixes for infinite API calls, global rate limiting (250ms minimum), and 429 error handling with exponential backoff
+- **⚡ Advanced Performance Optimization** - Multiple API call prevention, intelligent request batching, standardized 300ms search debouncing, comprehensive request deduplication, and 429 error handling with exponential backoff
 - **🛡️ Deletion Protection UI** - User-friendly error messages when attempting to delete entities referenced in active policies
 - **🗑️ Standardized Delete Modals** - Clean, professional delete confirmation dialogs with close icons, system item warnings, and consistent design across all modules (Subjects, Resources, Actions, Attributes, Users)
 - **📋 Activity Monitoring** - Comprehensive activity logging and audit trail system with real-time activity feed, advanced filtering, and detailed activity views
@@ -66,7 +68,7 @@ NODE_ENV=development
 
 # Application Settings
 NEXT_PUBLIC_APP_NAME=CRAFT Permission System
-NEXT_PUBLIC_APP_VERSION=1.0.0
+NEXT_PUBLIC_APP_VERSION=1.3.0
 ```
 
 ## 🚀 Development
@@ -189,13 +191,14 @@ src/
 ## 🔧 API Integration
 
 ### API Client Features
-- Automatic request/response interceptors with global rate limiting
-- JWT token management and automatic refresh
-- Advanced error handling and retry logic with 429 rate limit protection
-- Request ID tracking and request queue management
-- Exponential backoff for failed requests with proper retry delays
-- Real-time policy count fetching with consistent ID-based entity mapping
-- Optimized entity dependency queries with request throttling
+- Intelligent request batching and deduplication to prevent multiple identical API calls
+- Automatic request/response interceptors with advanced rate limiting and 300ms search debouncing
+- JWT token management and automatic refresh with enhanced security
+- Sophisticated error handling and retry logic with 429 rate limit protection and exponential backoff
+- Request ID tracking and request queue management with performance monitoring
+- Real-time policy count fetching with consistent ID-based entity mapping and optimized caching
+- Enhanced boolean attribute handling with improved display and validation logic
+- Local state management with comprehensive error recovery and user feedback mechanisms
 - Fixed schema consistency between frontend policy creation and backend policy tracking
 
 ### Available API Methods
@@ -395,29 +398,31 @@ await trackUser('updated', 'user-456', 'John Doe');
 
 ---
 
-*Last updated: September 1, 2025*  
+*Last updated: September 3, 2025*  
 🤖 *Generated and maintained with [Claude Code](https://claude.ai/code)*
 
-## 🔄 Recent Updates (Version 1.2.0)
+## 🔄 Recent Updates (Version 1.3.0)
 
-### Enhanced Policy Management
-- **5-Step Wizard**: Upgraded policy creation from 4 to 5 steps with dedicated Action & Resource selection
-- **Resource Attribute Selection**: Added dedicated resource attribute selection interface matching subject selection pattern
-- **Create/Edit Flow Consistency**: Synchronized create and edit policy flows for identical user experience
+### Advanced Performance Optimization
+- **Multiple API Call Prevention**: Intelligent request batching and deduplication system preventing redundant server calls
+- **Standardized Search Debouncing**: Consistent 300ms debouncing implemented across all search interfaces for optimal performance
+- **Request Deduplication**: Advanced API client with smart caching mechanisms preventing duplicate network requests
+- **Enhanced Error Handling**: Comprehensive local state management with graceful error recovery and user feedback
 
-### Attribute System Enhancements  
-- **Conditional Scope Selection**: Added subject/resource selection when creating attributes based on category
-- **Multi-Select Dropdowns**: Converted two-step approach to direct multi-select for better UX
-- **Category Filtering**: Subject attributes no longer appear in resource dropdowns and vice versa
+### UI/UX Enhancements
+- **Boolean Attribute Display**: Improved rendering and handling of boolean attribute types with better visual indicators
+- **Searchable Dropdowns**: Enhanced policy creation with advanced searchable dropdown components for better user experience
+- **Material-UI v7**: Upgraded to latest Material-UI components with improved styling and performance
+- **React 19**: Updated to latest React version with enhanced performance and developer experience
 
-### Performance & Stability Fixes
-- **Infinite API Call Resolution**: Comprehensive fixes for React hooks dependency issues causing infinite loops
-- **Global Rate Limiting**: Implemented 250ms minimum delay between identical API requests
-- **429 Error Handling**: Added automatic retry with exponential backoff for rate limit errors
-- **Request Throttling**: Page-level rate limiting with 500ms minimum between requests
+### Testing & Development
+- **Comprehensive Test Setup**: Full Jest 29 configuration with React Testing Library 16 for robust testing coverage
+- **Performance Testing**: Added tests for API optimization, debouncing, and request deduplication
+- **TypeScript 5.5**: Updated to latest TypeScript with enhanced type checking and development experience
+- **Build Optimizations**: Enhanced build process with improved error handling and faster compilation times
 
-### Testing & Build Improvements
-- **Test Coverage**: Added comprehensive Jest and React Testing Library test suites
-- **Build Fixes**: Resolved all TypeScript compilation errors and ESLint warnings
-- **Display Name Fixes**: Fixed React component display name issues in test files
-- **Hook Dependencies**: Resolved React hooks exhaustive-deps warnings
+### Previous Updates (Version 1.2.0)
+- **5-Step Policy Wizard**: Enhanced policy creation with separated Action & Resource selection
+- **Attribute System**: Conditional scope selection and category filtering improvements
+- **Rate Limiting**: Global API rate limiting with 429 error handling and exponential backoff
+- **Test Infrastructure**: Comprehensive Jest and React Testing Library implementation
