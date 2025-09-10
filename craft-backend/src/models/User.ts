@@ -67,6 +67,34 @@ const UserSchema = new Schema<UserDocument>({
   },
   lastLoginAt: {
     type: Date
+  },
+  
+  // Workspace associations
+  workspaces: [{
+    type: String,
+    ref: 'Workspace'
+  }],
+  currentWorkspace: {
+    type: String,
+    ref: 'Workspace'
+  },
+  
+  // Workspace-specific roles and permissions
+  workspaceRoles: {
+    type: Map,
+    of: {
+      role: {
+        type: String,
+        enum: ['owner', 'admin', 'member', 'viewer'],
+        default: 'member'
+      },
+      permissions: [String],
+      joinedAt: {
+        type: Date,
+        default: Date.now
+      }
+    },
+    default: new Map()
   }
 }, {
   timestamps: true,

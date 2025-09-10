@@ -28,6 +28,14 @@ A modern, responsive React-based dashboard for managing the CRAFT (Attribute-Bas
 - **🗑️ Standardized Delete Modals** - Clean, professional delete confirmation dialogs with close icons, system item warnings, and consistent design across all modules (Subjects, Resources, Actions, Attributes, Users)
 - **📋 Activity Monitoring** - Comprehensive activity logging and audit trail system with real-time activity feed, advanced filtering, and detailed activity views
 - **🧪 Policy Tester** - Interactive policy evaluation and testing with detailed results
+- **🏢 Hierarchical Workspace Management** - Complete multi-tenant workspace system with Workspace → Applications → Environments hierarchy and authentication integration
+- **⚙️ Unified Settings Page** - Single-page setup wizard with enhanced stepper UI and step-by-step guidance for creating complete workspace hierarchies
+- **🎨 Enhanced Stepper UI** - Policy Creation-inspired stepper design with circular progress indicators, completion states, and Material-UI theming
+- **🔄 Workspace Context Management** - Comprehensive React context providers with authentication-aware workspace, application, and environment state management
+- **🌐 Dynamic Navigation** - Context-aware navigation with workspace/application switching capabilities and real-time updates
+- **🚀 Multiple API Call Optimization** - Intelligent request batching and deduplication preventing redundant server calls across all components
+- **⚡ Standardized Search Debouncing** - Consistent 300ms search debouncing implemented across all search interfaces for optimal performance
+- **🔄 Request Deduplication** - Advanced API client with smart caching mechanisms preventing duplicate network requests
 - **📊 Real-time Statistics** - Dashboard with live metrics and activity tracking
 - **🎨 Professional UI/UX** - Material-UI components with consistent theming
 
@@ -121,15 +129,19 @@ src/
 │   ├── resources/     # Resources management
 │   ├── attributes/     # Attributes management
 │   ├── activity/       # Activity monitoring and audit logs
+│   ├── settings/       # Workspace settings and setup
 │   ├── layout.tsx      # Root layout with dashboard
 │   └── page.tsx        # Home page
 ├── components/         # Reusable UI components
 │   ├── activity/       # Activity-related components
 │   │   └── ActivityDetailModal.tsx # Activity detail modal
+│   ├── workspace/      # Workspace-related components
+│   │   └── WorkspaceSwitcher.tsx # Workspace/Application switcher
 │   └── layout/         # Layout components
 │       └── DashboardLayout.tsx # Main dashboard layout
 ├── contexts/           # React contexts
-│   └── AuthContext.tsx # Authentication context
+│   ├── AuthContext.tsx # Authentication context
+│   └── WorkspaceContext.tsx # Workspace management context
 ├── hooks/              # Custom React hooks
 ├── lib/                # Libraries and utilities
 │   ├── api.ts          # API client with interceptors
@@ -166,6 +178,7 @@ src/
   - **Policy View** (`/policies/[id]`): Dedicated policy viewing page (all users)
   - **Policy Edit** (`/policies/[id]/edit`): Dedicated policy editing page (Admin/Super Admin only)
 - **Attributes** (`/attributes`): Multi-category attribute system with policy count tooltips and auto-refresh (view-only for Basic users)
+- **Settings** (`/settings`): Unified workspace settings and setup wizard with step-by-step guidance (Admin/Super Admin only)
 - **Activity** (`/activity`): Comprehensive activity monitoring with real-time audit logs, advanced filtering, and detailed activity views (all users)
 - **Tester** (`/tester`): Policy evaluation testing (all users)
 
@@ -398,10 +411,27 @@ await trackUser('updated', 'user-456', 'John Doe');
 
 ---
 
-*Last updated: September 3, 2025*  
+*Last updated: September 10, 2025*  
 🤖 *Generated and maintained with [Claude Code](https://claude.ai/code)*
 
 ## 🔄 Recent Updates (Version 1.3.0)
+
+### Hierarchical Workspace Architecture & Performance Optimization
+- **🏢 Multi-Tenant Workspace System**: Complete workspace, application, and environment hierarchy with comprehensive React context management and authentication integration
+- **⚙️ Unified Settings Page**: Single-page setup wizard with enhanced stepper UI, circular progress indicators, and step-by-step guidance
+- **🔄 Workspace Context Provider**: Comprehensive state management for workspace, application, and environment selection with authentication-aware data loading
+- **🌐 WorkspaceSwitcher Component**: Dynamic navigation component with context-aware workspace/application switching and real-time updates
+- **🚀 Multiple API Call Optimization**: Intelligent request batching and deduplication system preventing redundant server calls across all pages
+- **⚡ Standardized Search Debouncing**: Consistent 300ms debouncing implemented across all search interfaces for optimal performance
+- **🔄 Request Deduplication**: Advanced API client with smart caching mechanisms preventing duplicate network requests and improving user experience
+- **🎯 Enhanced Boolean Attributes**: Improved rendering and handling of boolean attribute types with better visual indicators and validation
+- **🛡️ Enhanced Error Handling**: Comprehensive local state management with graceful error recovery and improved user feedback mechanisms
+- **🎨 UI Consistency Improvements**: Standardized modal padding across create/edit dialogs for cohesive user experience
+- **🔄 Table State Management**: Fixed resources table not updating properly after delete operations and other user interactions
+- **🆔 Enhanced ID Handling**: Improved handling of mixed ID formats (_id vs id) across all table operations and API interactions
+- **📊 Accurate Data Display**: Better table count calculations, pagination accuracy, and real-time data synchronization
+
+### Previous Updates (Version 1.2.0)
 
 ### Advanced Performance Optimization
 - **Multiple API Call Prevention**: Intelligent request batching and deduplication system preventing redundant server calls
@@ -422,7 +452,11 @@ await trackUser('updated', 'user-456', 'John Doe');
 - **Build Optimizations**: Enhanced build process with improved error handling and faster compilation times
 
 ### Previous Updates (Version 1.2.0)
-- **5-Step Policy Wizard**: Enhanced policy creation with separated Action & Resource selection
-- **Attribute System**: Conditional scope selection and category filtering improvements
-- **Rate Limiting**: Global API rate limiting with 429 error handling and exponential backoff
-- **Test Infrastructure**: Comprehensive Jest and React Testing Library implementation
+- **✅ Enhanced Policy Creation**: Upgraded from 4-step to 5-step wizard with separated Action & Resource selection
+- **🎯 Resource Attribute Selection**: Dedicated resource attribute selection interface matching subject selection pattern
+- **🔄 Attribute Scope Management**: Added conditional subject/resource selection in attribute creation with multi-select dropdowns
+- **⚡ Performance Optimization**: Comprehensive fixes for infinite API calls and implemented global rate limiting
+- **🛡️ Rate Limiting Protection**: Built-in API client rate limiting (250ms minimum) and 429 error handling with exponential backoff
+- **🧪 Testing Infrastructure**: Added comprehensive Jest and React Testing Library test coverage
+- **🔧 Build System Fixes**: Resolved all TypeScript compilation errors, React hooks dependencies, and ESLint issues
+- **🎨 UI/UX Improvements**: Standardized delete modals, attribute filtering by category, and consistent design patterns

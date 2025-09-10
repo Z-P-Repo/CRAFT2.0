@@ -25,6 +25,11 @@ A robust, scalable Node.js backend API for the CRAFT (Attribute-Based Access Con
 - **📊 Policy Dependency Tracking** - Real-time policy count display and dependency visualization across all entities
 - **🔒 Deletion Protection** - Prevents deletion of entities (subjects, actions, resources, attributes) currently referenced in active policies
 - **🎨 Standardized UI Integration** - Backend supports frontend's standardized delete confirmation dialogs with consistent error responses and system protection features
+- **🏢 Hierarchical Architecture** - Multi-tenant workspace system with complete Workspace → Applications → Environments hierarchy and comprehensive context integration
+- **⚙️ Settings Management** - Unified API endpoints for creating complete workspace hierarchies with transaction support and template system
+- **🚀 Advanced API Performance** - Intelligent request batching, deduplication, and optimized MongoDB queries for enhanced performance
+- **⚡ Request Optimization** - Sophisticated caching mechanisms, response compression, and database query optimization
+- **🎯 Enhanced Boolean Support** - Improved backend handling of boolean attributes with enhanced validation and serialization
 - **🧪 Policy Evaluation** - Real-time policy testing and validation
 - **📊 Comprehensive Logging** - Structured logging with Winston
 - **🛡️ Enhanced Security Features** - Advanced rate limiting with exponential backoff, CORS, helmet, comprehensive input validation, 429 error protection, and request deduplication security
@@ -114,18 +119,22 @@ src/
 │   ├── SubjectController.ts   # Subjects management
 │   └── UserController.ts      # User management and role changes
 ├── models/          # MongoDB models
-│   ├── Action.ts    # Action data model
-│   ├── Attribute.ts # Attribute data model
-│   ├── Policy.ts    # Policy data model
-│   ├── Resource.ts  # Resource data model
-│   ├── Subject.ts   # Subject data model
-│   └── User.ts      # User data model with role management
+│   ├── Action.ts       # Action data model
+│   ├── Application.ts  # Application/Project data model
+│   ├── Attribute.ts    # Attribute data model
+│   ├── Environment.ts  # Environment data model
+│   ├── Policy.ts       # Policy data model
+│   ├── Resource.ts     # Resource data model
+│   ├── Subject.ts      # Subject data model
+│   ├── User.ts         # User data model with role management
+│   └── Workspace.ts    # Workspace data model
 ├── routes/          # API routes
 │   ├── actionRoutes.ts    # Action endpoints
 │   ├── attributeRoutes.ts # Attribute endpoints
 │   ├── auth.ts           # Authentication endpoints
 │   ├── policyRoutes.ts    # Policy endpoints
 │   ├── resourceRoutes.ts  # Resource endpoints
+│   ├── settings.ts        # Workspace settings/setup endpoints
 │   ├── subjectRoutes.ts   # Subject endpoints
 │   └── userRoutes.ts     # User management endpoints
 ├── middleware/      # Express middleware
@@ -203,6 +212,10 @@ src/
 - `GET /api/v1/attributes/:id` - Get specific attribute with policy dependency information
 - `PUT /api/v1/attributes/:id` - Update attribute
 - `DELETE /api/v1/attributes/:id` - Delete attribute (with policy dependency protection)
+
+### Settings & Workspace Management
+- `POST /api/v1/settings` - Create complete workspace hierarchy (workspace, applications, environments)
+- `GET /api/v1/settings/templates` - Get workspace templates (Web App, Microservices, Simple API)
 
 ### Health & Info
 - `GET /health` - Health check
@@ -339,10 +352,26 @@ For support and questions:
 
 ---
 
-*Last updated: September 3, 2025*  
+*Last updated: September 10, 2025*  
 🤖 *Generated and maintained with [Claude Code](https://claude.ai/code)*
 
 ## 🔄 Recent Updates (Version 1.3.0)
+
+### Hierarchical Workspace Architecture & Performance Optimization
+- **🏢 Multi-Tenant System**: Complete workspace, application, and environment hierarchy with comprehensive MongoDB models and context integration
+- **⚙️ Settings API**: Unified endpoints for creating complete workspace hierarchies with transaction support and template system
+- **📝 Template System**: Pre-configured workspace templates (Web App, Microservices, Simple API) with structured project setup and automated configuration
+- **🔄 API Restructure**: Enhanced routing system with hierarchical endpoint organization and optimized performance
+- **🛡️ Data Integrity**: Transaction-based creation ensuring atomicity across workspace, application, and environment creation with enhanced error handling
+- **🚀 Request Deduplication**: Intelligent server-side request deduplication preventing redundant processing and improving response times
+- **⚡ Database Optimization**: Enhanced MongoDB queries with better indexing, aggregation pipelines, and response caching
+- **🎯 Boolean Attribute Support**: Enhanced backend handling of boolean attributes with improved validation, serialization, and API responses
+- **🛡️ Advanced Security**: Sophisticated rate limiting with adaptive thresholds, enhanced input validation, and comprehensive error recovery
+- **🔧 Settings API Fixes**: Fixed 400 error in settings API by making applications optional in workspace creation flow
+- **🎨 Improved API Consistency**: Better error handling and validation patterns across all endpoints
+- **🆔 ID Handling**: Improved MongoDB ObjectId validation and handling across authentication middleware
+
+### Previous Updates (Version 1.2.0)
 
 ### Advanced API Performance Optimization
 - **Request Deduplication**: Intelligent server-side request deduplication preventing redundant processing
@@ -363,7 +392,9 @@ For support and questions:
 - **Code Quality**: Enhanced ESLint configuration and code consistency standards
 
 ### Previous Updates (Version 1.2.0)
-- **Schema Consistency**: Fixed entity-policy mapping for accurate policy counts and deletion protection
-- **Policy Dependency Tracking**: Real-time policy count display with ID-based entity mapping
-- **Rate Limiting Protection**: Server-side rate limiting preventing API overload and 429 errors
-- **Database Optimizations**: Enhanced attribute models and policy tracking improvements
+- **✅ Schema Consistency**: Fixed entity-policy mapping for accurate policy counts and deletion protection with ID-based entity tracking
+- **📊 Policy Dependency Tracking**: Real-time policy count display with consistent ID-based entity mapping and optimized database queries
+- **🛡️ Rate Limiting Protection**: Server-side rate limiting preventing API overload and 429 errors with exponential backoff mechanisms
+- **📈 Database Optimizations**: Enhanced attribute models, policy tracking improvements, and performance-optimized MongoDB queries
+- **🔧 Build System**: Resolved TypeScript compilation errors, dependency issues, and enhanced development workflow
+- **🧪 Testing Framework**: Comprehensive Jest test coverage with enhanced API testing and validation scenarios

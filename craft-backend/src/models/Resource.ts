@@ -11,6 +11,11 @@ export interface IResource extends Document {
   attributes: Map<string, any>;
   parentId?: string;
   children: string[];
+  
+  // Hierarchy Context
+  workspaceId: string; // Reference to Workspace
+  applicationId: string; // Reference to Application
+  environmentId: string; // Reference to Environment
   permissions: {
     read: boolean;
     write: boolean;
@@ -37,10 +42,29 @@ export interface IResource extends Document {
 }
 
 const ResourceSchema = new Schema<IResource>({
+  // Hierarchy Context Fields
+  workspaceId: {
+    type: String,
+    required: [true, 'Workspace ID is required'],
+    index: true,
+    ref: 'Workspace'
+  },
+  applicationId: {
+    type: String,
+    required: [true, 'Application ID is required'],
+    index: true,
+    ref: 'Application'
+  },
+  environmentId: {
+    type: String,
+    required: [true, 'Environment ID is required'],
+    index: true,
+    ref: 'Environment'
+  },
+  
   id: {
     type: String,
     required: true,
-    unique: true,
   },
   name: {
     type: String,
@@ -142,11 +166,15 @@ const ResourceSchema = new Schema<IResource>({
   timestamps: true,
 });
 
-// Indexes for better query performance
-ResourceSchema.index({ name: 1, type: 1 });
-ResourceSchema.index({ 'metadata.classification': 1, active: 1 });
-ResourceSchema.index({ 'metadata.tags': 1 });
-ResourceSchema.index({ parentId: 1, active: 1 });
+// Hierarchy-based compound indexes for better query performance
+ResourceSchema.index({ environmentId: 1, id: 1 }, { unique: true }); // Unique within environment
+ResourceSchema.index({ workspaceId: 1, applicationId: 1, environmentId: 1 }); // Hierarchy navigation
+ResourceSchema.index({ environmentId: 1, name: 1, type: 1 });
+ResourceSchema.index({ environmentId: 1, 'metadata.classification': 1, active: 1 });
+ResourceSchema.index({ environmentId: 1, 'metadata.tags': 1 });
+ResourceSchema.index({ environmentId: 1, parentId: 1, active: 1 });
+ResourceSchema.index({ environmentId: 1, type: 1, active: 1 }); // Common type-based queries
+ResourceSchema.index({ environmentId: 1, uri: 1 }, { sparse: true }); // URI lookups within environment
 
 // Pre-save middleware to generate id if not provided
 ResourceSchema.pre('save', function(next) {

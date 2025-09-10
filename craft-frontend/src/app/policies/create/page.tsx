@@ -56,6 +56,10 @@ import { useRouter } from 'next/navigation';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import { apiClient } from '@/lib/api';
 import { useApiSnackbar } from '@/contexts/SnackbarContext';
+import { useWorkspace } from '@/contexts/WorkspaceContext';
+import SubjectCreationDialog from '@/components/subjects/SubjectCreationDialog';
+import ActionCreationDialog from '@/components/actions/ActionCreationDialog';
+import ResourceCreationDialog from '@/components/resources/ResourceCreationDialog';
 
 interface Subject {
   _id: string;
@@ -171,6 +175,7 @@ const attributeHasCategory = (attribute: Attribute, categoryToCheck: string): bo
 export default function CreatePolicyPage() {
   const router = useRouter();
   const snackbar = useApiSnackbar();
+  const { currentWorkspace, currentApplication, currentEnvironment } = useWorkspace();
   const [activeStep, setActiveStep] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isCurrentStepValid, setIsCurrentStepValid] = useState(false);
@@ -217,7 +222,16 @@ export default function CreatePolicyPage() {
   // Conditional selections for attribute scope
   const [selectedSubjectsForAttribute, setSelectedSubjectsForAttribute] = useState<string[]>([]);
   const [selectedResourcesForAttribute, setSelectedResourcesForAttribute] = useState<string[]>([]);
+
+  // Subject creation modal state
+  const [subjectDialogOpen, setSubjectDialogOpen] = useState(false);
   const [existingValues, setExistingValues] = useState<any[]>([]);
+  
+  // Action creation modal state
+  const [actionDialogOpen, setActionDialogOpen] = useState(false);
+  
+  // Resource creation modal state
+  const [resourceDialogOpen, setResourceDialogOpen] = useState(false);
   
   // Create value modal (keep existing)
   const [showCreateValue, setShowCreateValue] = useState<string | null>(null);
@@ -439,6 +453,66 @@ export default function CreatePolicyPage() {
     setAttributeDisplayNameError(validateAttributeDisplayName(value));
   };
 
+  // Subject creation handlers
+  const handleOpenSubjectDialog = () => {
+    setSubjectDialogOpen(true);
+  };
+
+  const handleCloseSubjectDialog = () => {
+    setSubjectDialogOpen(false);
+  };
+
+  const handleSubjectCreated = (newSubject: any) => {
+    // Add the new subject to the subjects list
+    setSubjects(prev => [...prev, newSubject]);
+    
+    // Select the newly created subject
+    setSelectedSubjects(prev => [...prev, newSubject.id]);
+    
+    // Show success message using snackbar
+    snackbar.showSuccess('Subject created successfully!');
+  };
+
+  // Action creation handlers
+  const handleOpenActionDialog = () => {
+    setActionDialogOpen(true);
+  };
+
+  const handleCloseActionDialog = () => {
+    setActionDialogOpen(false);
+  };
+
+  const handleActionCreated = (newAction: any) => {
+    // Add the new action to the actions list
+    setActions(prev => [...prev, newAction]);
+    
+    // Select the newly created action
+    setSelectedActions(prev => [...prev, newAction.id]);
+    
+    // Show success message using snackbar
+    snackbar.showSuccess('Action created successfully!');
+  };
+
+  // Resource creation handlers
+  const handleOpenResourceDialog = () => {
+    setResourceDialogOpen(true);
+  };
+
+  const handleCloseResourceDialog = () => {
+    setResourceDialogOpen(false);
+  };
+
+  const handleResourceCreated = (newResource: any) => {
+    // Add the new resource to the resources list
+    setResources(prev => [...prev, newResource]);
+    
+    // Select the newly created resource
+    setSelectedResources(prev => [...prev, newResource.id]);
+    
+    // Show success message using snackbar
+    snackbar.showSuccess('Resource created successfully!');
+  };
+
   const handleDataTypeChange = (dataType: string) => {
     setSelectedDataType(dataType);
     setPermittedValues('');
@@ -493,25 +567,49 @@ export default function CreatePolicyPage() {
   const handleAttributeSubmit = async () => {
     if (!attributeDisplayName || attributeDisplayNameError) return;
 
+    // Check if required workspace context is available
+    if (!currentWorkspace || !currentApplication || !currentEnvironment) {
+      snackbar.showError('Please select a workspace, application, and environment before creating an attribute.');
+      return;
+    }
+
     try {
       setIsSubmitting(true);
+      
+      // Debug logging for policy creation attribute flow
+      console.log('Policy Creation - Attribute Debug Info:');
+      console.log('Selected Data Type:', selectedDataType);
+      console.log('Permitted Values:', permittedValues);
+      console.log('String Values:', stringValues);
+      console.log('Number Values:', numberValues);
+      console.log('Boolean Values:', booleanValues);
+      console.log('Parsed Values:', parsedValues);
+      
+      const finalEnumValues = parsedValues.length > 0 ? parsedValues : (
+        selectedDataType === 'string' ? stringValues.filter(v => v.trim() !== '') :
+        selectedDataType === 'number' ? numberValues.map(v => parseFloat(v)).filter(v => !isNaN(v)) :
+        selectedDataType === 'boolean' ? booleanValues.map(v => v === 'true') :
+        []
+      );
+      
+      console.log('Final Enum Values to send:', finalEnumValues);
       
       const apiData = {
         id: attributeDisplayName.toLowerCase().replace(/[^a-zA-Z0-9_]/g, '_'),
         name: attributeDisplayName.toLowerCase().replace(/[^a-zA-Z0-9_]/g, '_'),
         displayName: attributeDisplayName,
         description: attributeDescription,
-        category: selectedCategories[0] || 'subject',
+        categories: selectedCategories.length > 0 ? selectedCategories : ['subject'],
         dataType: selectedDataType,
         isRequired: false,
         isMultiValue: false,
+        scope: 'environment',
+        // Required hierarchy IDs
+        workspaceId: currentWorkspace._id,
+        applicationId: currentApplication._id,
+        environmentId: currentEnvironment._id,
         constraints: {
-          enumValues: parsedValues.length > 0 ? parsedValues : (
-            selectedDataType === 'string' ? stringValues.filter(v => v.trim() !== '') :
-            selectedDataType === 'number' ? numberValues.map(v => parseFloat(v)).filter(v => !isNaN(v)) :
-            selectedDataType === 'boolean' ? booleanValues.map(v => v === 'true') :
-            []
-          )
+          enumValues: finalEnumValues
         },
         validation: {},
         metadata: {
@@ -604,19 +702,27 @@ export default function CreatePolicyPage() {
           const ruleIndex = actionIndex * selectedResources.length + resourceIndex;
           
           // Build subject attributes for rule
+          console.log('Selected Subject Attributes:', selectedSubjectAttributes);
+          console.log('Available Attributes:', attributes.map(a => ({ id: a.id, name: a.name, displayName: a.displayName })));
+          
           const subjectAttributes = Object.entries(selectedSubjectAttributes)
             .filter(([_, value]) => value !== '' && value !== null && value !== undefined)
             .map(([attrId, value]) => {
               const attribute = attributes.find(attr => attr.id === attrId);
+              console.log(`Looking for attribute ${attrId}, found:`, attribute);
               if (!attribute) return null;
               
-              return {
+              const attrData = {
                 name: attribute.name,
                 operator: Array.isArray(value) ? 'in' : 'equals',
                 value: value
               };
+              console.log('Created attribute data:', attrData);
+              return attrData;
             })
             .filter(Boolean);
+            
+          console.log('Final subject attributes for rule:', subjectAttributes);
 
           // Build resource attributes for rule
           const resourceAttributes = Object.entries(selectedResourceAttributeValues)
@@ -656,6 +762,12 @@ export default function CreatePolicyPage() {
         })
       );
 
+      // Check if required workspace context is available
+      if (!currentWorkspace || !currentApplication || !currentEnvironment) {
+        snackbar.showError('Please select a workspace, application, and environment before creating a policy.');
+        return;
+      }
+
       const policyData = {
         name: displayName.trim(),
         description: description?.trim() || '',
@@ -665,8 +777,14 @@ export default function CreatePolicyPage() {
         subjects: selectedSubjects,
         resources: selectedResources,
         actions: selectedActions,
-        conditions: []
+        conditions: [],
+        // Required workspace context for backend validation
+        workspaceId: currentWorkspace._id,
+        applicationId: currentApplication._id,
+        environmentId: currentEnvironment._id
       };
+
+      console.log('Final policy data being sent to backend:', JSON.stringify(policyData, null, 2));
 
       const response = await apiClient.post('/policies', policyData);
       
@@ -778,13 +896,26 @@ export default function CreatePolicyPage() {
             <Paper elevation={0} sx={{ p: 3, border: '1px solid', borderColor: 'grey.200', borderRadius: 2 }}>
                 <Grid container spacing={3}>
                   <Grid size={{ xs: 12, md: 5 }}>
+                    <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <Typography variant="subtitle1" fontWeight="600">
+                        Select Subject
+                      </Typography>
+                      <Button
+                        size="small"
+                        variant="outlined"
+                        startIcon={<AddIcon />}
+                        onClick={handleOpenSubjectDialog}
+                        sx={{ fontSize: '0.75rem' }}
+                      >
+                        Create New Subject
+                      </Button>
+                    </Box>
                     <Autocomplete
-                      multiple
                       options={subjects}
                       getOptionLabel={(option) => option.displayName}
-                      value={subjects.filter(subject => selectedSubjects.includes(subject.id))}
+                      value={subjects.find(subject => selectedSubjects.includes(subject.id)) || null}
                       onChange={(event, newValue) => {
-                        setSelectedSubjects(newValue.map(subject => subject.id));
+                        setSelectedSubjects(newValue ? [newValue.id] : []);
                       }}
                       disabled={loadingDropdownData}
                       filterOptions={(options, { inputValue }) => {
@@ -798,33 +929,15 @@ export default function CreatePolicyPage() {
                       renderInput={(params) => (
                         <TextField
                           {...params}
-                          label="Select Subjects *"
+                          label="Select Subject *"
                           placeholder="Search subjects by name, email, type, or department"
                           sx={{ bgcolor: 'white' }}
                         />
                       )}
-                      renderTags={(value, getTagProps) =>
-                        value.map((option, index) => {
-                          const { key, ...tagProps } = getTagProps({ index });
-                          return (
-                            <Chip
-                              key={key}
-                              {...tagProps}
-                              label={option.displayName}
-                              size="small"
-                              sx={{ fontSize: '0.75rem' }}
-                            />
-                          );
-                        })
-                      }
-                      renderOption={(props, option, { selected }) => {
+                      renderOption={(props, option) => {
                         const { key, ...otherProps } = props;
                         return (
                           <Box component="li" key={key} {...otherProps}>
-                            <Checkbox
-                              checked={selected}
-                              sx={{ mr: 1 }}
-                            />
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, width: '100%', py: 0.5 }}>
                               <Avatar
                                 sx={{
@@ -1251,6 +1364,19 @@ export default function CreatePolicyPage() {
             </Box>
 
             <Paper elevation={0} sx={{ p: 3, border: '1px solid', borderColor: 'grey.200', borderRadius: 2 }}>
+              <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500 }}>
+                  Available Actions
+                </Typography>
+                <Button
+                  variant="outlined"
+                  startIcon={<AddIcon />}
+                  onClick={handleOpenActionDialog}
+                  sx={{ fontSize: '0.75rem' }}
+                >
+                  Create New Action
+                </Button>
+              </Box>
               <Autocomplete
                 multiple
                 options={actions || []}
@@ -1338,6 +1464,19 @@ export default function CreatePolicyPage() {
             <Paper elevation={0} sx={{ p: 3, border: '1px solid', borderColor: 'grey.200', borderRadius: 2 }}>
                 <Grid container spacing={3}>
                   <Grid size={{ xs: 12, md: 5 }}>
+                    <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500 }}>
+                        Available Resources
+                      </Typography>
+                      <Button
+                        variant="outlined"
+                        startIcon={<AddIcon />}
+                        onClick={handleOpenResourceDialog}
+                        sx={{ fontSize: '0.75rem' }}
+                      >
+                        Create New Resource
+                      </Button>
+                    </Box>
                     <Autocomplete
                       multiple
                       options={resources}
@@ -2532,6 +2671,27 @@ export default function CreatePolicyPage() {
             </Button>
           </DialogActions>
         </Dialog>
+
+        {/* Subject Creation Dialog */}
+        <SubjectCreationDialog
+          open={subjectDialogOpen}
+          onClose={handleCloseSubjectDialog}
+          onSubjectCreated={handleSubjectCreated}
+        />
+
+        {/* Action Creation Dialog */}
+        <ActionCreationDialog
+          open={actionDialogOpen}
+          onClose={handleCloseActionDialog}
+          onActionCreated={handleActionCreated}
+        />
+
+        {/* Resource Creation Dialog */}
+        <ResourceCreationDialog
+          open={resourceDialogOpen}
+          onClose={handleCloseResourceDialog}
+          onResourceCreated={handleResourceCreated}
+        />
 
     </DashboardLayout>
   );

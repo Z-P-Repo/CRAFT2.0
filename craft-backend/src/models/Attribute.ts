@@ -10,6 +10,19 @@ export interface IAttribute extends Document {
   isRequired: boolean;
   isMultiValue: boolean;
   defaultValue?: any;
+  
+  // Hierarchy Context
+  workspaceId: string; // Reference to Workspace
+  applicationId: string; // Reference to Application
+  environmentId: string; // Reference to Environment
+  
+  // Scope and inheritance
+  scope: 'environment' | 'application' | 'workspace'; // Defines inheritance scope
+  inheritanceRules?: {
+    canOverride: boolean; // Can be overridden in lower scopes
+    requiresApproval: boolean; // Requires approval for changes
+    propagateChanges: boolean; // Auto-propagate changes to lower scopes
+  };
   constraints: {
     minLength?: number;
     maxLength?: number;
@@ -45,6 +58,52 @@ export interface IAttribute extends Document {
 }
 
 const AttributeSchema = new Schema<IAttribute>({
+  // Hierarchy Context Fields
+  workspaceId: {
+    type: String,
+    required: [true, 'Workspace ID is required'],
+    index: true,
+    ref: 'Workspace'
+  },
+  applicationId: {
+    type: String,
+    required: [true, 'Application ID is required'],
+    index: true,
+    ref: 'Application'
+  },
+  environmentId: {
+    type: String,
+    required: [true, 'Environment ID is required'],
+    index: true,
+    ref: 'Environment'
+  },
+  
+  // Scope and inheritance
+  scope: {
+    type: String,
+    enum: {
+      values: ['environment', 'application', 'workspace'],
+      message: 'Scope must be environment, application, or workspace'
+    },
+    required: [true, 'Scope is required'],
+    index: true,
+    default: 'environment'
+  },
+  inheritanceRules: {
+    canOverride: {
+      type: Boolean,
+      default: true
+    },
+    requiresApproval: {
+      type: Boolean,
+      default: false
+    },
+    propagateChanges: {
+      type: Boolean,
+      default: false
+    }
+  },
+  
   id: {
     type: String,
     required: [true, 'Attribute ID is required'],
@@ -120,9 +179,10 @@ const AttributeSchema = new Schema<IAttribute>({
       type: String,
       trim: true
     },
-    enumValues: [{
-      type: Schema.Types.Mixed
-    }],
+    enumValues: {
+      type: [Schema.Types.Mixed],
+      default: []
+    },
     format: {
       type: String,
       enum: ['email', 'url', 'phone', 'ipv4', 'ipv6', '']
@@ -205,13 +265,16 @@ const AttributeSchema = new Schema<IAttribute>({
   }
 });
 
-// Indexes
-AttributeSchema.index({ id: 1 }, { unique: true });
-AttributeSchema.index({ category: 1, active: 1 });
-AttributeSchema.index({ dataType: 1 });
-AttributeSchema.index({ 'metadata.isSystem': 1 });
-AttributeSchema.index({ 'metadata.isCustom': 1 });
-AttributeSchema.index({ name: 'text', displayName: 'text', description: 'text' });
+// Hierarchy-based compound indexes for better query performance
+AttributeSchema.index({ environmentId: 1, id: 1 }, { unique: true }); // Unique within environment
+AttributeSchema.index({ workspaceId: 1, applicationId: 1, environmentId: 1 }); // Hierarchy navigation
+AttributeSchema.index({ scope: 1, workspaceId: 1 }); // Scope-based inheritance queries
+AttributeSchema.index({ environmentId: 1, categories: 1, active: 1 }); // Category-based queries within environment
+AttributeSchema.index({ environmentId: 1, dataType: 1 });
+AttributeSchema.index({ environmentId: 1, 'metadata.isSystem': 1 });
+AttributeSchema.index({ environmentId: 1, 'metadata.isCustom': 1 });
+AttributeSchema.index({ environmentId: 1, name: 'text', displayName: 'text', description: 'text' });
+AttributeSchema.index({ scope: 1, 'inheritanceRules.canOverride': 1 }); // Inheritance rule queries
 
 // Validate constraints based on data type
 AttributeSchema.pre('save', function(this: IAttribute, next) {

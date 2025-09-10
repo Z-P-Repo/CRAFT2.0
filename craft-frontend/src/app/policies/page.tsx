@@ -33,6 +33,8 @@ import {
   DialogContent,
   DialogActions,
   CircularProgress,
+  Alert,
+  AlertTitle,
 } from '@mui/material';
 import {
   Security as PolicyIcon,
@@ -60,6 +62,7 @@ import { apiClient } from '@/lib/api';
 import { ApiResponse } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
 import { useApiSnackbar } from '@/contexts/SnackbarContext';
+import { useWorkspace } from '@/contexts/WorkspaceContext';
 import { canManage, canEdit, canDelete, canCreate } from '@/utils/permissions';
 
 interface Policy {
@@ -87,6 +90,7 @@ export default function PoliciesPage() {
   const router = useRouter();
   const { user: currentUser } = useAuth();
   const snackbar = useApiSnackbar();
+  const { currentWorkspace, currentApplication } = useWorkspace();
   
   // State for policies
   const [policies, setPolicies] = useState<Policy[]>([]);
@@ -342,8 +346,20 @@ export default function PoliciesPage() {
     return effect === 'Allow' ? 'success' : 'error';
   };
 
+  // Check if workspace and application are selected
+  const canCreateEntity = currentWorkspace && currentApplication && canCreate(currentUser);
+
   return (
     <DashboardLayout>
+      {/* Workspace Selection Alert */}
+      {(!currentWorkspace || !currentApplication) && (
+        <Alert severity="info" sx={{ mb: 3 }}>
+          <AlertTitle>Workspace and Application Required</AlertTitle>
+          Please select a workspace and application before creating or managing policies. 
+          Use the workspace switcher in the header to select your workspace and application.
+        </Alert>
+      )}
+
       {/* Header */}
       <Paper elevation={0} sx={{ p: 3, mb: 3, border: '1px solid', borderColor: 'grey.200' }}>
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
@@ -384,16 +400,15 @@ export default function PoliciesPage() {
           <Typography variant="body2" color="text.secondary">
             Manage and monitor your organization's access control policies
           </Typography>
-          {canCreate(currentUser) && (
-            <Button
-              variant="contained"
-              startIcon={<AddIcon />}
-              onClick={() => router.push('/policies/create')}
-              sx={{ px: 3 }}
-            >
-              Create Policy
-            </Button>
-          )}
+          <Button
+            variant="contained"
+            startIcon={<AddIcon />}
+            onClick={() => router.push('/policies/create')}
+            disabled={!canCreateEntity}
+            sx={{ px: 3 }}
+          >
+            Create Policy
+          </Button>
         </Box>
       </Paper>
 
@@ -777,16 +792,15 @@ export default function PoliciesPage() {
         />
 
         {/* Create Policy FAB */}
-        {canCreate(currentUser) && (
-          <Fab
-            color="primary"
-            aria-label="add"
-            onClick={() => router.push('/policies/create')}
-            sx={{ position: 'fixed', bottom: 24, right: 24 }}
-          >
-            <AddIcon />
-          </Fab>
-        )}
+        <Fab
+          color="primary"
+          aria-label="add"
+          onClick={() => router.push('/policies/create')}
+          disabled={!canCreateEntity}
+          sx={{ position: 'fixed', bottom: 24, right: 24 }}
+        >
+          <AddIcon />
+        </Fab>
     </DashboardLayout>
   );
 }

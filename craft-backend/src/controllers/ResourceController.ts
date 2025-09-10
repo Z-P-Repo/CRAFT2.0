@@ -136,11 +136,26 @@ export class ResourceController {
       externalId,
       mimeType,
       size,
+      workspaceId,
+      applicationId,
+      environmentId,
+      metadata
     } = req.body;
 
     // Validate required fields
     if (!name || !type || !uri) {
       throw new ValidationError('Name, type, and URI are required');
+    }
+
+    // Validate workspace hierarchy fields (required by Resource model)
+    if (!workspaceId) {
+      throw new ValidationError('Workspace ID is required');
+    }
+    if (!applicationId) {
+      throw new ValidationError('Application ID is required');
+    }
+    if (!environmentId) {
+      throw new ValidationError('Environment ID is required');
     }
 
     // Check if resource already exists by name
@@ -171,6 +186,10 @@ export class ResourceController {
       attributes: new Map(Object.entries(attributes || {})),
       parentId,
       children: [],
+      // Required workspace hierarchy fields
+      workspaceId,
+      applicationId,
+      environmentId,
       permissions: {
         read: permissions?.read ?? true,
         write: permissions?.write ?? false,
@@ -178,7 +197,7 @@ export class ResourceController {
         execute: permissions?.execute ?? false,
         admin: permissions?.admin ?? false,
       },
-      metadata: {
+      metadata: metadata || {
         owner: owner || req.user?.name || 'system',
         createdBy: req.user?.name || null,
         lastModifiedBy: req.user?.name || null,
@@ -187,7 +206,11 @@ export class ResourceController {
         externalId,
         mimeType,
         size,
+        isSystem: false,
+        isCustom: true,
+        version: '1.0.0',
       },
+      active: true,
     };
 
     const resource = await Resource.create(resourceData);

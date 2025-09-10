@@ -40,6 +40,8 @@ import {
   Tooltip,
   InputAdornment,
   OutlinedInput,
+  Alert,
+  AlertTitle,
 } from '@mui/material';
 import {
   Folder as FolderIcon,
@@ -69,6 +71,7 @@ import DeleteConfirmationDialog from '@/components/common/DeleteConfirmationDial
 import { apiClient } from '@/lib/api';
 import { ApiResponse, ResourceObject } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
+import { useWorkspace } from '@/contexts/WorkspaceContext';
 import { useApiSnackbar } from '@/contexts/SnackbarContext';
 import { canManage, canEdit, canDelete, canCreate } from '@/utils/permissions';
 
@@ -120,6 +123,7 @@ interface ExtendedResourceObject extends ResourceObject {
 
 export default function ObjectsPage() {
   const { user: currentUser } = useAuth();
+  const { currentWorkspace, currentApplication, currentEnvironment } = useWorkspace();
   const snackbar = useApiSnackbar();
   const [objects, setObjects] = useState<ExtendedResourceObject[]>([]);
   const [loading, setLoading] = useState(true);
@@ -243,16 +247,23 @@ export default function ObjectsPage() {
 
     setIsDeleting(true);
     try {
-      const response = await apiClient.delete(`/resources/${deleteObject?._id}`);
+      const resourceId = deleteObject._id || deleteObject.id;
+      const response = await apiClient.delete(`/resources/${resourceId}`);
 
       if (response.success) {
-        // Remove from local state immediately
-        const updatedObjects = objects.filter(obj => obj._id !== deleteObject._id);
+        // Remove from local state immediately using both id and _id for matching
+        const updatedObjects = objects.filter(obj => 
+          (obj._id !== deleteObject._id) && 
+          (obj.id !== deleteObject.id)
+        );
         setObjects(updatedObjects);
-        // Only count objects that have id (and will be displayed)
-        const objectsWithId = updatedObjects.filter(obj => obj.id);
-        setTotal(objectsWithId.length);
+        setTotal(updatedObjects.length);
+        
+        // Clear selection if deleted object was selected
+        setSelectedObjects(prev => prev.filter(id => id !== deleteObject.id));
+        
         handleDeleteClose();
+        snackbar.showSuccess(`Resource "${deleteObject.displayName || deleteObject.name}" deleted successfully`);
       } else {
         throw new Error(response.error || 'Failed to delete object');
       }
@@ -262,12 +273,18 @@ export default function ObjectsPage() {
       // If object was not found (404), it might have been already deleted
       // Remove from local state and close the dialog
       if (error.code === 'NOT_FOUND' || error.message?.includes('not found')) {
-        const updatedObjects = objects.filter(obj => obj._id !== deleteObject._id);
+        const updatedObjects = objects.filter(obj => 
+          (obj._id !== deleteObject._id) && 
+          (obj.id !== deleteObject.id)
+        );
         setObjects(updatedObjects);
-        // Only count objects that have id (and will be displayed)
-        const objectsWithId = updatedObjects.filter(obj => obj.id);
-        setTotal(objectsWithId.length);
+        setTotal(updatedObjects.length);
+        
+        // Clear selection if deleted object was selected
+        setSelectedObjects(prev => prev.filter(id => id !== deleteObject.id));
+        
         handleDeleteClose();
+        snackbar.showSuccess(`Resource "${deleteObject.displayName || deleteObject.name}" was already deleted`);
       } else {
         // Extract error message from API response
         const errorMessage = error?.error || error?.message || 'Unknown error';
@@ -305,7 +322,7 @@ export default function ObjectsPage() {
   // Multi-selection handlers
   const handleSelectAllClick = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.checked) {
-      const newSelected = paginatedObjects.map((object) => object.id).filter((id): id is string => id !== undefined);
+      const newSelected = paginatedObjects.map((object) => object.id || object._id).filter((id): id is string => id !== undefined && id !== '');
       setSelectedObjects(newSelected);
     } else {
       setSelectedObjects([]);
@@ -360,15 +377,18 @@ export default function ObjectsPage() {
       });
 
       if (response.success) {
-        // Update local state by filtering out deleted objects
-        const updatedObjects = objects.filter(obj => obj._id && !selectedObjects.includes(obj._id));
+        // Update local state by filtering out deleted objects using both id and _id
+        const updatedObjects = objects.filter(obj => 
+          !(selectedObjects.includes(obj.id || '') || selectedObjects.includes(obj._id || ''))
+        );
         setObjects(updatedObjects);
-        // Only count objects that have id (and will be displayed)
-        const objectsWithId = updatedObjects.filter(obj => obj.id);
-        setTotal(objectsWithId.length);
+        setTotal(updatedObjects.length);
 
         // Clear selection
         setSelectedObjects([]);
+        
+        // Show success message
+        snackbar.showSuccess(`${selectedObjects.length} resource${selectedObjects.length === 1 ? '' : 's'} deleted successfully`);
 
       } else {
         throw new Error(response.error || 'Failed to delete objects');
@@ -439,6 +459,12 @@ export default function ObjectsPage() {
       return;
     }
 
+    // Check if required context is available
+    if (!currentWorkspace || !currentApplication || !currentEnvironment) {
+      snackbar.showError('Please select a workspace, application, and environment before creating a resource.');
+      return;
+    }
+
     setIsSubmitting(true);
     try {
       const objectData = {
@@ -448,6 +474,29 @@ export default function ObjectsPage() {
         type: 'file',
         uri: `/${displayName.toLowerCase().replace(/\s+/g, '')}`,
         active: true,
+        // Required workspace context for backend validation
+        workspaceId: currentWorkspace._id,
+        applicationId: currentApplication._id,
+        environmentId: currentEnvironment._id,
+        attributes: new Map(),
+        children: [],
+        permissions: {
+          read: true,
+          write: false,
+          delete: false,
+          execute: false,
+          admin: false
+        },
+        metadata: {
+          owner: currentUser?.name || 'System',
+          createdBy: currentUser?.name || 'System',
+          lastModifiedBy: currentUser?.name || 'System',
+          tags: [],
+          classification: 'internal' as 'public' | 'internal' | 'confidential' | 'restricted',
+          isSystem: false,
+          isCustom: true,
+          version: '1.0.0'
+        }
       };
 
       if (selectedObject) {
@@ -512,9 +561,8 @@ export default function ObjectsPage() {
 
       if (response.success && response.data) {
         setObjects(response.data);
-        // Only count objects that have id (and will be displayed)
-        const objectsWithId = response.data.filter((obj: ExtendedResourceObject) => obj.id);
-        setTotal(objectsWithId.length);
+        setTotal(response.data.length);
+        setError(null); // Clear any previous errors
       } else {
         throw new Error(response.error || 'Failed to fetch objects');
       }
@@ -530,11 +578,12 @@ export default function ObjectsPage() {
 
       setError(err.response?.data?.error || err.message || 'Failed to load objects');
 
-      // Fallback to mock data for demo
-      setObjects(mockObjects);
-      // Only count objects that have id (and will be displayed)
-      const objectsWithId = mockObjects.filter(obj => obj.id);
-      setTotal(objectsWithId.length);
+      // Only fall back to mock data if objects array is empty (first load failure)
+      // Don't override existing data on subsequent failures to preserve user interactions
+      if (objects.length === 0) {
+        setObjects(mockObjects);
+        setTotal(mockObjects.length);
+      }
     } finally {
       setLoading(false);
     }
@@ -583,8 +632,10 @@ export default function ObjectsPage() {
     return status === 'Active' ? 'success' : 'error';
   };
 
-  // Search and filter logic
-  const filteredObjects = objects.filter(object => {
+  // Filter out objects without valid IDs first, then apply search and filter logic
+  const validObjects = objects.filter(object => object.id || object._id);
+  
+  const filteredObjects = validObjects.filter(object => {
     const searchMatch = !searchTerm ||
       object?.displayName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       object?.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -620,11 +671,22 @@ export default function ObjectsPage() {
   const hasActiveFilters = Boolean(searchTerm || filterStatus.length > 0);
 
   // Stats calculation
-  const activeCount = filteredObjects.filter(obj => obj.active !== false).length;
-  const inactiveCount = filteredObjects.filter(obj => obj.active === false).length;
+  const activeCount = validObjects.filter(obj => obj.active !== false).length;
+  const inactiveCount = validObjects.filter(obj => obj.active === false).length;
+
+  // Check if user can create entities (requires workspace, application, and environment selection)
+  const canCreateEntity = currentWorkspace && currentApplication && currentEnvironment && canCreate(currentUser);
 
   return (
     <DashboardLayout>
+      {(!currentWorkspace || !currentApplication || !currentEnvironment) && (
+        <Alert severity="info" sx={{ mb: 3 }}>
+          <AlertTitle>Workspace, Application, and Environment Required</AlertTitle>
+          Please select a workspace, application, and environment before creating or managing resources. 
+          Use the workspace switcher in the header to select your workspace and application.
+        </Alert>
+      )}
+      
       {/* Header */}
       <Paper elevation={0} sx={{ p: 3, mb: 3, border: '1px solid', borderColor: 'grey.200' }}>
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
@@ -637,7 +699,7 @@ export default function ObjectsPage() {
           <Box sx={{ display: 'flex', gap: 3, textAlign: 'center' }}>
             <Box>
               <Typography variant="h6" color="primary.main" fontWeight="600">
-                {loading ? '...' : total}
+                {loading ? '...' : validObjects.length}
               </Typography>
               <Typography variant="caption" color="text.secondary">
                 Total
@@ -666,16 +728,15 @@ export default function ObjectsPage() {
           <Typography variant="body2" color="text.secondary">
             Manage files, folders, databases, and other system objects in your permission system.
           </Typography>
-          {canCreate(currentUser) && (
-            <Button
-              variant="contained"
-              startIcon={<AddIcon />}
-              onClick={() => handleClickOpen()}
-              sx={{ px: 3 }}
-            >
-              Create Resource
-            </Button>
-          )}
+          <Button
+            variant="contained"
+            startIcon={<AddIcon />}
+            onClick={() => handleClickOpen()}
+            disabled={!canCreateEntity}
+            sx={{ px: 3 }}
+          >
+            Create Resource
+          </Button>
         </Box>
       </Paper>
 
@@ -859,15 +920,16 @@ export default function ObjectsPage() {
                       </TableCell>
                     </TableRow>
                   ) : (
-                    paginatedObjects.filter(object => object.id).map((object) => {
-                      const isItemSelected = isSelected(object.id!);
-                      const labelId = `enhanced-table-checkbox-${object.id}`;
+                    paginatedObjects.map((object) => {
+                      const objectId = object.id || object._id || '';
+                      const isItemSelected = isSelected(objectId);
+                      const labelId = `enhanced-table-checkbox-${objectId}`;
 
                       return (
                         <TableRow
-                          key={object.id}
+                          key={objectId}
                           hover
-                          onClick={() => handleObjectSelect(object.id!)}
+                          onClick={() => handleObjectSelect(objectId)}
                           role="checkbox"
                           aria-checked={isItemSelected}
                           tabIndex={-1}
@@ -999,7 +1061,7 @@ export default function ObjectsPage() {
             <TablePagination
               rowsPerPageOptions={[5, 10, 25]}
               component="div"
-              count={total}
+              count={filteredObjects.length}
               rowsPerPage={rowsPerPage}
               page={page}
               onPageChange={handleChangePage}
@@ -1111,16 +1173,15 @@ export default function ObjectsPage() {
         </List>
       </Popover>
 
-      {canCreate(currentUser) && (
-        <Fab 
-          color="primary" 
-          aria-label="add" 
-          sx={{ position: 'fixed', bottom: 24, right: 24 }} 
-          onClick={() => handleClickOpen()}
-        >
-          <AddIcon />
-        </Fab>
-      )}
+      <Fab 
+        color="primary" 
+        aria-label="add" 
+        sx={{ position: 'fixed', bottom: 24, right: 24 }} 
+        onClick={() => handleClickOpen()}
+        disabled={!canCreateEntity}
+      >
+        <AddIcon />
+      </Fab>
 
       {/* Resource Dialog */}
       <Dialog

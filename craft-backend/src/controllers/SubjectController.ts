@@ -125,11 +125,26 @@ export class SubjectController {
       status,
       permissions,
       createdBy,
+      workspaceId,
+      applicationId,
+      environmentId,
     } = req.body;
 
     // Validate required fields
     if (!displayName) {
       throw new ValidationError('Display name is required');
+    }
+    
+    if (!workspaceId) {
+      throw new ValidationError('Workspace ID is required');
+    }
+    
+    if (!applicationId) {
+      throw new ValidationError('Application ID is required');
+    }
+    
+    if (!environmentId) {
+      throw new ValidationError('Environment ID is required');
     }
 
     // Check if subject already exists (by displayName or email if provided)
@@ -155,6 +170,10 @@ export class SubjectController {
       description: description?.trim(),
       status: status || 'active',
       permissions: permissions || [],
+      // Required hierarchy IDs
+      workspaceId,
+      applicationId,
+      environmentId,
       metadata: {
         createdBy: createdBy || req.user?.name || null,
         lastModifiedBy: req.user?.name || null,

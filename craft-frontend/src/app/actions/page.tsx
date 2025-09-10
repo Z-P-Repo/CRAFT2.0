@@ -40,6 +40,8 @@ import {
   Tooltip,
   InputAdornment,
   OutlinedInput,
+  Alert,
+  AlertTitle,
 } from '@mui/material';
 import {
   PlayArrow as ActionIcon,
@@ -68,6 +70,7 @@ import DeleteConfirmationDialog from '@/components/common/DeleteConfirmationDial
 import { apiClient } from '@/lib/api';
 import { ApiResponse } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
+import { useWorkspace } from '@/contexts/WorkspaceContext';
 import { canManage, canEdit, canDelete, canCreate } from '@/utils/permissions';
 import { useApiSnackbar } from '@/contexts/SnackbarContext';
 
@@ -103,6 +106,7 @@ interface ActionObject {
 
 export default function ActionsPage() {
   const { user: currentUser } = useAuth();
+  const { currentWorkspace, currentApplication, currentEnvironment } = useWorkspace();
   const snackbar = useApiSnackbar();
   const [actions, setActions] = useState<ActionObject[]>([]);
   const [loading, setLoading] = useState(true);
@@ -334,6 +338,12 @@ export default function ActionsPage() {
       return;
     }
 
+    // Check if required context is available
+    if (!currentWorkspace || !currentApplication || !currentEnvironment) {
+      snackbar.showError('Please select a workspace, application, and environment before creating an action.');
+      return;
+    }
+
     setIsSubmitting(true);
     try {
       const actionData = {
@@ -343,6 +353,19 @@ export default function ActionsPage() {
         category: 'read',
         riskLevel: 'low',
         active: true,
+        // Required workspace context for backend validation
+        workspaceId: currentWorkspace._id,
+        applicationId: currentApplication._id,
+        environmentId: currentEnvironment._id,
+        metadata: {
+          owner: currentUser?.name || 'System',
+          createdBy: currentUser?.name || 'System',
+          lastModifiedBy: currentUser?.name || 'System',
+          tags: [],
+          isSystem: false,
+          isCustom: true,
+          version: '1.0.0'
+        }
       };
 
       if (selectedAction) {
@@ -473,6 +496,9 @@ export default function ActionsPage() {
   const activeCount = actions.filter(action => action.active !== false).length;
   const inactiveCount = actions.filter(action => action.active === false).length;
 
+  // Check if user can create entities (requires workspace, application, and environment selection)
+  const canCreateEntity = currentWorkspace && currentApplication && currentEnvironment && canCreate(currentUser);
+
   const getCategoryIcon = (category: string) => {
     switch (category) {
       case 'read': return <ViewIcon />;
@@ -507,6 +533,14 @@ export default function ActionsPage() {
 
   return (
     <DashboardLayout>
+      {(!currentWorkspace || !currentApplication || !currentEnvironment) && (
+        <Alert severity="info" sx={{ mb: 3 }}>
+          <AlertTitle>Workspace, Application, and Environment Required</AlertTitle>
+          Please select a workspace, application, and environment before creating or managing actions. 
+          Use the workspace switcher in the header to select your workspace and application.
+        </Alert>
+      )}
+      
       {/* Header */}
       <Paper elevation={0} sx={{ p: 3, mb: 3, border: '1px solid', borderColor: 'grey.200' }}>
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
@@ -548,16 +582,15 @@ export default function ActionsPage() {
           <Typography variant="body2" color="text.secondary">
             Manage system actions and operations in your permission system.
           </Typography>
-          {canCreate(currentUser) && (
-            <Button
-              variant="contained"
-              startIcon={<AddIcon />}
-              onClick={() => handleClickOpen()}
-              sx={{ px: 3 }}
-            >
-              Create Action
-            </Button>
-          )}
+          <Button
+            variant="contained"
+            startIcon={<AddIcon />}
+            onClick={() => handleClickOpen()}
+            disabled={!canCreateEntity}
+            sx={{ px: 3 }}
+          >
+            Create Action
+          </Button>
         </Box>
       </Paper>
 
@@ -980,20 +1013,19 @@ export default function ActionsPage() {
       </Popover>
 
       {/* Floating Action Button */}
-      {canCreate(currentUser) && (
-        <Fab
-          color="primary"
-          aria-label="add"
-          onClick={() => handleClickOpen()}
-          sx={{
-            position: 'fixed',
-            bottom: 24,
-            right: 24,
-          }}
-        >
-          <AddIcon />
-        </Fab>
-      )}
+      <Fab
+        color="primary"
+        aria-label="add"
+        onClick={() => handleClickOpen()}
+        disabled={!canCreateEntity}
+        sx={{
+          position: 'fixed',
+          bottom: 24,
+          right: 24,
+        }}
+      >
+        <AddIcon />
+      </Fab>
 
       {/* Create/Edit Action Dialog */}
       <Dialog

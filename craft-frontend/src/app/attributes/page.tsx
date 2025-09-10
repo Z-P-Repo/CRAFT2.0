@@ -41,6 +41,8 @@ import {
   Tooltip,
   InputAdornment,
   OutlinedInput,
+  Alert,
+  AlertTitle,
 } from '@mui/material';
 import {
   Settings as SettingsIcon,
@@ -73,6 +75,7 @@ import DeleteConfirmationDialog from '@/components/common/DeleteConfirmationDial
 import { apiClient } from '@/lib/api';
 import { ApiResponse } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
+import { useWorkspace } from '@/contexts/WorkspaceContext';
 import { useApiSnackbar } from '@/contexts/SnackbarContext';
 import { canManage, canEdit, canDelete, canCreate } from '@/utils/permissions';
 
@@ -134,6 +137,7 @@ interface Attribute {
 
 export default function AttributesPage() {
   const { user: currentUser } = useAuth();
+  const { currentWorkspace, currentApplication, currentEnvironment } = useWorkspace();
   const snackbar = useApiSnackbar();
   const [attributes, setAttributes] = useState<Attribute[]>([]);
   const [loading, setLoading] = useState(true);
@@ -621,7 +625,7 @@ export default function AttributesPage() {
       
       if (response.success) {
         // Update local state by filtering out deleted attributes
-        setAttributes(prev => prev.filter(attr => !selectedAttributes.includes(attr._id)));
+        setAttributes(prev => prev.filter(attr => !selectedAttributes.includes(attr.id)));
         setTotal(prev => prev - selectedAttributes.length);
         
         // Clear selection
@@ -710,6 +714,9 @@ export default function AttributesPage() {
   const activeCount = attributes.filter(attr => attr.active !== false).length;
   const inactiveCount = attributes.filter(attr => attr.active === false).length;
 
+  // Check if user can create entities (requires workspace, application, and environment selection)
+  const canCreateEntity = currentWorkspace && currentApplication && currentEnvironment && canCreate(currentUser);
+
   const handleSubmit = async () => {
     if (!displayName || displayNameError) return;
 
@@ -719,8 +726,20 @@ export default function AttributesPage() {
       return;
     }
 
+    // Check if required context is available
+    if (!currentWorkspace || !currentApplication || !currentEnvironment) {
+      snackbar.showError('Please select a workspace, application, and environment before creating an attribute.');
+      return;
+    }
+
     setIsSubmitting(true);
     try {
+      console.log('Attribute creation data:');
+      console.log('Data Type:', selectedDataType);
+      console.log('Permitted Values Input:', permittedValues);
+      console.log('String Values:', stringValues);
+      console.log('Parsed Values:', parsedValues);
+      
       const attributeData = {
         id: `attr_${displayName.trim().toLowerCase().replace(/\s+/g, '_')}`,
         name: displayName.trim(),
@@ -730,11 +749,17 @@ export default function AttributesPage() {
         dataType: selectedDataType || 'string',
         isRequired: false,
         isMultiValue: false,
+        // Required workspace context for backend validation
+        workspaceId: currentWorkspace._id,
+        applicationId: currentApplication._id,
+        environmentId: currentEnvironment._id,
+        scope: 'environment', // Set default scope
         constraints: {
           enumValues: parsedValues.length > 0 ? parsedValues : []
         },
         metadata: {
           createdBy: currentUser?.name || 'System',
+          lastModifiedBy: currentUser?.name || 'System',
           tags: [],
           isSystem: false,
           isCustom: true,
@@ -747,7 +772,7 @@ export default function AttributesPage() {
         }
       };
 
-      // Debug logging
+      console.log('Final attribute data being sent:', JSON.stringify(attributeData, null, 2));
 
       if (selectedAttribute) {
         // Update existing attribute
@@ -902,6 +927,14 @@ export default function AttributesPage() {
 
   return (
     <DashboardLayout>
+      {(!currentWorkspace || !currentApplication || !currentEnvironment) && (
+        <Alert severity="info" sx={{ mb: 3 }}>
+          <AlertTitle>Workspace, Application, and Environment Required</AlertTitle>
+          Please select a workspace, application, and environment before creating or managing attributes. 
+          Use the workspace switcher in the header to select your workspace and application.
+        </Alert>
+      )}
+      
       {/* Header */}
       <Paper elevation={0} sx={{ p: 3, mb: 3, border: '1px solid', borderColor: 'grey.200' }}>
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
@@ -942,18 +975,17 @@ export default function AttributesPage() {
           <Typography variant="body2" color="text.secondary">
             Manage system attributes for subjects, resources, actions, and environment
           </Typography>
-          {canCreate(currentUser) && (
-            <Button
-              variant="contained"
-              startIcon={<AddIcon />}
-              onClick={() => {
-                handleClickOpen();
-              }}
-              sx={{ px: 3 }}
-            >
-              Create Attribute
-            </Button>
-          )}
+          <Button
+            variant="contained"
+            startIcon={<AddIcon />}
+            onClick={() => {
+              handleClickOpen();
+            }}
+            disabled={!canCreateEntity}
+            sx={{ px: 3 }}
+          >
+            Create Attribute
+          </Button>
         </Box>
       </Paper>
 
@@ -1603,16 +1635,15 @@ export default function AttributesPage() {
 
 
       {/* Floating Action Button */}
-      {canCreate(currentUser) && (
-        <Fab
-          color="primary"
-          aria-label="add"
-          sx={{ position: 'fixed', bottom: 24, right: 24 }}
-          onClick={() => handleClickOpen()}
-        >
-          <AddIcon />
-        </Fab>
-      )}
+      <Fab
+        color="primary"
+        aria-label="add"
+        sx={{ position: 'fixed', bottom: 24, right: 24 }}
+        onClick={() => handleClickOpen()}
+        disabled={!canCreateEntity}
+      >
+        <AddIcon />
+      </Fab>
 
       {/* Attribute Dialog */}
       <Dialog

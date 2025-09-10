@@ -33,6 +33,12 @@ export interface IPolicyRule {
 export interface IPolicy extends Document {
   _id: string;
   id: string;
+  
+  // Hierarchy Context
+  workspaceId: string; // Reference to Workspace
+  applicationId: string; // Reference to Application
+  environmentId: string; // Reference to Environment
+  
   name: string;
   description: string;
   effect: 'Allow' | 'Deny';
@@ -50,6 +56,14 @@ export interface IPolicy extends Document {
     isSystem: boolean;
     isCustom: boolean;
   };
+  
+  // Inheritance rules
+  inheritanceRules?: {
+    fromParentEnvironments: boolean;
+    fromApplicationDefaults: boolean;
+    fromWorkspaceDefaults: boolean;
+  };
+  
   createdAt: Date;
   updatedAt: Date;
 }
@@ -138,6 +152,27 @@ const PolicySchema = new Schema<IPolicy>({
     unique: true,
     sparse: true,
   },
+  
+  // Hierarchy Context
+  workspaceId: {
+    type: String,
+    required: true,
+    index: true,
+    ref: 'Workspace'
+  },
+  applicationId: {
+    type: String,
+    required: true,
+    index: true,
+    ref: 'Application'
+  },
+  environmentId: {
+    type: String,
+    required: true,
+    index: true,
+    ref: 'Environment'
+  },
+  
   name: {
     type: String,
     required: true,
@@ -203,19 +238,37 @@ const PolicySchema = new Schema<IPolicy>({
       default: true,
     },
   },
+  
+  // Inheritance rules
+  inheritanceRules: {
+    fromParentEnvironments: {
+      type: Boolean,
+      default: false,
+    },
+    fromApplicationDefaults: {
+      type: Boolean,
+      default: false,
+    },
+    fromWorkspaceDefaults: {
+      type: Boolean,
+      default: false,
+    },
+  },
 }, {
   timestamps: true,
 });
 
-// Indexes for better query performance
-// Note: id field already has unique constraint which creates an index
-PolicySchema.index({ name: 1, effect: 1 });
-PolicySchema.index({ status: 1 });
-PolicySchema.index({ effect: 1, status: 1 });
-PolicySchema.index({ 'metadata.tags': 1 });
-PolicySchema.index({ subjects: 1 });
-PolicySchema.index({ actions: 1 });
-PolicySchema.index({ resources: 1 });
+// Indexes for better query performance with hierarchical structure
+// Compound indexes for hierarchy-based queries
+PolicySchema.index({ workspaceId: 1, applicationId: 1, environmentId: 1 });
+PolicySchema.index({ workspaceId: 1, applicationId: 1, environmentId: 1, name: 1 }, { unique: true });
+PolicySchema.index({ workspaceId: 1, applicationId: 1, environmentId: 1, status: 1 });
+PolicySchema.index({ workspaceId: 1, applicationId: 1, environmentId: 1, effect: 1 });
+PolicySchema.index({ workspaceId: 1, applicationId: 1, environmentId: 1, subjects: 1 });
+PolicySchema.index({ workspaceId: 1, applicationId: 1, environmentId: 1, actions: 1 });
+PolicySchema.index({ workspaceId: 1, applicationId: 1, environmentId: 1, resources: 1 });
+PolicySchema.index({ workspaceId: 1, applicationId: 1, environmentId: 1, 'metadata.tags': 1 });
+PolicySchema.index({ workspaceId: 1, applicationId: 1, environmentId: 1, createdAt: -1 });
 
 // Pre-save middleware to generate id if not provided
 PolicySchema.pre('save', function(next) {

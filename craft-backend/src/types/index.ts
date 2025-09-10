@@ -1,5 +1,25 @@
 // Core Permission System Types
 
+// Generic API Response Types
+export interface ApiResponse<T = any> {
+  success: boolean;
+  data?: T;
+  message?: string;
+  error?: string;
+  code?: string;
+}
+
+export interface PaginationMeta {
+  page: number;
+  limit: number;
+  total: number;
+  pages: number;
+}
+
+export interface PaginatedResponse<T = any> extends ApiResponse<T[]> {
+  pagination: PaginationMeta;
+}
+
 export interface IAttributeDefinition {
   _id?: string;
   name: string;
@@ -94,6 +114,13 @@ export interface IUser {
   authProvider?: 'local' | 'azuread';
   azureAdId?: string;
   lastLoginAt?: Date;
+  workspaces?: string[];
+  currentWorkspace?: string;
+  workspaceRoles?: Map<string, {
+    role: 'owner' | 'admin' | 'member' | 'viewer';
+    permissions: string[];
+    joinedAt: Date;
+  }>;
   createdAt?: Date;
   updatedAt?: Date;
 }

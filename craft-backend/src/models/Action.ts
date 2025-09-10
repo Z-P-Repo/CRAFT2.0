@@ -12,6 +12,11 @@ export interface IAction extends Document {
   riskLevel: 'low' | 'medium' | 'high' | 'critical';
   active: boolean;
   children?: string[];
+  
+  // Hierarchy Context
+  workspaceId: string; // Reference to Workspace
+  applicationId: string; // Reference to Application
+  environmentId: string; // Reference to Environment
   metadata: {
     owner: string;
     createdBy: string;
@@ -26,10 +31,29 @@ export interface IAction extends Document {
 }
 
 const ActionSchema = new Schema<IAction>({
+  // Hierarchy Context Fields
+  workspaceId: {
+    type: String,
+    required: [true, 'Workspace ID is required'],
+    index: true,
+    ref: 'Workspace'
+  },
+  applicationId: {
+    type: String,
+    required: [true, 'Application ID is required'],
+    index: true,
+    ref: 'Application'
+  },
+  environmentId: {
+    type: String,
+    required: [true, 'Environment ID is required'],
+    index: true,
+    ref: 'Environment'
+  },
+  
   id: {
     type: String,
     required: true,
-    unique: true,
   },
   name: {
     type: String,
@@ -118,11 +142,15 @@ const ActionSchema = new Schema<IAction>({
   timestamps: true,
 });
 
-// Indexes for better query performance
-ActionSchema.index({ name: 1, category: 1 });
-ActionSchema.index({ 'metadata.tags': 1 });
-ActionSchema.index({ category: 1, active: 1 });
-ActionSchema.index({ riskLevel: 1, active: 1 });
+// Hierarchy-based compound indexes for better query performance
+ActionSchema.index({ environmentId: 1, id: 1 }, { unique: true }); // Unique within environment
+ActionSchema.index({ workspaceId: 1, applicationId: 1, environmentId: 1 }); // Hierarchy navigation
+ActionSchema.index({ environmentId: 1, name: 1, category: 1 });
+ActionSchema.index({ environmentId: 1, 'metadata.tags': 1 });
+ActionSchema.index({ environmentId: 1, category: 1, active: 1 });
+ActionSchema.index({ environmentId: 1, riskLevel: 1, active: 1 });
+ActionSchema.index({ environmentId: 1, httpMethod: 1 }, { sparse: true }); // HTTP method queries
+ActionSchema.index({ environmentId: 1, endpoint: 'text' }, { sparse: true }); // Endpoint search
 
 // Pre-save middleware to generate id if not provided
 ActionSchema.pre('save', function(next) {

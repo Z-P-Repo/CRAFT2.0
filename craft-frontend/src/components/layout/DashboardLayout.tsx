@@ -34,9 +34,11 @@ import {
   ExitToApp as LogoutIcon,
   ChevronLeft as ChevronLeftIcon,
   Timeline as TimelineIcon,
+  Build as SetupIcon,
 } from '@mui/icons-material';
 import { useRouter, usePathname } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
+import WorkspaceSwitcher from '@/components/workspace/WorkspaceSwitcher';
 
 const DRAWER_WIDTH = 280;
 const DRAWER_WIDTH_COLLAPSED = 64;
@@ -54,6 +56,7 @@ const menuItems = [
   { text: 'Attributes', icon: AttributeIcon, path: '/attributes' },
   { text: 'Activity', icon: TimelineIcon, path: '/activity' },
   { text: 'Users', icon: AccountCircle, path: '/users' },
+  { text: 'Settings', icon: SetupIcon, path: '/settings' },
   { text: 'Policy Tester', icon: TesterIcon, path: '/tester' },
 ];
 
@@ -119,6 +122,15 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           {collapsed ? <MenuIcon /> : <ChevronLeftIcon />}
         </IconButton>
       </Box>
+
+      <Divider />
+
+      {/* Workspace Switcher in Sidebar */}
+      {!collapsed && (
+        <Box sx={{ px: 1, py: 1 }}>
+          <WorkspaceSwitcher variant="sidebar" showLabels={false} />
+        </Box>
+      )}
 
       <Divider />
 

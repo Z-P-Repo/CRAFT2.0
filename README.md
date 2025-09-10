@@ -81,17 +81,17 @@ CRAFT2.0/
 ├── craft-backend/          # Node.js/Express backend
 │   ├── src/
 │   │   ├── controllers/    # API controllers
-│   │   ├── models/         # MongoDB models
-│   │   ├── routes/         # API routes
+│   │   ├── models/         # MongoDB models (including Workspace, Application, Environment)
+│   │   ├── routes/         # API routes (including hierarchical routes)
 │   │   ├── middleware/     # Authentication & validation
 │   │   ├── services/       # Business logic
 │   │   └── utils/          # Utility functions
 │   └── docs/               # Backend documentation
 ├── craft-frontend/         # Next.js frontend
 │   ├── src/
-│   │   ├── app/            # App router pages
-│   │   ├── components/     # Reusable components
-│   │   ├── contexts/       # React contexts
+│   │   ├── app/            # App router pages (including Settings page)
+│   │   ├── components/     # Reusable components (including WorkspaceSwitcher)
+│   │   ├── contexts/       # React contexts (WorkspaceContext, AuthContext)
 │   │   ├── lib/            # Utilities and API client
 │   │   └── types/          # TypeScript types
 │   └── docs/               # Frontend documentation
@@ -118,6 +118,14 @@ CRAFT2.0/
 - Collapsible sidebar navigation
 - Real-time statistics and analytics
 - Mobile-friendly responsive design
+
+### 🏢 Hierarchical Workspace Architecture
+- **Workspace Management**: Multi-tenant architecture supporting multiple organizations with full workspace context management
+- **Application Management**: Organize projects and services within workspaces with seamless application switching
+- **Environment Management**: Manage deployment stages (development, testing, staging, production) with environment-specific configurations
+- **Unified Settings**: Single-page setup wizard for creating complete workspace hierarchies with step-by-step guidance
+- **Workspace Switching**: Dynamic workspace and application selection with comprehensive context awareness and real-time updates
+- **Context Providers**: Comprehensive React context system for workspace state management integrated with authentication flow
 
 ### 🏗️ ABAC Components
 - **Policies**: Define access control rules with enhanced 5-step wizard and separated resource attribute selection (view-only access for Basic users)
@@ -154,10 +162,11 @@ CRAFT2.0/
 ### 🔧 Technical Stack
 - **Frontend**: Next.js 15.4.6, React 19, Material-UI v7, TypeScript 5.5
 - **Backend**: Node.js 18+, Express 4.19, MongoDB 7.0+, Mongoose 8.5, TypeScript 5.5
-- **Authentication**: JWT, bcrypt, Azure AD SSO with MSAL
-- **Testing**: Jest 29, React Testing Library 16 with comprehensive test coverage
-- **Performance**: Advanced search debouncing (300ms), request deduplication, API call optimization
+- **Authentication**: JWT, bcrypt, Azure AD SSO with MSAL, comprehensive context integration
+- **Testing**: Jest 29, React Testing Library 16 with comprehensive test coverage including performance tests
+- **Performance**: Advanced search debouncing (300ms), request deduplication, API call optimization, intelligent request batching
 - **Security**: Enhanced rate limiting, request throttling, 429 error handling with exponential backoff
+- **Architecture**: Hierarchical workspace system with multi-tenant support and comprehensive context management
 - **Documentation**: Comprehensive markdown docs with automated maintenance
 
 ## 🛠️ Development Workflow
@@ -445,20 +454,37 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 **Built with ❤️ using Next.js, Node.js, and MongoDB**
 
-*Last updated: September 3, 2025*  
+*Last updated: September 10, 2025*  
 🤖 *Generated and maintained with [Claude Code](https://claude.ai/code)*
 
 ## ⭐ Latest Updates
 
-### Version 1.3.0 - Advanced Performance & User Experience Optimization
-- **🚀 Multiple API Call Optimization**: Intelligent request batching and deduplication preventing redundant server calls
+### Version 1.3.0 - Advanced Performance & Hierarchical Architecture
+- **🏢 Hierarchical Workspace System**: Complete multi-tenant architecture with Workspace → Applications → Environments hierarchy and comprehensive context management
+- **⚙️ Unified Settings Page**: Single-page setup wizard for creating entire workspace hierarchies with enhanced stepper UI and step-by-step guidance
+- **🎨 Enhanced Stepper UI**: Policy Creation-inspired stepper design with circular progress indicators, completion states, and Material-UI theming
+- **🔄 Workspace Context Management**: Comprehensive React context providers for workspace, application, and environment state with authentication integration
+- **🌐 Dynamic Navigation**: Context-aware navigation with workspace/application switching capabilities and real-time updates
+- **🚀 Multiple API Call Optimization**: Intelligent request batching and deduplication preventing redundant server calls across all pages
 - **⚡ Standardized Search Debouncing**: Consistent 300ms search debouncing implemented across all pages for optimal performance
-- **🔄 Request Deduplication**: Advanced API client prevents duplicate requests with intelligent caching mechanisms
-- **🎯 Boolean Attribute Display**: Enhanced UI rendering for boolean attributes with improved visual indicators
-- **🛡️ Enhanced Error Handling**: Comprehensive local state management with graceful error recovery
-- **🔍 Improved Policy Creation**: Enhanced searchable dropdowns for better user experience during policy setup
-- **🧪 Comprehensive Testing Setup**: Full Jest configuration with React Testing Library for robust testing coverage
-- **📱 UI/UX Polish**: Refined user interface elements and interaction patterns for better usability
+- **🎯 Enhanced Boolean Attributes**: Improved display and handling of boolean attribute types with better visual feedback and validation
+- **🛡️ Comprehensive Error Handling**: Enhanced local state management with graceful error recovery and improved user feedback mechanisms
+- **📝 Template System**: Pre-configured workspace templates for quick setup (Web App, Microservices, Simple API)
+- **🔧 Backend API Integration**: Complete RESTful API system for workspace, application, and environment management with optimized performance
+- **🎨 UI Consistency**: Standardized modal padding and styling across all create/edit dialogs for better visual consistency
+- **🔄 State Management Fixes**: Resolved resources table not updating after user interactions like delete operations
+- **🆔 ID Handling**: Fixed inconsistent handling of object IDs (_id vs id) across all table operations and API interactions
+- **📊 Count Accuracy**: Improved table count calculations and pagination for more accurate data display
+
+### Version 1.2.0 - Enhanced Policy Management & Performance Optimization
+- **✅ Enhanced Policy Creation**: Upgraded from 4-step to 5-step wizard with separated Action & Resource selection
+- **🎯 Resource Attribute Selection**: Dedicated resource attribute selection interface matching subject selection pattern
+- **🔄 Attribute Scope Management**: Added conditional subject/resource selection in attribute creation with multi-select dropdowns
+- **⚡ Performance Optimization**: Comprehensive fixes for infinite API calls and implemented global rate limiting
+- **🛡️ Rate Limiting Protection**: Built-in API client rate limiting (250ms minimum) and 429 error handling with exponential backoff
+- **🧪 Testing Infrastructure**: Added comprehensive Jest and React Testing Library test coverage
+- **🔧 Build System Fixes**: Resolved all TypeScript compilation errors, React hooks dependencies, and ESLint issues
+- **🎨 UI/UX Improvements**: Standardized delete modals, attribute filtering by category, and consistent design patterns
 
 ### Version 1.2.0 - Enhanced Policy Management & Performance Optimization
 - **✅ Enhanced Policy Creation**: Upgraded from 4-step to 5-step wizard with separated Action & Resource selection

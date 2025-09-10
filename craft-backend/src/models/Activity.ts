@@ -23,6 +23,19 @@ export interface IActivity extends Document {
   description: string;
   timestamp: Date;
   severity: 'low' | 'medium' | 'high' | 'critical';
+  
+  // Hierarchy Context for proper audit trails
+  workspaceId: string; // Reference to Workspace
+  applicationId: string; // Reference to Application
+  environmentId: string; // Reference to Environment
+  
+  // Enhanced audit trail context
+  hierarchyContext?: {
+    workspaceName: string;
+    applicationName: string;
+    environmentName: string;
+    crossEnvironmentActivity: boolean; // Tracks if this spans multiple environments
+  };
   metadata?: {
     changes?: Record<string, { from: any; to: any }>;
     ipAddress?: string;
@@ -39,6 +52,47 @@ export interface IActivity extends Document {
 }
 
 const ActivitySchema = new Schema<IActivity>({
+  // Hierarchy Context Fields
+  workspaceId: {
+    type: String,
+    required: [true, 'Workspace ID is required'],
+    index: true,
+    ref: 'Workspace'
+  },
+  applicationId: {
+    type: String,
+    required: [true, 'Application ID is required'],
+    index: true,
+    ref: 'Application'
+  },
+  environmentId: {
+    type: String,
+    required: [true, 'Environment ID is required'],
+    index: true,
+    ref: 'Environment'
+  },
+  
+  // Enhanced audit trail context
+  hierarchyContext: {
+    workspaceName: {
+      type: String,
+      required: true
+    },
+    applicationName: {
+      type: String,
+      required: true
+    },
+    environmentName: {
+      type: String,
+      required: true
+    },
+    crossEnvironmentActivity: {
+      type: Boolean,
+      default: false,
+      index: true
+    }
+  },
+  
   type: {
     type: String,
     required: true,
@@ -189,12 +243,16 @@ const ActivitySchema = new Schema<IActivity>({
   collection: 'activities'
 });
 
-// Indexes for performance
-ActivitySchema.index({ timestamp: -1 }); // Most recent first
-ActivitySchema.index({ 'actor.id': 1, timestamp: -1 }); // Actor activities
-ActivitySchema.index({ category: 1, severity: 1 }); // Filtering
-ActivitySchema.index({ type: 1, timestamp: -1 }); // Type-based queries
-ActivitySchema.index({ 'metadata.sessionId': 1 }); // Session tracking
+// Hierarchy-based compound indexes for performance and audit trails
+ActivitySchema.index({ environmentId: 1, timestamp: -1 }); // Most recent within environment
+ActivitySchema.index({ workspaceId: 1, applicationId: 1, environmentId: 1, timestamp: -1 }); // Hierarchy navigation
+ActivitySchema.index({ environmentId: 1, 'actor.id': 1, timestamp: -1 }); // Actor activities within environment
+ActivitySchema.index({ environmentId: 1, category: 1, severity: 1 }); // Filtering within environment
+ActivitySchema.index({ environmentId: 1, type: 1, timestamp: -1 }); // Type-based queries within environment
+ActivitySchema.index({ environmentId: 1, 'metadata.sessionId': 1 }); // Session tracking within environment
+ActivitySchema.index({ 'hierarchyContext.crossEnvironmentActivity': 1, timestamp: -1 }); // Cross-environment activities
+ActivitySchema.index({ workspaceId: 1, timestamp: -1 }); // Workspace-level audit queries
+ActivitySchema.index({ applicationId: 1, timestamp: -1 }); // Application-level audit queries
 
 // TTL index for automatic cleanup (optional - remove if you want to keep all activities)
 // ActivitySchema.index({ createdAt: 1 }, { expireAfterSeconds: 365 * 24 * 60 * 60 }); // 1 year
@@ -224,24 +282,47 @@ ActivitySchema.pre('save', function(next) {
   next();
 });
 
-// Static methods
-ActivitySchema.statics.getRecentActivities = function(hours: number = 24) {
+// Enhanced static methods for hierarchical audit queries
+ActivitySchema.statics.getRecentActivities = function(environmentId: string, hours: number = 24) {
   const cutoff = new Date(Date.now() - hours * 60 * 60 * 1000);
-  return this.find({ timestamp: { $gte: cutoff } })
+  return this.find({ environmentId, timestamp: { $gte: cutoff } })
     .sort({ timestamp: -1 })
     .limit(100);
 };
 
-ActivitySchema.statics.getActivityStats = function() {
+ActivitySchema.statics.getActivityStats = function(environmentId: string) {
   return Promise.all([
-    this.countDocuments(),
+    this.countDocuments({ environmentId }),
     this.aggregate([
+      { $match: { environmentId } },
       { $group: { _id: '$category', count: { $sum: 1 } } }
     ]),
     this.aggregate([
+      { $match: { environmentId } },
       { $group: { _id: '$severity', count: { $sum: 1 } } }
     ])
   ]);
+};
+
+ActivitySchema.statics.getHierarchyActivities = function(workspaceId: string, applicationId?: string, environmentId?: string, hours: number = 24) {
+  const cutoff = new Date(Date.now() - hours * 60 * 60 * 1000);
+  const query: any = { workspaceId, timestamp: { $gte: cutoff } };
+  if (applicationId) query.applicationId = applicationId;
+  if (environmentId) query.environmentId = environmentId;
+  return this.find(query)
+    .sort({ timestamp: -1 })
+    .limit(500);
+};
+
+ActivitySchema.statics.getCrossEnvironmentActivities = function(workspaceId: string, hours: number = 24) {
+  const cutoff = new Date(Date.now() - hours * 60 * 60 * 1000);
+  return this.find({ 
+    workspaceId, 
+    'hierarchyContext.crossEnvironmentActivity': true,
+    timestamp: { $gte: cutoff } 
+  })
+    .sort({ timestamp: -1 })
+    .limit(100);
 };
 
 export const Activity = mongoose.model<IActivity>('Activity', ActivitySchema);

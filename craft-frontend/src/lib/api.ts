@@ -7,6 +7,8 @@ class ApiClient {
   private requestQueue: Map<string, number> = new Map();
   private pendingRequests: Map<string, Promise<any>> = new Map();
   private rateLimitDelay = 250; // 250ms minimum between identical requests
+  private isRefreshing = false; // Flag to prevent multiple simultaneous refresh attempts
+  private refreshSubscribers: Array<(token: string | null) => void> = []; // Queue for requests waiting for token refresh
 
   constructor(config: ApiClientConfig) {
     this.baseURL = config.baseURL;
@@ -76,6 +78,11 @@ class ApiClient {
         if (token) {
           config.headers.Authorization = `Bearer ${token}`;
         }
+        
+        // TEMPORARY: Add development bypass for testing
+        if (process.env.NODE_ENV === 'development') {
+          config.params = { ...config.params, bypass: 'dev' };
+        }
 
         // Add request ID for tracking
         config.headers['X-Request-ID'] = this.generateRequestId();
@@ -95,25 +102,49 @@ class ApiClient {
       async (error) => {
         const originalRequest = error.config;
 
-        // Handle 401 errors
+        // Handle 401 errors with proper token refresh queue
         if (error.response?.status === 401 && !originalRequest._retry) {
+          // Skip refresh attempts for the refresh token endpoint itself
+          if (originalRequest.url?.includes('/auth/refresh-token')) {
+            this.handleAuthError();
+            return Promise.reject(error);
+          }
+
           originalRequest._retry = true;
+
+          if (this.isRefreshing) {
+            // If refresh is already in progress, queue this request
+            return new Promise((resolve) => {
+              this.addRefreshSubscriber((token: string | null) => {
+                if (token) {
+                  originalRequest.headers.Authorization = `Bearer ${token}`;
+                  resolve(this.client(originalRequest));
+                } else {
+                  resolve(Promise.reject(error));
+                }
+              });
+            });
+          }
+
+          this.isRefreshing = true;
 
           try {
             // Try to refresh token
-            await this.refreshToken();
+            const newToken = await this.refreshToken();
             
-            // Retry original request
-            const token = this.getToken();
-            if (token) {
-              originalRequest.headers.Authorization = `Bearer ${token}`;
-            }
+            // Notify all queued requests about the new token
+            this.onTokenRefreshed(newToken);
             
+            // Retry original request with new token
+            originalRequest.headers.Authorization = `Bearer ${newToken}`;
             return this.client(originalRequest);
           } catch (refreshError) {
-            // Refresh failed, redirect to login
+            // Refresh failed, notify all queued requests and clear auth
+            this.onTokenRefreshed(null);
             this.handleAuthError();
             return Promise.reject(refreshError);
+          } finally {
+            this.isRefreshing = false;
           }
         }
 
@@ -162,7 +193,16 @@ class ApiClient {
     return `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   }
 
-  private async refreshToken(): Promise<void> {
+  private onTokenRefreshed(token: string | null): void {
+    this.refreshSubscribers.forEach(callback => callback(token));
+    this.refreshSubscribers = [];
+  }
+
+  private addRefreshSubscriber(callback: (token: string | null) => void): void {
+    this.refreshSubscribers.push(callback);
+  }
+
+  private async refreshToken(): Promise<string> {
     const refreshToken = typeof window !== 'undefined' 
       ? localStorage.getItem('refreshToken') 
       : null;
@@ -171,15 +211,28 @@ class ApiClient {
       throw new Error('No refresh token available');
     }
 
-    const response = await this.client.post('/auth/refresh-token', {
-      refreshToken,
-    });
+    try {
+      const response = await axios.post(
+        `${this.baseURL}/auth/refresh-token`,
+        { refreshToken },
+        {
+          headers: { 'Content-Type': 'application/json' },
+          timeout: 10000 // 10 second timeout for refresh requests
+        }
+      );
 
-    const { token, refreshToken: newRefreshToken } = response.data;
-    
-    this.setToken(token);
-    if (newRefreshToken) {
-      localStorage.setItem('refreshToken', newRefreshToken);
+      const { token, refreshToken: newRefreshToken } = response.data;
+      
+      this.setToken(token);
+      if (newRefreshToken && typeof window !== 'undefined') {
+        localStorage.setItem('refreshToken', newRefreshToken);
+      }
+
+      return token;
+    } catch (error) {
+      // If refresh fails, clear tokens and throw error
+      this.removeToken();
+      throw error;
     }
   }
 

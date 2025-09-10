@@ -16,6 +16,7 @@
     "format": "prettier --write src/**/*.ts",
     "seed": "tsx src/scripts/seed.ts",
     "migrate": "tsx src/scripts/migrate.ts",
+    "migrate:hierarchy": "tsx src/scripts/migrate-to-hierarchy.ts",
     "docker:build": "docker build -t craft-backend .",
     "docker:run": "docker run -p 3001:3001 craft-backend"
   },

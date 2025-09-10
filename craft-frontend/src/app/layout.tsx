@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { SnackbarProvider } from '@/contexts/SnackbarContext';
+import { WorkspaceProvider } from '@/contexts/WorkspaceContext';
 import ClientThemeProvider from '@/components/providers/ThemeProvider';
 
 export const metadata: Metadata = {
@@ -36,7 +37,9 @@ export default function RootLayout({
         <ClientThemeProvider>
           <SnackbarProvider>
             <AuthProvider>
-              {children}
+              <WorkspaceProvider>
+                {children}
+              </WorkspaceProvider>
             </AuthProvider>
           </SnackbarProvider>
         </ClientThemeProvider>

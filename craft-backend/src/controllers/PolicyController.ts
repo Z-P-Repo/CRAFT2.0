@@ -93,12 +93,26 @@ export class PolicyController {
       resources,
       actions,
       conditions,
-      tags
+      tags,
+      workspaceId,
+      applicationId,
+      environmentId
     } = req.body;
 
     // Validate required fields
     if (!name || !effect) {
       throw new ValidationError('Name and effect are required');
+    }
+
+    // Validate workspace hierarchy fields (required by Policy model)
+    if (!workspaceId) {
+      throw new ValidationError('Workspace ID is required');
+    }
+    if (!applicationId) {
+      throw new ValidationError('Application ID is required');
+    }
+    if (!environmentId) {
+      throw new ValidationError('Environment ID is required');
     }
 
     logger.info(`Creating policy: ${name} with status: ${status || 'Draft'} by ${req.user?.email || 'system'}`);
@@ -123,6 +137,10 @@ export class PolicyController {
       resources: resources || [],
       actions: actions || [],
       conditions: conditions || [],
+      // Required workspace hierarchy fields
+      workspaceId,
+      applicationId,
+      environmentId,
       metadata: {
         createdBy: req.user?.email || 'system',
         lastModifiedBy: req.user?.email || 'system',

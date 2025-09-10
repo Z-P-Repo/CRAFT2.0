@@ -9,13 +9,19 @@ import actionRoutes from './actionRoutes';
 import attributeRoutes from './attributeRoutes';
 import policyRoutes from './policyRoutes';
 import activityRoutes from './activityRoutes';
+
+// New hierarchical routes
+import workspaceRoutes from './workspaces';
+import applicationRoutes from './applications';
+import environmentRoutes from './environments';
+import settingsRoutes from './settings';
 import { databaseConnection } from '@/config/database';
 import { config } from '@/config/environment';
 
 const router = Router();
 
 // Health check endpoint
-router.get('/health', async (req: Request, res: Response) => {
+router.get('/health', async (req: Request, res: Response): Promise<void> => {
   const dbHealth = await databaseConnection.healthCheck();
   
   res.status(200).json({
@@ -39,6 +45,8 @@ router.get('/info', (req: Request, res: Response) => {
       auth: `${config.apiPrefix}/auth`,
       azureAd: `${config.apiPrefix}/azure-ad`,
       users: `${config.apiPrefix}/users`,
+      settings: `${config.apiPrefix}/settings`,
+      workspaces: `${config.apiPrefix}/workspaces`,
       subjects: `${config.apiPrefix}/subjects`,
       resources: `${config.apiPrefix}/resources`,
       actions: `${config.apiPrefix}/actions`,
@@ -53,6 +61,14 @@ router.get('/info', (req: Request, res: Response) => {
 router.use('/auth', authRoutes);
 router.use('/azure-ad', azureAdRoutes);
 router.use('/users', userRoutes);
+
+// New hierarchical settings and management routes
+router.use('/settings', settingsRoutes);
+router.use('/workspaces', workspaceRoutes);
+router.use('/workspaces/:workspaceId/applications', applicationRoutes);
+router.use('/workspaces/:workspaceId/applications/:applicationId/environments', environmentRoutes);
+
+// Legacy flat routes (for backward compatibility)
 router.use('/subjects', subjectRoutes);
 router.use('/resources', resourceRoutes);
 router.use('/actions', actionRoutes);

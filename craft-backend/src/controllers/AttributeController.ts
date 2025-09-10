@@ -138,16 +138,23 @@ export class AttributeController {
       tags,
       externalId,
       metadata,
+      workspaceId,
+      applicationId,
+      environmentId,
+      scope,
     } = req.body;
 
     // Validate required fields
-    if (!id || !name || !displayName || !categories || !dataType) {
+    if (!id || !name || !displayName || !categories || !dataType || !workspaceId || !applicationId || !environmentId) {
       const missingFields = [];
       if (!id) missingFields.push('id');
       if (!name) missingFields.push('name');
       if (!displayName) missingFields.push('displayName');
       if (!categories) missingFields.push('categories');
       if (!dataType) missingFields.push('dataType');
+      if (!workspaceId) missingFields.push('workspaceId');
+      if (!applicationId) missingFields.push('applicationId');
+      if (!environmentId) missingFields.push('environmentId');
       throw new ValidationError(`Missing required fields: ${missingFields.join(', ')}`);
     }
 
@@ -174,6 +181,11 @@ export class AttributeController {
       isRequired: isRequired || false,
       isMultiValue: isMultiValue || false,
       defaultValue,
+      scope: scope || 'environment',
+      // Required hierarchy IDs
+      workspaceId,
+      applicationId,
+      environmentId,
       constraints: constraints || {},
       validation: validation || {},
       mapping: mapping || {},

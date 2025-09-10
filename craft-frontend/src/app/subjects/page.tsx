@@ -41,6 +41,8 @@ import {
   OutlinedInput,
   ListItemIcon,
   CircularProgress,
+  Alert,
+  AlertTitle,
 } from '@mui/material';
 import {
   People as PeopleIcon,
@@ -69,11 +71,13 @@ import {
 } from '@mui/icons-material';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import DeleteConfirmationDialog from '@/components/common/DeleteConfirmationDialog';
+import SubjectCreationDialog from '@/components/subjects/SubjectCreationDialog';
 import { apiClient } from '@/lib/api';
 import { ApiResponse } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
 import { canManage, canEdit, canDelete, canCreate } from '@/utils/permissions';
 import { useApiSnackbar } from '@/contexts/SnackbarContext';
+import { useWorkspace } from '@/contexts/WorkspaceContext';
 
 interface Subject {
   _id: string;
@@ -111,6 +115,7 @@ interface Subject {
 export default function SubjectsPage() {
   const { user: currentUser } = useAuth();
   const snackbar = useApiSnackbar();
+  const { currentWorkspace, currentApplication } = useWorkspace();
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -121,15 +126,6 @@ export default function SubjectsPage() {
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [selectedSubjects, setSelectedSubjects] = useState<string[]>([]);
-  const [displayName, setDisplayName] = useState('');
-  const [displayNameError, setDisplayNameError] = useState('');
-  const [selectedType, setSelectedType] = useState('');
-  const [selectedRole, setSelectedRole] = useState('');
-  const [selectedDepartment, setSelectedDepartment] = useState('');
-  const [selectedStatus, setSelectedStatus] = useState('');
-  const [email, setEmail] = useState('');
-  const [description, setDescription] = useState('');
-  const [createdBy, setCreatedBy] = useState('');
   
   // Search, Filter, Sort states
   const [searchTerm, setSearchTerm] = useState('');
@@ -151,9 +147,6 @@ export default function SubjectsPage() {
 
   const handleClickOpen = (subject?: Subject) => {
     setSelectedSubject(subject || null);
-    setDisplayName(subject?.displayName || '');
-    setDisplayNameError('');
-    setDescription(subject?.description || '');
     setOpen(true);
   };
 
@@ -226,19 +219,8 @@ export default function SubjectsPage() {
   const handleClose = () => {
     setOpen(false);
     setSelectedSubject(null);
-    setDisplayName('');
-    setDisplayNameError('');
-    setDescription('');
   };
 
-  const handleDisplayNameChange = (value: string) => {
-    setDisplayName(value);
-    if (value.trim().length < 2) {
-      setDisplayNameError('Name must be at least 2 characters long.');
-    } else {
-      setDisplayNameError('');
-    }
-  };
 
   // Multi-selection handlers
   const handleSelectAllClick = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -299,11 +281,14 @@ export default function SubjectsPage() {
       
       if (response.success) {
         // Update local state by filtering out deleted subjects
-        setSubjects(prev => prev.filter(subj => !selectedSubjects.includes(subj._id)));
+        setSubjects(prev => prev.filter(subj => !selectedSubjects.includes(subj.id)));
         setTotal(prev => prev - selectedSubjects.length);
         
         // Clear selection
         setSelectedSubjects([]);
+        
+        // Show success message
+        snackbar.showSuccess(`${selectedSubjects.length} subject${selectedSubjects.length === 1 ? '' : 's'} deleted successfully`);
         
       } else {
         throw new Error(response.error || 'Failed to delete subjects');
@@ -322,7 +307,7 @@ export default function SubjectsPage() {
       }
       
       // Update local state instead of refetching
-      setSubjects(prev => prev.filter(subject => !selectedSubjects.includes(subject._id)));
+      setSubjects(prev => prev.filter(subject => !selectedSubjects.includes(subject.id)));
       setTotal(prev => Math.max(0, prev - selectedSubjects.length));
       
       // Clear selection regardless of error
@@ -466,69 +451,33 @@ export default function SubjectsPage() {
     return status === 'active' ? 'success' : 'error';
   };
 
-  const handleSubmit = async () => {
-    if (!displayName.trim() || displayNameError) {
-      return;
-    }
-
-    setIsSubmitting(true);
-    try {
-      const subjectData = {
-        displayName: displayName.trim(),
-        description: description?.trim() || '',
-        // Set default values for required backend fields
-        name: displayName.toLowerCase().replace(/\s+/g, ''),
-        type: 'user',
-        role: 'User',
-        department: 'General',
-        status: 'active',
-      };
-
-      if (selectedSubject) {
-        // Update existing subject
-        const response = await apiClient.put(`/subjects/${selectedSubject._id}`, subjectData);
-        
-        if (response.success) {
-          // Update local state instead of refetching
-          setSubjects(prev => prev.map(subject => 
-            subject._id === selectedSubject?._id ? response.data : subject
-          ));
-          snackbar.showSuccess(`Subject "${subjectData.displayName}" updated successfully`);
-          handleClose();
-        } else {
-          snackbar.handleApiResponse(response, undefined, 'Failed to update subject');
-        }
-      } else {
-        // Create new subject
-        const response = await apiClient.post('/subjects', subjectData);
-        
-        if (response.success) {
-          // Add to local state instead of refetching
-          setSubjects(prev => [response.data, ...prev]);
-          setTotal(prev => prev + 1);
-          snackbar.showSuccess(`Subject "${subjectData.displayName}" created successfully`);
-          handleClose();
-        } else {
-          snackbar.handleApiResponse(response, undefined, 'Failed to create subject');
-        }
-      }
-      
-    } catch (error: any) {
-      console.error('Failed to save subject:', error);
-      
-      // Handle specific duplicate error
-      if (error?.error && error.error.includes('already exists')) {
-        snackbar.showError(`Subject "${displayName.trim()}" already exists. Please choose a different name.`);
-      } else {
-        snackbar.handleApiError(error, 'Failed to save subject. Please try again.');
-      }
-    } finally {
-      setIsSubmitting(false);
-    }
+  const handleSubjectCreated = (newSubject: any) => {
+    setSubjects(prev => [newSubject, ...prev]);
+    setTotal(prev => prev + 1);
+    snackbar.showSuccess(`Subject "${newSubject.displayName}" created successfully`);
   };
+
+  const handleSubjectUpdated = (updatedSubject: any) => {
+    setSubjects(prev => prev.map(subject => 
+      subject._id === updatedSubject._id ? updatedSubject : subject
+    ));
+    snackbar.showSuccess(`Subject "${updatedSubject.displayName}" updated successfully`);
+  };
+
+  // Check if workspace and application are selected
+  const canCreateEntity = currentWorkspace && currentApplication && canCreate(currentUser);
 
   return (
     <DashboardLayout>
+      {/* Workspace Selection Alert */}
+      {(!currentWorkspace || !currentApplication) && (
+        <Alert severity="info" sx={{ mb: 3 }}>
+          <AlertTitle>Workspace and Application Required</AlertTitle>
+          Please select a workspace and application before creating or managing subjects. 
+          Use the workspace switcher in the header to select your workspace and application.
+        </Alert>
+      )}
+
       {/* Header */}
       <Paper elevation={0} sx={{ p: 3, mb: 3, border: '1px solid', borderColor: 'grey.200' }}>
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
@@ -569,16 +518,15 @@ export default function SubjectsPage() {
           <Typography variant="body2" color="text.secondary">
             Manage users, groups, and roles in your permission system
           </Typography>
-          {canCreate(currentUser) && (
-            <Button
-              variant="contained"
-              startIcon={<AddIcon />}
-              onClick={() => handleClickOpen()}
-              sx={{ px: 3 }}
-            >
-              Create Subject
-            </Button>
-          )}
+          <Button
+            variant="contained"
+            startIcon={<AddIcon />}
+            onClick={() => handleClickOpen()}
+            disabled={!canCreateEntity}
+            sx={{ px: 3 }}
+          >
+            Create Subject
+          </Button>
         </Box>
       </Paper>
 
@@ -895,111 +843,14 @@ export default function SubjectsPage() {
         )}
       </Paper>
 
-      {/* Subject Dialog */}
-      <Dialog
+      {/* Subject Creation/Edit Dialog */}
+      <SubjectCreationDialog
         open={open}
         onClose={handleClose}
-        maxWidth="sm"
-        fullWidth
-        PaperProps={{
-          sx: {
-            borderRadius: 2,
-            boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
-            m: 2,
-          }
-        }}
-      >
-        <DialogTitle sx={{
-          pb: 1,
-          pt: 2.5,
-          px: 3,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between'
-        }}>
-          <Typography variant="h6" fontWeight="600" color="text.primary">
-            {selectedSubject ? 'Edit Subject' : 'New Subject'}
-          </Typography>
-          <IconButton
-            onClick={handleClose}
-            size="small"
-            sx={{
-              color: 'grey.500',
-              '&:hover': {
-                bgcolor: 'grey.100'
-              }
-            }}
-          >
-            <CloseIcon fontSize="small" />
-          </IconButton>
-        </DialogTitle>
-
-        <DialogContent sx={{ px: 3, pt: 2, pb: 2 }}>
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5, mt: 1 }}>
-            <TextField
-              fullWidth
-              label="Name"
-              value={displayName}
-              onChange={(e) => handleDisplayNameChange(e.target.value)}
-              variant="outlined"
-              placeholder="e.g., John Doe, Marketing Team, Admin Role"
-              error={!!displayNameError}
-              helperText={displayNameError || 'Enter the subject name'}
-            />
-
-            <TextField
-              fullWidth
-              label="Description"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              variant="outlined"
-              placeholder="Brief description of the subject"
-              multiline
-              rows={3}
-            />
-          </Box>
-        </DialogContent>
-
-        <DialogActions sx={{
-          px: 3,
-          pb: 3,
-          pt: 1,
-          gap: 1.5
-        }}>
-          <Button
-            onClick={handleClose}
-            variant="outlined"
-            disabled={isSubmitting}
-            sx={{
-              textTransform: 'none',
-              minWidth: 100,
-              borderColor: 'grey.300',
-              color: 'text.secondary',
-              '&:hover': {
-                borderColor: 'grey.400',
-                bgcolor: 'grey.50'
-              }
-            }}
-          >
-            Cancel
-          </Button>
-          <Button
-            onClick={handleSubmit}
-            variant="contained"
-            disabled={isSubmitting || !displayName.trim() || !!displayNameError}
-            sx={{
-              textTransform: 'none',
-              minWidth: 120,
-              bgcolor: 'primary.main',
-              '&:hover': {
-                bgcolor: 'primary.dark'
-              }
-            }}
-          >
-            {isSubmitting ? 'Saving...' : (selectedSubject ? 'Update Subject' : 'Create Subject')}
-          </Button>
-        </DialogActions>
-      </Dialog>
+        onSubjectCreated={handleSubjectCreated}
+        onSubjectUpdated={handleSubjectUpdated}
+        editingSubject={selectedSubject}
+      />
 
       {/* View Subject Dialog */}
       <Dialog

@@ -333,6 +333,6 @@ For additional support:
 
 ---
 
-**Last Updated:** August 29, 2025  
-**Version:** 1.1.0  
+**Last Updated:** September 10, 2025  
+**Version:** 1.3.0  
 🤖 *Generated and maintained with [Claude Code](https://claude.ai/code)*

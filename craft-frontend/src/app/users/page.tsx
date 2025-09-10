@@ -39,6 +39,8 @@ import {
   Tooltip,
   InputAdornment,
   OutlinedInput,
+  Alert,
+  AlertTitle,
 } from '@mui/material';
 import {
   Person as PersonIcon,
@@ -63,6 +65,7 @@ import DeleteConfirmationDialog from '@/components/common/DeleteConfirmationDial
 import { apiClient } from '@/lib/api';
 import { User, ApiResponse } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
+import { useWorkspace } from '@/contexts/WorkspaceContext';
 import { canManage, canEdit, canDelete, canCreate } from '@/utils/permissions';
 
 interface ExtendedUser extends User {
@@ -74,6 +77,7 @@ interface ExtendedUser extends User {
 export default function UsersPage() {
   const router = useRouter();
   const { user: currentUser } = useAuth();
+  const { currentWorkspace, currentApplication } = useWorkspace();
   const [users, setUsers] = useState<ExtendedUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -432,8 +436,19 @@ export default function UsersPage() {
     setSortAnchorEl(null);
   };
 
+  // Check if user can create entities (requires workspace and application selection)
+  const canCreateEntity = currentWorkspace && currentApplication && canCreate(currentUser);
+
   return (
     <DashboardLayout>
+      {(!currentWorkspace || !currentApplication) && (
+        <Alert severity="info" sx={{ mb: 3 }}>
+          <AlertTitle>Workspace and Application Required</AlertTitle>
+          Please select a workspace and application before creating or managing users. 
+          Use the workspace switcher in the header to select your workspace and application.
+        </Alert>
+      )}
+      
       {/* Header */}
       <Paper elevation={0} sx={{ p: 3, mb: 3, border: '1px solid', borderColor: 'grey.200' }}>
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
@@ -474,16 +489,15 @@ export default function UsersPage() {
           <Typography variant="body2" color="text.secondary">
             Manage user accounts and roles in your system
           </Typography>
-          {canCreate(currentUser) && (
-            <Button
-              variant="contained"
-              startIcon={<AddIcon />}
-              onClick={() => handleClickOpen()}
-              sx={{ px: 3 }}
-            >
-              Create User
-            </Button>
-          )}
+          <Button
+            variant="contained"
+            startIcon={<AddIcon />}
+            onClick={() => handleClickOpen()}
+            disabled={!canCreateEntity}
+            sx={{ px: 3 }}
+          >
+            Create User
+          </Button>
         </Box>
       </Paper>
 

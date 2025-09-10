@@ -120,11 +120,26 @@ export class ActionController {
       endpoint,
       riskLevel,
       active,
+      workspaceId,
+      applicationId,
+      environmentId,
+      metadata
     } = req.body;
 
     // Validate required fields
     if (!displayName || !name || !category || !riskLevel) {
       throw new ValidationError('Display name, name, category, and risk level are required');
+    }
+
+    // Validate workspace hierarchy fields (required by Action model)
+    if (!workspaceId) {
+      throw new ValidationError('Workspace ID is required');
+    }
+    if (!applicationId) {
+      throw new ValidationError('Application ID is required');
+    }
+    if (!environmentId) {
+      throw new ValidationError('Environment ID is required');
     }
 
     // Check if action already exists by name
@@ -147,7 +162,11 @@ export class ActionController {
       endpoint: endpoint?.trim(),
       riskLevel,
       active: active !== undefined ? active : true,
-      metadata: {
+      // Required workspace hierarchy fields
+      workspaceId,
+      applicationId,
+      environmentId,
+      metadata: metadata || {
         owner: req.user?.name || 'system',
         createdBy: req.user?.name || null,
         lastModifiedBy: req.user?.name || null,
