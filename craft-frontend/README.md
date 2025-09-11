@@ -2,7 +2,7 @@
 
 A modern, responsive React-based dashboard for managing the CRAFT (Attribute-Based Access Control) Permission System. Built with Next.js 15, TypeScript, and Material-UI with a professional collapsible sidebar layout.
 
-![Version](https://img.shields.io/badge/version-1.3.0-blue.svg)
+![Version](https://img.shields.io/badge/version-1.3.1-blue.svg)
 ![Next.js](https://img.shields.io/badge/Next.js-15.4.6-black.svg)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.5-blue.svg)
 ![Material-UI](https://img.shields.io/badge/Material--UI-7.3-blue.svg)
@@ -76,7 +76,7 @@ NODE_ENV=development
 
 # Application Settings
 NEXT_PUBLIC_APP_NAME=CRAFT Permission System
-NEXT_PUBLIC_APP_VERSION=1.3.0
+NEXT_PUBLIC_APP_VERSION=1.3.1
 ```
 
 ## 🚀 Development
@@ -411,10 +411,22 @@ await trackUser('updated', 'user-456', 'John Doe');
 
 ---
 
-*Last updated: September 10, 2025*  
+*Last updated: September 11, 2025*  
 🤖 *Generated and maintained with [Claude Code](https://claude.ai/code)*
 
-## 🔄 Recent Updates (Version 1.3.0)
+## 🔄 Recent Updates (Version 1.3.1)
+
+### UI/UX Consistency & User Experience Improvements
+- **🎨 Standardized Dropdown Format**: Consistent display format across all policy creation dropdowns (Subjects, Actions, Resources) showing only essential information
+- **👥 Clean Subject Selection**: Subject dropdowns now show only displayName + email for improved readability and faster selection
+- **⚡ Streamlined Action Selection**: Action dropdowns display displayName + description without category/risk level clutter for better focus
+- **🗃️ Simplified Resource Selection**: Resource dropdowns show displayName + description/URI without type information for cleaner interface
+- **⚠️ Cancel Protection**: Added confirmation dialog when canceling policy creation to prevent accidental data loss
+- **🔄 Enhanced State Management**: Improved resources table real-time updates after user interactions including delete operations
+- **🎯 Better User Feedback**: Enhanced error handling and confirmation dialogs throughout the application
+- **🔧 Build Stability**: Fixed React useEffect/useCallback missing dependencies for better performance and reliability
+
+### Recent Updates (Version 1.3.0)
 
 ### Hierarchical Workspace Architecture & Performance Optimization
 - **🏢 Multi-Tenant Workspace System**: Complete workspace, application, and environment hierarchy with comprehensive React context management and authentication integration

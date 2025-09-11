@@ -223,7 +223,7 @@ NEXT_PUBLIC_API_URL=http://localhost:3001/api/v1
 
 # App Configuration
 NEXT_PUBLIC_APP_NAME=CRAFT 2.0
-NEXT_PUBLIC_APP_VERSION=1.3.0
+NEXT_PUBLIC_APP_VERSION=1.3.1
 
 # Azure AD SSO (optional)
 NEXT_PUBLIC_AZURE_AD_CLIENT_ID=your-azure-ad-client-id
@@ -454,10 +454,21 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 **Built with ❤️ using Next.js, Node.js, and MongoDB**
 
-*Last updated: September 10, 2025*  
+*Last updated: September 11, 2025*  
 🤖 *Generated and maintained with [Claude Code](https://claude.ai/code)*
 
 ## ⭐ Latest Updates
+
+### Version 1.3.1 - UI/UX Consistency & Build Optimization
+- **🎨 Consistent Dropdown Format**: Standardized all policy creation dropdowns (Subjects, Actions, Resources) to show only essential information - displayName and one relevant secondary field
+- **📝 Subject Selection**: Shows displayName + email for cleaner selection interface
+- **⚡ Action Selection**: Shows displayName + description without category/risk clutter  
+- **🗃️ Resource Selection**: Shows displayName + description/URI without type information
+- **⚠️ Cancel Confirmation**: Added user confirmation dialog when canceling policy creation to prevent accidental data loss
+- **🔧 Build System**: Fixed all TypeScript compilation errors and ESLint warnings across frontend and backend
+- **📊 State Management**: Enhanced resources table real-time updates after user interactions
+- **🆔 ObjectId Handling**: Resolved MongoDB ObjectId type conversion issues in migration scripts
+- **🔄 Hook Dependencies**: Fixed React useEffect/useCallback missing dependencies for better performance
 
 ### Version 1.3.0 - Advanced Performance & Hierarchical Architecture
 - **🏢 Hierarchical Workspace System**: Complete multi-tenant architecture with Workspace → Applications → Environments hierarchy and comprehensive context management

@@ -2,7 +2,7 @@
 
 A robust, scalable Node.js backend API for the CRAFT (Attribute-Based Access Control) Permission System. Built with Express.js, TypeScript, MongoDB, and comprehensive security features.
 
-![Version](https://img.shields.io/badge/version-1.3.0-blue.svg)
+![Version](https://img.shields.io/badge/version-1.3.1-blue.svg)
 ![Node.js](https://img.shields.io/badge/Node.js-18+-green.svg)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.5-blue.svg)
 ![Express](https://img.shields.io/badge/Express-4.19-black.svg)
@@ -352,10 +352,21 @@ For support and questions:
 
 ---
 
-*Last updated: September 10, 2025*  
+*Last updated: September 11, 2025*  
 🤖 *Generated and maintained with [Claude Code](https://claude.ai/code)*
 
-## 🔄 Recent Updates (Version 1.3.0)
+## 🔄 Recent Updates (Version 1.3.1)
+
+### Build System Stability & TypeScript Optimization
+- **🔧 TypeScript Build Fixes**: Resolved all compilation errors in backend scripts including ObjectId type conversions
+- **🗃️ Migration Script Updates**: Fixed MongoDB ObjectId handling in user reference migration scripts  
+- **📝 Script Reliability**: Enhanced script error handling in seed-hierarchy, migrate-user-refs, and test-attribute scripts
+- **🎯 Attribute API**: Fixed enumValues undefined error handling in test-attribute-api.ts
+- **🔄 Database Connection**: Improved mongoose connection null checks and error recovery
+- **⚡ Build Performance**: Streamlined TypeScript compilation process for faster development cycles
+- **🛡️ Type Safety**: Enhanced type checking and validation across all backend scripts and utilities
+
+### Recent Updates (Version 1.3.0)
 
 ### Hierarchical Workspace Architecture & Performance Optimization
 - **🏢 Multi-Tenant System**: Complete workspace, application, and environment hierarchy with comprehensive MongoDB models and context integration

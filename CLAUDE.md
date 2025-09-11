@@ -36,19 +36,25 @@ When user prompts "deploy", prepare the application for production deployment:
 - Frontend: `/craft-frontend` (Next.js 15.4.6, TypeScript 5.5, Material-UI v7, Azure AD MSAL, Jest 29 Testing)
 - Backend: `/craft-backend` (Node.js 18+, Express 4.19, TypeScript 5.5, MongoDB 7.0+, Azure AD SSO, Advanced Rate Limiting)
 
-## Latest Features (v1.3.0)
+## Latest Features (v1.3.1)
+- Consistent dropdown format across all policy creation dropdowns (Subjects, Actions, Resources) showing only essential information
+- Subject selection dropdowns now show only displayName + email for cleaner interface
+- Action selection dropdowns display only displayName + description without category/risk clutter
+- Resource selection dropdowns show only displayName + description/URI without type information
+- Added cancel confirmation dialog when canceling policy creation to prevent accidental data loss
+- Fixed all TypeScript compilation errors and ESLint warnings across frontend and backend projects
+- Enhanced resources table real-time updates after user interactions including delete operations
+- Resolved MongoDB ObjectId type conversion issues in migration scripts with proper error handling
+- Fixed React useEffect/useCallback missing dependencies for better performance and reliability
+- Improved build system stability with streamlined compilation processes
+
+## Previous Features (v1.3.0)
 - Hierarchical workspace system with complete Workspace → Applications → Environments architecture
 - Unified settings page with step-by-step setup wizard and template system
 - Multiple API call optimization with intelligent request batching and deduplication
 - Standardized search debouncing (300ms) across all pages for optimal performance
 - Enhanced boolean attribute display with improved visual indicators
 - Comprehensive error handling and local state management improvements
-- UI consistency fixes including modal padding standardization
-- Fixed resources table state management and update issues after user interactions
-- Improved ID handling across all table operations (_id vs id consistency)
-- Better table count calculations and pagination accuracy
-- Settings API fixes for workspace creation without requiring applications
-- Enhanced workspace context management and authentication integration
 
 ## Previous Features (v1.2.0)
 - Enhanced 5-step policy creation wizard with separated Action & Resource selection

@@ -233,6 +233,9 @@ export default function CreatePolicyPage() {
   // Resource creation modal state
   const [resourceDialogOpen, setResourceDialogOpen] = useState(false);
   
+  // Cancel confirmation dialog state
+  const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
+  
   // Create value modal (keep existing)
   const [showCreateValue, setShowCreateValue] = useState<string | null>(null);
   const [newValueData, setNewValueData] = useState('');
@@ -511,6 +514,20 @@ export default function CreatePolicyPage() {
     
     // Show success message using snackbar
     snackbar.showSuccess('Resource created successfully!');
+  };
+
+  // Cancel confirmation handlers
+  const handleCancelClick = () => {
+    setCancelDialogOpen(true);
+  };
+
+  const handleCancelConfirm = () => {
+    setCancelDialogOpen(false);
+    router.push('/policies');
+  };
+
+  const handleCancelCancel = () => {
+    setCancelDialogOpen(false);
   };
 
   const handleDataTypeChange = (dataType: string) => {
@@ -957,9 +974,6 @@ export default function CreatePolicyPage() {
                                 </Typography>
                                 <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
                                   {option.email}
-                                </Typography>
-                                <Typography variant="caption" color="text.secondary">
-                                  {option.type} • {option.department}
                                 </Typography>
                               </Box>
                             </Box>
@@ -1434,9 +1448,6 @@ export default function CreatePolicyPage() {
                           <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
                             {option.description}
                           </Typography>
-                          <Typography variant="caption" color="text.secondary">
-                            {option.category} • {option.riskLevel} Risk
-                          </Typography>
                         </Box>
                       </Box>
                     </Box>
@@ -1536,9 +1547,6 @@ export default function CreatePolicyPage() {
                                 </Typography>
                                 <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
                                   {option.description || option.uri}
-                                </Typography>
-                                <Typography variant="caption" color="text.secondary">
-                                  {option.type}
                                 </Typography>
                               </Box>
                             </Box>
@@ -1987,7 +1995,7 @@ export default function CreatePolicyPage() {
                         <Typography variant="caption" color="text.secondary">
                           {selectedSubjects.map(id => {
                             const subject = subjects.find(s => s.id === id);
-                            return subject ? `${subject.type} • ${subject.department}` : '';
+                            return subject ? subject.email : '';
                           }).join('; ')}
                         </Typography>
                         {Object.keys(selectedSubjectAttributes).length > 0 && (
@@ -2133,7 +2141,7 @@ export default function CreatePolicyPage() {
           <Breadcrumbs aria-label="breadcrumb" sx={{ mb: 2 }}>
             <Link 
               color="inherit" 
-              onClick={() => router.push('/policies')}
+              onClick={handleCancelClick}
               sx={{ cursor: 'pointer', '&:hover': { textDecoration: 'underline' } }}
             >
               Policies
@@ -2144,7 +2152,7 @@ export default function CreatePolicyPage() {
           <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
               <IconButton 
-                onClick={() => router.push('/policies')}
+                onClick={handleCancelClick}
                 sx={{ 
                   bgcolor: 'grey.100',
                   '&:hover': { bgcolor: 'grey.200' }
@@ -2217,7 +2225,7 @@ export default function CreatePolicyPage() {
             <Box sx={{ display: 'flex', gap: 2 }}>
               <Button
                 variant="outlined"
-                onClick={() => router.push('/policies')}
+                onClick={handleCancelClick}
               >
                 Cancel
               </Button>
@@ -2427,7 +2435,7 @@ export default function CreatePolicyPage() {
                                     {subject.displayName}
                                   </Typography>
                                   <Typography variant="caption" color="text.secondary">
-                                    {subject.type} • {subject.department}
+                                    {subject.email}
                                   </Typography>
                                 </Box>
                               </Box>
@@ -2692,6 +2700,38 @@ export default function CreatePolicyPage() {
           onClose={handleCloseResourceDialog}
           onResourceCreated={handleResourceCreated}
         />
+
+        {/* Cancel Confirmation Dialog */}
+        <Dialog
+          open={cancelDialogOpen}
+          onClose={handleCancelCancel}
+          maxWidth="sm"
+          fullWidth
+        >
+          <DialogTitle sx={{ pb: 1 }}>
+            Cancel Policy Creation
+          </DialogTitle>
+          <DialogContent>
+            <Typography variant="body1" color="text.secondary">
+              Are you sure you want to cancel? All your progress will be lost and cannot be recovered.
+            </Typography>
+          </DialogContent>
+          <DialogActions sx={{ px: 3, pb: 3 }}>
+            <Button 
+              onClick={handleCancelCancel}
+              variant="outlined"
+            >
+              Continue Editing
+            </Button>
+            <Button 
+              onClick={handleCancelConfirm}
+              variant="contained"
+              color="error"
+            >
+              Yes, Cancel
+            </Button>
+          </DialogActions>
+        </Dialog>
 
     </DashboardLayout>
   );
