@@ -107,15 +107,15 @@ const EnvironmentConfigurationSchema = new Schema<IEnvironmentConfiguration>({
   },
   databases: {
     primary: {
-      host: { type: String, required: true },
-      port: { type: Number, required: true, min: 1, max: 65535 },
-      database: { type: String, required: true },
+      host: { type: String, required: false },
+      port: { type: Number, min: 1, max: 65535, required: false },
+      database: { type: String, required: false },
       ssl: { type: Boolean, default: true }
     },
     replica: {
-      host: { type: String },
-      port: { type: Number, min: 1, max: 65535 },
-      database: { type: String },
+      host: { type: String, required: false },
+      port: { type: Number, min: 1, max: 65535, required: false },
+      database: { type: String, required: false },
       ssl: { type: Boolean, default: true }
     }
   },

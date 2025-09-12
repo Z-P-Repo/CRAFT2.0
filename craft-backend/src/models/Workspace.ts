@@ -47,7 +47,7 @@ export interface IWorkspace extends Document {
   name: string;
   displayName: string;
   description?: string;
-  status: 'active' | 'inactive' | 'suspended' | 'deleted';
+  status: 'active' | 'inactive' | 'suspended' | 'deleted' | 'draft';
   settings: IWorkspaceSettings;
   limits: IWorkspaceLimits;
   metadata: IWorkspaceMetadata;
@@ -115,10 +115,8 @@ const WorkspaceSchema = new Schema<IWorkspace>({
     required: true, 
     unique: true,
     trim: true,
-    lowercase: true,
     minlength: 2,
-    maxlength: 50,
-    match: /^[a-z0-9][a-z0-9-]*[a-z0-9]$/,
+    maxlength: 25,
     index: true
   },
   displayName: { 
@@ -136,8 +134,8 @@ const WorkspaceSchema = new Schema<IWorkspace>({
   },
   status: { 
     type: String, 
-    enum: ['active', 'inactive', 'suspended', 'deleted'], 
-    default: 'active',
+    enum: ['active', 'inactive', 'suspended', 'deleted', 'draft'], 
+    default: 'draft',
     index: true 
   },
   settings: { 
@@ -177,6 +175,14 @@ WorkspaceSchema.virtual('applicationsCount', {
   localField: '_id',
   foreignField: 'workspaceId',
   count: true
+});
+
+// Virtual for applications
+WorkspaceSchema.virtual('applications', {
+  ref: 'Application',
+  localField: '_id',
+  foreignField: 'workspaceId',
+  match: { active: true }
 });
 
 // Pre-save middleware

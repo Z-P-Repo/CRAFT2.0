@@ -32,7 +32,7 @@ const validateIds = [
 router.get('/', requireAuth, validateIds, async (req: Request, res: Response): Promise<void> => {
   try {
     const { workspaceId, applicationId } = req.params;
-    const { page = 1, limit = 10, search, type, status = 'active' } = req.query;
+    const { page = 1, limit = 10, search, type, status = 'all' } = req.query;
     const userId = (req as any).user._id;
 
     // Verify access
@@ -65,7 +65,7 @@ router.get('/', requireAuth, validateIds, async (req: Request, res: Response): P
       });
     }
 
-    const query: any = { workspaceId, applicationId, active: true };
+    const query: any = { workspaceId, applicationId };
 
     if (status !== 'all') {
       query.status = status;

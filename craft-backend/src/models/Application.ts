@@ -203,6 +203,14 @@ ApplicationSchema.virtual('environmentsCount', {
   count: true
 });
 
+// Virtual for environments
+ApplicationSchema.virtual('environments', {
+  ref: 'Environment',
+  localField: '_id',
+  foreignField: 'applicationId',
+  match: { active: true }
+});
+
 // Pre-save middleware
 ApplicationSchema.pre('save', function(next) {
   if (this.isModified() && !this.isNew) {

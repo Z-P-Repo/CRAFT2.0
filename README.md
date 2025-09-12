@@ -223,7 +223,7 @@ NEXT_PUBLIC_API_URL=http://localhost:3001/api/v1
 
 # App Configuration
 NEXT_PUBLIC_APP_NAME=CRAFT 2.0
-NEXT_PUBLIC_APP_VERSION=1.3.1
+NEXT_PUBLIC_APP_VERSION=1.3.2
 
 # Azure AD SSO (optional)
 NEXT_PUBLIC_AZURE_AD_CLIENT_ID=your-azure-ad-client-id
@@ -454,12 +454,28 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 **Built with ❤️ using Next.js, Node.js, and MongoDB**
 
-*Last updated: September 11, 2025*  
+*Last updated: September 12, 2025*  
 🤖 *Generated and maintained with [Claude Code](https://claude.ai/code)*
 
 ## ⭐ Latest Updates
 
-### Version 1.3.1 - UI/UX Consistency & Build Optimization
+### Version 1.3.2 - UI/UX Polish & User Management 
+- **🔐 Superadmin User Creation**: Added automated superadmin user creation script with secure credentials and database integration
+- **🎨 Enhanced Workspace Cards**: Redesigned application count display with professional badge-like styling and proper visual hierarchy
+- **✨ Professional Action Controls**: Completely restructured workspace card layout with integrated action buttons and proper element positioning
+- **📊 Badge Consistency**: Standardized status and application count badges with matching size, styling, and visual weight
+- **🔧 Layout Optimization**: Fixed overlapping issues between action icons and expand arrows with improved spacing and alignment
+- **👤 Authentication System**: Enhanced auth middleware with proper workspace deletion permissions for admin and super_admin roles
+- **🏷️ Current Workspace Indicator**: Removed redundant "Current" workspace indicator for cleaner UI presentation
+- **🎯 Visual Polish**: Improved workspace card aesthetics with consistent shadows, rounded corners, and professional appearance
+- **⚡ Element Positioning**: Optimized accordion structure for better content flow and interaction patterns
+- **🖱️ User Experience**: Enhanced hover states and interactive feedback for all workspace management actions
+
+### Version 1.3.1 - Critical Bug Fix & UI/UX Consistency 
+- **🔧 Application/Environment Display Fix**: Resolved critical issue preventing applications and environments from showing under workspaces in the UI hierarchy
+- **🔐 Authentication Bug Resolution**: Fixed mock user ID mismatch in development auth middleware that was causing "Workspace not found" errors
+- **✅ Workspace Hierarchy**: Fully functional workspace → applications → environments structure now working correctly
+- **🚀 API Resolution**: Backend APIs now properly return applications and environments data with correct authorization
 - **🎨 Consistent Dropdown Format**: Standardized all policy creation dropdowns (Subjects, Actions, Resources) to show only essential information - displayName and one relevant secondary field
 - **📝 Subject Selection**: Shows displayName + email for cleaner selection interface
 - **⚡ Action Selection**: Shows displayName + description without category/risk clutter  

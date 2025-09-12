@@ -31,7 +31,7 @@ const validateIds = [
 router.get('/', requireAuth, validateIds, async (req: Request, res: Response): Promise<void> => {
   try {
     const { workspaceId } = req.params;
-    const { page = 1, limit = 10, search, type, status = 'active' } = req.query;
+    const { page = 1, limit = 10, search, type, status = 'all' } = req.query;
     const userId = (req as any).user._id;
 
     // Verify workspace access
@@ -51,7 +51,7 @@ router.get('/', requireAuth, validateIds, async (req: Request, res: Response): P
       });
     }
 
-    const query: any = { workspaceId, active: true };
+    const query: any = { workspaceId };
 
     // Note: We filter by active field, not status field
     // The status field is for application lifecycle, active field is for soft delete

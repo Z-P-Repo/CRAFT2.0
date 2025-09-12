@@ -1,4 +1,5 @@
 import mongoose, { Schema, Document } from 'mongoose';
+import bcrypt from 'bcrypt';
 import { IUser } from '@/types';
 
 export interface UserDocument extends Omit<IUser, '_id'>, Document {
@@ -115,9 +116,8 @@ UserSchema.index({ authProvider: 1 });
 // Instance methods
 UserSchema.methods.comparePassword = async function(candidatePassword: string): Promise<boolean> {
   try {
-    const bcrypt = require('bcrypt');
     return await bcrypt.compare(candidatePassword, this.password);
-  } catch (error) {
+  } catch {
     return false;
   }
 };

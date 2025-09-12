@@ -2,7 +2,7 @@
 
 A robust, scalable Node.js backend API for the CRAFT (Attribute-Based Access Control) Permission System. Built with Express.js, TypeScript, MongoDB, and comprehensive security features.
 
-![Version](https://img.shields.io/badge/version-1.3.1-blue.svg)
+![Version](https://img.shields.io/badge/version-1.3.2-blue.svg)
 ![Node.js](https://img.shields.io/badge/Node.js-18+-green.svg)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.5-blue.svg)
 ![Express](https://img.shields.io/badge/Express-4.19-black.svg)
@@ -352,10 +352,17 @@ For support and questions:
 
 ---
 
-*Last updated: September 11, 2025*  
+*Last updated: September 12, 2025*  
 🤖 *Generated and maintained with [Claude Code](https://claude.ai/code)*
 
 ## 🔄 Recent Updates (Version 1.3.1)
+
+### Critical Backend Fix & Workspace Hierarchy 
+- **🔧 Application/Environment API Fix**: Resolved critical issue causing 404 errors for workspace application and environment endpoints
+- **🔐 Authentication Middleware Fix**: Fixed mock user ID mismatch in development auth that was preventing proper workspace access
+- **✅ Hierarchical API Functionality**: Fully functional `/api/v1/workspaces/:workspaceId/applications` and `/api/v1/workspaces/:workspaceId/applications/:applicationId/environments` endpoints
+- **🚀 Workspace Access Resolution**: Backend now correctly authorizes and returns applications/environments data for workspace hierarchy display
+- **🆔 User Authorization**: Fixed ObjectId matching between auth middleware and workspace ownership for proper permission validation
 
 ### Build System Stability & TypeScript Optimization
 - **🔧 TypeScript Build Fixes**: Resolved all compilation errors in backend scripts including ObjectId type conversions

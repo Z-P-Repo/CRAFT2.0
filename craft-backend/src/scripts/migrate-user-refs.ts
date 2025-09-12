@@ -5,11 +5,21 @@ import { Application } from '../models/Application';
 import { Environment } from '../models/Environment';
 import { config } from '../config/environment';
 
+// Map old invalid string IDs to proper ObjectIds
+const invalidIdMapping: Record<string, string> = {
+  'test-user-id': '507f1f77bcf86cd799439011',
+  'test-user-global': '507f1f77bcf86cd799439011'
+};
+
 async function migrateUserReferences() {
   try {
     // Connect to MongoDB
     await mongoose.connect(config.mongodb.uri);
     console.log('✅ Connected to MongoDB');
+
+    // Just verify the target ObjectId exists for mapping
+    const testUserId = new mongoose.Types.ObjectId('507f1f77bcf86cd799439011');
+    console.log('✅ Using target ObjectId for migration:', testUserId.toString());
 
     // Get all users for reference
     const users = await User.find({}).select('_id email');
@@ -23,11 +33,7 @@ async function migrateUserReferences() {
       }
     });
 
-    // Since we're changing the schema from String to ObjectId,
-    // and existing data is already using valid ObjectId strings,
-    // we need to ensure MongoDB interprets them correctly.
-
-    // Update Workspaces - convert string refs to ObjectIds
+    // Update Workspaces - convert string refs to ObjectIds and handle invalid IDs
     if (!mongoose.connection.db) {
       throw new Error('Database connection not available');
     }
@@ -38,19 +44,32 @@ async function migrateUserReferences() {
     for (const workspace of workspaces) {
       const updates: any = {};
       
+      // Helper function to convert ID (handles invalid IDs)
+      const convertId = (id: string): mongoose.Types.ObjectId => {
+        if (invalidIdMapping[id]) {
+          return new mongoose.Types.ObjectId(invalidIdMapping[id]);
+        }
+        try {
+          return new mongoose.Types.ObjectId(id);
+        } catch (e) {
+          console.warn(`Invalid ObjectId: ${id}, using default test user ID`);
+          return new mongoose.Types.ObjectId('507f1f77bcf86cd799439011');
+        }
+      };
+      
       if (workspace.metadata?.owner && typeof workspace.metadata.owner === 'string') {
-        updates['metadata.owner'] = new mongoose.Types.ObjectId(workspace.metadata.owner);
+        updates['metadata.owner'] = convertId(workspace.metadata.owner);
       }
       if (workspace.metadata?.createdBy && typeof workspace.metadata.createdBy === 'string') {
-        updates['metadata.createdBy'] = new mongoose.Types.ObjectId(workspace.metadata.createdBy);
+        updates['metadata.createdBy'] = convertId(workspace.metadata.createdBy);
       }
       if (workspace.metadata?.lastModifiedBy && typeof workspace.metadata.lastModifiedBy === 'string') {
-        updates['metadata.lastModifiedBy'] = new mongoose.Types.ObjectId(workspace.metadata.lastModifiedBy);
+        updates['metadata.lastModifiedBy'] = convertId(workspace.metadata.lastModifiedBy);
       }
       if (workspace.metadata?.admins && Array.isArray(workspace.metadata.admins)) {
-        updates['metadata.admins'] = workspace.metadata.admins.map((admin: string) => 
-          new mongoose.Types.ObjectId(admin)
-        );
+        updates['metadata.admins'] = workspace.metadata.admins
+          .filter((admin: any) => typeof admin === 'string')
+          .map((admin: string) => convertId(admin));
       }
 
       if (Object.keys(updates).length > 0) {
@@ -68,19 +87,32 @@ async function migrateUserReferences() {
     for (const app of applications) {
       const updates: any = {};
       
+      // Helper function to convert ID (handles invalid IDs)
+      const convertId = (id: string): mongoose.Types.ObjectId => {
+        if (invalidIdMapping[id]) {
+          return new mongoose.Types.ObjectId(invalidIdMapping[id]);
+        }
+        try {
+          return new mongoose.Types.ObjectId(id);
+        } catch (e) {
+          console.warn(`Invalid ObjectId: ${id}, using default test user ID`);
+          return new mongoose.Types.ObjectId('507f1f77bcf86cd799439011');
+        }
+      };
+      
       if (app.metadata?.owner && typeof app.metadata.owner === 'string') {
-        updates['metadata.owner'] = new mongoose.Types.ObjectId(app.metadata.owner);
+        updates['metadata.owner'] = convertId(app.metadata.owner);
       }
       if (app.metadata?.createdBy && typeof app.metadata.createdBy === 'string') {
-        updates['metadata.createdBy'] = new mongoose.Types.ObjectId(app.metadata.createdBy);
+        updates['metadata.createdBy'] = convertId(app.metadata.createdBy);
       }
       if (app.metadata?.lastModifiedBy && typeof app.metadata.lastModifiedBy === 'string') {
-        updates['metadata.lastModifiedBy'] = new mongoose.Types.ObjectId(app.metadata.lastModifiedBy);
+        updates['metadata.lastModifiedBy'] = convertId(app.metadata.lastModifiedBy);
       }
       if (app.metadata?.maintainers && Array.isArray(app.metadata.maintainers)) {
-        updates['metadata.maintainers'] = app.metadata.maintainers.map((maintainer: string) => 
-          new mongoose.Types.ObjectId(maintainer)
-        );
+        updates['metadata.maintainers'] = app.metadata.maintainers
+          .filter((maintainer: any) => typeof maintainer === 'string')
+          .map((maintainer: string) => convertId(maintainer));
       }
 
       if (Object.keys(updates).length > 0) {
@@ -98,19 +130,32 @@ async function migrateUserReferences() {
     for (const env of environments) {
       const updates: any = {};
       
+      // Helper function to convert ID (handles invalid IDs)
+      const convertId = (id: string): mongoose.Types.ObjectId => {
+        if (invalidIdMapping[id]) {
+          return new mongoose.Types.ObjectId(invalidIdMapping[id]);
+        }
+        try {
+          return new mongoose.Types.ObjectId(id);
+        } catch (e) {
+          console.warn(`Invalid ObjectId: ${id}, using default test user ID`);
+          return new mongoose.Types.ObjectId('507f1f77bcf86cd799439011');
+        }
+      };
+      
       if (env.metadata?.owner && typeof env.metadata.owner === 'string') {
-        updates['metadata.owner'] = new mongoose.Types.ObjectId(env.metadata.owner);
+        updates['metadata.owner'] = convertId(env.metadata.owner);
       }
       if (env.metadata?.createdBy && typeof env.metadata.createdBy === 'string') {
-        updates['metadata.createdBy'] = new mongoose.Types.ObjectId(env.metadata.createdBy);
+        updates['metadata.createdBy'] = convertId(env.metadata.createdBy);
       }
       if (env.metadata?.lastModifiedBy && typeof env.metadata.lastModifiedBy === 'string') {
-        updates['metadata.lastModifiedBy'] = new mongoose.Types.ObjectId(env.metadata.lastModifiedBy);
+        updates['metadata.lastModifiedBy'] = convertId(env.metadata.lastModifiedBy);
       }
       if (env.metadata?.promotionRules?.approvers && Array.isArray(env.metadata.promotionRules.approvers)) {
-        updates['metadata.promotionRules.approvers'] = env.metadata.promotionRules.approvers.map((approver: string) => 
-          new mongoose.Types.ObjectId(approver)
-        );
+        updates['metadata.promotionRules.approvers'] = env.metadata.promotionRules.approvers
+          .filter((approver: any) => typeof approver === 'string')
+          .map((approver: string) => convertId(approver));
       }
 
       if (Object.keys(updates).length > 0) {

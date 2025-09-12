@@ -20,12 +20,13 @@ export const requireAuth = asyncHandler(
     // TEMPORARY: Development bypass for testing
     if (config.isDevelopment && req.query.bypass === 'dev') {
       // Create a mock user for development with proper ObjectId
+      // Using the actual admin user ID from database to match workspace ownership
       req.user = {
-        _id: new Types.ObjectId('507f1f77bcf86cd799439011'),
+        _id: new Types.ObjectId('68c3d5afaf7c6f1e88aa8a53'),
         globalUserId: 'test-user-global',
         email: 'test@example.com',
         name: 'Test User',
-        role: 'admin',
+        role: 'super_admin',
         isActive: true,
         currentWorkspace: 'seed-workspace'
       } as any;
