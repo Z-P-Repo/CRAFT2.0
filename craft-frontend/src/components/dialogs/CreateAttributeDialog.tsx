@@ -59,6 +59,7 @@ const CreateAttributeDialog: React.FC<CreateAttributeDialogProps> = ({
     isMultiValue: false,
     enumValues: ['']
   });
+  const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
 
   const handleSubmit = async () => {
     if (!formData.name || !formData.displayName) return;
@@ -81,8 +82,35 @@ const CreateAttributeDialog: React.FC<CreateAttributeDialogProps> = ({
   };
 
   const handleClose = () => {
+    // Check if form has data and show confirmation
+    const hasFormData = formData.name.trim() || 
+                       formData.displayName.trim() || 
+                       formData.description.trim() ||
+                       formData.category !== 'subject' ||
+                       formData.dataType !== 'string' ||
+                       formData.isRequired ||
+                       formData.isMultiValue ||
+                       (formData.enumValues.length > 1 || formData.enumValues[0]?.trim());
+    
+    if (hasFormData) {
+      setCancelDialogOpen(true);
+      return;
+    }
+    
+    // No data, close directly
     handleReset();
     onClose();
+  };
+
+  // Cancel confirmation handlers
+  const handleCancelConfirm = () => {
+    setCancelDialogOpen(false);
+    handleReset();
+    onClose();
+  };
+
+  const handleCancelCancel = () => {
+    setCancelDialogOpen(false);
   };
 
   const handleEnumValueChange = (index: number, value: string) => {
@@ -247,6 +275,26 @@ const CreateAttributeDialog: React.FC<CreateAttributeDialogProps> = ({
           Create Attribute
         </Button>
       </DialogActions>
+
+      {/* Cancel Confirmation Dialog */}
+      <Dialog open={cancelDialogOpen} onClose={handleCancelCancel} maxWidth="sm" fullWidth>
+        <DialogTitle sx={{ pb: 1 }}>
+          Cancel Attribute Creation
+        </DialogTitle>
+        <DialogContent>
+          <Typography variant="body1" color="text.secondary">
+            Are you sure you want to cancel? All your changes will be lost and cannot be recovered.
+          </Typography>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 3 }}>
+          <Button onClick={handleCancelCancel} variant="outlined">
+            Continue Creating
+          </Button>
+          <Button onClick={handleCancelConfirm} variant="contained" color="error">
+            Yes, Cancel
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Dialog>
   );
 };

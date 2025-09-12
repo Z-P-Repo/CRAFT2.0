@@ -118,7 +118,7 @@ const WorkspaceSwitcher: React.FC<WorkspaceSwitcherProps> = ({
           }
         })
       }}
-      disabled={workspacesLoading || workspaces.length === 0}
+      disabled={workspacesLoading}
     >
       {!compact && (
         <Box sx={{ flex: 1, textAlign: 'left', ml: showLabels ? 1 : 0 }}>
@@ -237,7 +237,7 @@ const WorkspaceSwitcher: React.FC<WorkspaceSwitcherProps> = ({
         open={Boolean(workspaceMenuAnchor)}
         onClose={() => setWorkspaceMenuAnchor(null)}
         PaperProps={{
-          sx: { minWidth: 280, maxHeight: 400 }
+          sx: { minWidth: 280, maxHeight: workspaces.length === 0 ? 200 : 400 }
         }}
       >
         <Box sx={{ px: 2, py: 1 }}>
@@ -246,37 +246,44 @@ const WorkspaceSwitcher: React.FC<WorkspaceSwitcherProps> = ({
           </Typography>
         </Box>
         <Divider />
-        {workspaces && workspaces.length > 0 ? workspaces.map((workspace) => (
-          <MenuItem
-            key={workspace._id}
-            onClick={() => handleWorkspaceSelect(workspace)}
-            sx={{ py: 1.5 }}
-          >
-            <ListItemAvatar>
-              <Avatar sx={{ bgcolor: 'primary.main', width: 32, height: 32 }}>
-                <WorkspaceIcon fontSize="small" />
-              </Avatar>
-            </ListItemAvatar>
-            <ListItemText
-              primary={workspace.displayName}
-              secondary={workspace.description || `${workspace.name} workspace`}
-              primaryTypographyProps={{ fontWeight: 500 }}
-            />
-            {currentWorkspace?._id === workspace._id && (
-              <ListItemIcon sx={{ minWidth: 'auto', ml: 1 }}>
-                <CheckIcon color="primary" />
-              </ListItemIcon>
-            )}
-          </MenuItem>
-        )) : (
-          <MenuItem disabled>
-            <Typography variant="body2" color="text.secondary">
-              No workspaces available
-            </Typography>
+        {workspaces && workspaces.length > 0 ? (
+          workspaces.map((workspace) => (
+            <MenuItem
+              key={workspace._id}
+              onClick={() => handleWorkspaceSelect(workspace)}
+              sx={{ py: 1.5 }}
+            >
+              <ListItemAvatar>
+                <Avatar sx={{ bgcolor: 'primary.main', width: 32, height: 32 }}>
+                  <WorkspaceIcon fontSize="small" />
+                </Avatar>
+              </ListItemAvatar>
+              <ListItemText
+                primary={workspace.displayName}
+                secondary={workspace.description || `${workspace.name} workspace`}
+                primaryTypographyProps={{ fontWeight: 500 }}
+              />
+              {currentWorkspace?._id === workspace._id && (
+                <ListItemIcon sx={{ minWidth: 'auto', ml: 1 }}>
+                  <CheckIcon color="primary" />
+                </ListItemIcon>
+              )}
+            </MenuItem>
+          ))
+        ) : (
+          <MenuItem disabled sx={{ py: 1.5 }}>
+            <Box sx={{ textAlign: 'center', width: '100%' }}>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
+                No workspaces available
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                Create your first workspace below
+              </Typography>
+            </Box>
           </MenuItem>
         )}
         <Divider />
-        <MenuItem onClick={() => router.push('/settings')}>
+        <MenuItem onClick={() => router.push('/workspaces')}>
           <ListItemIcon>
             <AddIcon />
           </ListItemIcon>
@@ -343,7 +350,7 @@ const WorkspaceSwitcher: React.FC<WorkspaceSwitcherProps> = ({
         )}
         <Divider />
         <MenuItem 
-          onClick={() => router.push(`/workspaces/${currentWorkspace?._id}/applications/new`)}
+          onClick={() => router.push(`/workspaces`)}
           disabled={!currentWorkspace}
         >
           <ListItemIcon>
@@ -419,7 +426,7 @@ const WorkspaceSwitcher: React.FC<WorkspaceSwitcherProps> = ({
         )}
         <Divider />
         <MenuItem 
-          onClick={() => router.push(`/workspaces/${currentWorkspace?._id}/applications/${currentApplication?._id}/environments/new`)}
+          onClick={() => router.push(`/workspaces`)}
           disabled={!currentApplication}
         >
           <ListItemIcon>

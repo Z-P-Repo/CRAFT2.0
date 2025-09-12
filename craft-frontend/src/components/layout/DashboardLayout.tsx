@@ -35,6 +35,7 @@ import {
   ChevronLeft as ChevronLeftIcon,
   Timeline as TimelineIcon,
   Build as SetupIcon,
+  Business as WorkspaceIcon,
 } from '@mui/icons-material';
 import { useRouter, usePathname } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
@@ -49,6 +50,7 @@ interface DashboardLayoutProps {
 
 const menuItems = [
   { text: 'Dashboard', icon: DashboardIcon, path: '/dashboard' },
+  { text: 'Workspaces', icon: WorkspaceIcon, path: '/workspaces' },
   { text: 'Policies', icon: SecurityIcon, path: '/policies' },
   { text: 'Subjects', icon: PeopleIcon, path: '/subjects' },
   { text: 'Resources', icon: FolderIcon, path: '/resources' },

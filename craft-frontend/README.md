@@ -2,7 +2,7 @@
 
 A modern, responsive React-based dashboard for managing the CRAFT (Attribute-Based Access Control) Permission System. Built with Next.js 15, TypeScript, and Material-UI with a professional collapsible sidebar layout.
 
-![Version](https://img.shields.io/badge/version-1.3.1-blue.svg)
+![Version](https://img.shields.io/badge/version-1.3.2-blue.svg)
 ![Next.js](https://img.shields.io/badge/Next.js-15.4.6-black.svg)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.5-blue.svg)
 ![Material-UI](https://img.shields.io/badge/Material--UI-7.3-blue.svg)
@@ -76,7 +76,7 @@ NODE_ENV=development
 
 # Application Settings
 NEXT_PUBLIC_APP_NAME=CRAFT Permission System
-NEXT_PUBLIC_APP_VERSION=1.3.1
+NEXT_PUBLIC_APP_VERSION=1.3.2
 ```
 
 ## 🚀 Development
@@ -411,10 +411,28 @@ await trackUser('updated', 'user-456', 'John Doe');
 
 ---
 
-*Last updated: September 11, 2025*  
+*Last updated: September 12, 2025*  
 🤖 *Generated and maintained with [Claude Code](https://claude.ai/code)*
 
-## 🔄 Recent Updates (Version 1.3.1)
+## 🔄 Recent Updates (Version 1.3.2)
+
+### UI/UX Polish & User Management Enhancement
+- **🎨 Enhanced Workspace Cards**: Complete redesign of application count display with professional badge-like styling, improved visual hierarchy, and consistent Material-UI theming
+- **✨ Professional Action Controls**: Restructured workspace card layout with integrated action buttons, proper element positioning, and optimized accordion structure for better content flow
+- **📊 Badge Consistency**: Standardized status and application count badges with matching size, styling, visual weight, shadows, and rounded corners for professional appearance
+- **🔧 Layout Optimization**: Fixed overlapping issues between action icons and expand arrows with improved spacing, alignment, and element ordering using CSS flexbox
+- **🏷️ UI Simplification**: Removed redundant "Current" workspace indicator for cleaner presentation and better focus on essential information
+- **⚡ Element Positioning**: Optimized accordion structure with proper CSS order properties, natural content flow, and enhanced interaction patterns
+- **🖱️ Enhanced User Experience**: Improved hover states, interactive feedback, and visual polish across all workspace management components
+- **🎯 Visual Hierarchy**: Better organization of workspace information with logical element placement and consistent spacing throughout
+
+### Previous Updates (Version 1.3.1)
+
+### Critical Bug Fix & Workspace Hierarchy Resolution
+- **🏢 Workspace Hierarchy Display Fix**: Resolved critical issue preventing applications and environments from appearing under workspaces in the UI
+- **✅ Functional Navigation**: Workspace hierarchy navigation now properly displays applications and environments with correct data loading
+- **🔄 Context Integration**: WorkspaceContext and related components now correctly interface with fixed backend APIs
+- **📱 Real-time Updates**: Application and environment counts now display correctly in workspace cards and navigation
 
 ### UI/UX Consistency & User Experience Improvements
 - **🎨 Standardized Dropdown Format**: Consistent display format across all policy creation dropdowns (Subjects, Actions, Resources) showing only essential information

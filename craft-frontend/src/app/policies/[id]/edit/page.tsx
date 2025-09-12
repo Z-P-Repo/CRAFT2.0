@@ -232,6 +232,7 @@ export default function EditPolicyPage() {
   const [success, setSuccess] = useState(false);
   const [isCurrentStepValid, setIsCurrentStepValid] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
 
   // Original policy data
   const [originalPolicy, setOriginalPolicy] = useState<Policy | null>(null);
@@ -449,6 +450,20 @@ export default function EditPolicyPage() {
     if (activeStep > 0) {
       setActiveStep(prevStep => prevStep - 1);
     }
+  };
+
+  // Cancel confirmation handlers
+  const handleCancelClick = () => {
+    setCancelDialogOpen(true);
+  };
+
+  const handleCancelConfirm = () => {
+    setCancelDialogOpen(false);
+    router.push(`/policies/${policyId}`);
+  };
+
+  const handleCancelCancel = () => {
+    setCancelDialogOpen(false);
   };
 
   // Subject attribute selection
@@ -1858,7 +1873,7 @@ export default function EditPolicyPage() {
             <Box sx={{ display: 'flex', gap: 2 }}>
               <Button
                 variant="outlined"
-                onClick={() => router.push(`/policies/${policyId}`)}
+                onClick={handleCancelClick}
               >
                 Cancel
               </Button>
@@ -1885,6 +1900,26 @@ export default function EditPolicyPage() {
             </Box>
           </Box>
         </Paper>
+
+        {/* Cancel Confirmation Dialog */}
+        <Dialog open={cancelDialogOpen} onClose={handleCancelCancel} maxWidth="sm" fullWidth>
+          <DialogTitle sx={{ pb: 1 }}>
+            Cancel Policy Edit
+          </DialogTitle>
+          <DialogContent>
+            <Typography variant="body1" color="text.secondary">
+              Are you sure you want to cancel editing this policy? All your changes will be lost and cannot be recovered.
+            </Typography>
+          </DialogContent>
+          <DialogActions sx={{ px: 3, pb: 3 }}>
+            <Button onClick={handleCancelCancel} variant="outlined">
+              Continue Editing
+            </Button>
+            <Button onClick={handleCancelConfirm} variant="contained" color="error">
+              Yes, Cancel
+            </Button>
+          </DialogActions>
+        </Dialog>
     </DashboardLayout>
   );
 }

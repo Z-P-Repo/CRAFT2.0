@@ -10,7 +10,8 @@ import {
   Button,
   Box,
   IconButton,
-  CircularProgress
+  CircularProgress,
+  Typography
 } from '@mui/material';
 import {
   Close as CloseIcon
@@ -40,6 +41,7 @@ export default function ActionCreationDialog({
   const [displayNameError, setDisplayNameError] = useState('');
   const [description, setDescription] = useState('');
   const [isCreating, setIsCreating] = useState(false);
+  const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
 
   // Populate form when editing
   React.useEffect(() => {
@@ -57,10 +59,31 @@ export default function ActionCreationDialog({
 
   const handleClose = () => {
     if (isCreating) return; // Prevent closing during creation
+    
+    // Check if form has data and show confirmation
+    if (displayName.trim() || description.trim()) {
+      setCancelDialogOpen(true);
+      return;
+    }
+    
+    // No data, close directly
     setDisplayName('');
     setDescription('');
     setDisplayNameError('');
     onClose();
+  };
+
+  // Cancel confirmation handlers
+  const handleCancelConfirm = () => {
+    setCancelDialogOpen(false);
+    setDisplayName('');
+    setDescription('');
+    setDisplayNameError('');
+    onClose();
+  };
+
+  const handleCancelCancel = () => {
+    setCancelDialogOpen(false);
   };
 
   const handleDisplayNameChange = (value: string) => {
@@ -248,6 +271,26 @@ export default function ActionCreationDialog({
             : `${editingAction ? 'Update' : 'Create'} Action`}
         </Button>
       </DialogActions>
+
+      {/* Cancel Confirmation Dialog */}
+      <Dialog open={cancelDialogOpen} onClose={handleCancelCancel} maxWidth="sm" fullWidth>
+        <DialogTitle sx={{ pb: 1 }}>
+          {editingAction ? 'Cancel Action Edit' : 'Cancel Action Creation'}
+        </DialogTitle>
+        <DialogContent>
+          <Typography variant="body1" color="text.secondary">
+            Are you sure you want to cancel? All your changes will be lost and cannot be recovered.
+          </Typography>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 3 }}>
+          <Button onClick={handleCancelCancel} variant="outlined">
+            {editingAction ? 'Continue Editing' : 'Continue Creating'}
+          </Button>
+          <Button onClick={handleCancelConfirm} variant="contained" color="error">
+            Yes, Cancel
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Dialog>
   );
 }

@@ -14,7 +14,8 @@ import {
   Button,
   Box,
   IconButton,
-  CircularProgress
+  CircularProgress,
+  Typography
 } from '@mui/material';
 import {
   Close as CloseIcon
@@ -43,6 +44,7 @@ export default function SubjectCreationDialog({
   const [displayName, setDisplayName] = useState('');
   const [description, setDescription] = useState('');
   const [isCreating, setIsCreating] = useState(false);
+  const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
 
   // Populate form when editing
   React.useEffect(() => {
@@ -58,9 +60,29 @@ export default function SubjectCreationDialog({
 
   const handleClose = () => {
     if (isCreating) return; // Prevent closing during creation
+    
+    // Check if form has data and show confirmation
+    if (displayName.trim() || description.trim()) {
+      setCancelDialogOpen(true);
+      return;
+    }
+    
+    // No data, close directly
     setDisplayName('');
     setDescription('');
     onClose();
+  };
+
+  // Cancel confirmation handlers
+  const handleCancelConfirm = () => {
+    setCancelDialogOpen(false);
+    setDisplayName('');
+    setDescription('');
+    onClose();
+  };
+
+  const handleCancelCancel = () => {
+    setCancelDialogOpen(false);
   };
 
   const handleSubmit = async () => {
@@ -231,6 +253,26 @@ export default function SubjectCreationDialog({
             : `${editingSubject ? 'Update' : 'Create'} Subject`}
         </Button>
       </DialogActions>
+
+      {/* Cancel Confirmation Dialog */}
+      <Dialog open={cancelDialogOpen} onClose={handleCancelCancel} maxWidth="sm" fullWidth>
+        <DialogTitle sx={{ pb: 1 }}>
+          {editingSubject ? 'Cancel Subject Edit' : 'Cancel Subject Creation'}
+        </DialogTitle>
+        <DialogContent>
+          <Typography variant="body1" color="text.secondary">
+            Are you sure you want to cancel? All your changes will be lost and cannot be recovered.
+          </Typography>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 3 }}>
+          <Button onClick={handleCancelCancel} variant="outlined">
+            {editingSubject ? 'Continue Editing' : 'Continue Creating'}
+          </Button>
+          <Button onClick={handleCancelConfirm} variant="contained" color="error">
+            Yes, Cancel
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Dialog>
   );
 }

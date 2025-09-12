@@ -116,6 +116,7 @@ export default function UsersPage() {
   const [newRole, setNewRole] = useState<'super_admin' | 'admin' | 'basic'>('basic');
   const [isDeleting, setIsDeleting] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
   
   // Filter and sort menu states
   const [filterAnchorEl, setFilterAnchorEl] = useState<HTMLElement | null>(null);
@@ -307,6 +308,19 @@ export default function UsersPage() {
   };
 
   const handleClose = () => {
+    // Check if form has data and show confirmation
+    const hasFormData = name.trim() || 
+                       email.trim() || 
+                       role !== 'basic' ||
+                       department.trim() ||
+                       password.trim();
+    
+    if (hasFormData) {
+      setCancelDialogOpen(true);
+      return;
+    }
+    
+    // No data, close directly
     setOpen(false);
     setSelectedUser(null);
     setName('');
@@ -317,6 +331,25 @@ export default function UsersPage() {
     setNameError('');
     setEmailError('');
     setPasswordError('');
+  };
+
+  // Cancel confirmation handlers
+  const handleCancelConfirm = () => {
+    setCancelDialogOpen(false);
+    setOpen(false);
+    setSelectedUser(null);
+    setName('');
+    setEmail('');
+    setRole('basic');
+    setDepartment('');
+    setPassword('');
+    setNameError('');
+    setEmailError('');
+    setPasswordError('');
+  };
+
+  const handleCancelCancel = () => {
+    setCancelDialogOpen(false);
   };
 
   const handleViewOpen = (user: ExtendedUser) => {
@@ -899,6 +932,26 @@ export default function UsersPage() {
         </DialogContent>
         <DialogActions>
           <Button onClick={handleViewClose}>Close</Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Cancel Confirmation Dialog */}
+      <Dialog open={cancelDialogOpen} onClose={handleCancelCancel} maxWidth="sm" fullWidth>
+        <DialogTitle sx={{ pb: 1 }}>
+          {selectedUser ? 'Cancel User Edit' : 'Cancel User Creation'}
+        </DialogTitle>
+        <DialogContent>
+          <Typography variant="body1" color="text.secondary">
+            Are you sure you want to cancel? All your changes will be lost and cannot be recovered.
+          </Typography>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 3 }}>
+          <Button onClick={handleCancelCancel} variant="outlined">
+            {selectedUser ? 'Continue Editing' : 'Continue Creating'}
+          </Button>
+          <Button onClick={handleCancelConfirm} variant="contained" color="error">
+            Yes, Cancel
+          </Button>
         </DialogActions>
       </Dialog>
 
