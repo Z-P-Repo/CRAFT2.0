@@ -39,6 +39,7 @@ import {
 } from '@mui/icons-material';
 import { useRouter, usePathname } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
+import { canManage, canCreate, canEdit } from '@/utils/permissions';
 import WorkspaceSwitcher from '@/components/workspace/WorkspaceSwitcher';
 
 const DRAWER_WIDTH = 280;
@@ -49,17 +50,17 @@ interface DashboardLayoutProps {
 }
 
 const menuItems = [
-  { text: 'Dashboard', icon: DashboardIcon, path: '/dashboard' },
-  { text: 'Workspaces', icon: WorkspaceIcon, path: '/workspaces' },
-  { text: 'Policies', icon: SecurityIcon, path: '/policies' },
-  { text: 'Subjects', icon: PeopleIcon, path: '/subjects' },
-  { text: 'Resources', icon: FolderIcon, path: '/resources' },
-  { text: 'Actions', icon: ActionIcon, path: '/actions' },
-  { text: 'Attributes', icon: AttributeIcon, path: '/attributes' },
-  { text: 'Activity', icon: TimelineIcon, path: '/activity' },
-  { text: 'Users', icon: AccountCircle, path: '/users' },
-  { text: 'Settings', icon: SetupIcon, path: '/settings' },
-  { text: 'Policy Tester', icon: TesterIcon, path: '/tester' },
+  { text: 'Dashboard', icon: DashboardIcon, path: '/dashboard', roles: ['basic', 'admin', 'super_admin'] },
+  { text: 'Workspaces', icon: WorkspaceIcon, path: '/workspaces', roles: ['basic', 'admin', 'super_admin'] },
+  { text: 'Activity', icon: TimelineIcon, path: '/activity', roles: ['basic', 'admin', 'super_admin'] },
+  { text: 'Policies', icon: SecurityIcon, path: '/policies', roles: ['basic', 'admin', 'super_admin'] },
+  { text: 'Subjects', icon: PeopleIcon, path: '/subjects', roles: ['basic', 'admin', 'super_admin'] },
+  { text: 'Resources', icon: FolderIcon, path: '/resources', roles: ['basic', 'admin', 'super_admin'] },
+  { text: 'Actions', icon: ActionIcon, path: '/actions', roles: ['basic', 'admin', 'super_admin'] },
+  { text: 'Attributes', icon: AttributeIcon, path: '/attributes', roles: ['basic', 'admin', 'super_admin'] },
+  { text: 'Users', icon: AccountCircle, path: '/users', roles: ['admin', 'super_admin'] },
+  { text: 'Settings', icon: SetupIcon, path: '/settings', roles: ['admin', 'super_admin'] },
+  { text: 'Policy Tester', icon: TesterIcon, path: '/tester', roles: ['admin', 'super_admin'] },
 ];
 
 export default function DashboardLayout({ children }: DashboardLayoutProps) {
@@ -72,6 +73,11 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const { user, logout } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
+
+  // Filter menu items based on user role
+  const filteredMenuItems = menuItems.filter(item =>
+    user?.role && item.roles.includes(user.role)
+  );
 
   const handleDrawerToggle = () => {
     setDrawerOpen(!drawerOpen);
@@ -138,7 +144,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
       {/* Navigation */}
       <List sx={{ flex: 1, pt: 1 }}>
-        {menuItems.map((item) => {
+        {filteredMenuItems.map((item) => {
           const Icon = item.icon;
           // Check for exact match or sub-paths (drill-down pages)
           const isActive = pathname === item.path ||

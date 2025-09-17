@@ -1,5 +1,10 @@
 import { User } from '@/types';
 
+export const canView = (user: User | null): boolean => {
+  if (!user) return false;
+  return user.role === 'basic' || user.role === 'admin' || user.role === 'super_admin';
+};
+
 export const canEdit = (user: User | null): boolean => {
   if (!user) return false;
   return user.role === 'admin' || user.role === 'super_admin';

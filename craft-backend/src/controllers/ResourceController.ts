@@ -9,9 +9,9 @@ import { Policy } from '@/models/Policy';
 
 export class ResourceController {
   // Get all resources with pagination and filtering
-  static getResources = asyncHandler(async (req: Request, res: Response): Promise<any> => {
+  static getResources = asyncHandler(async (req: AuthRequest, res: Response): Promise<any> => {
     logger.info('GET /resources called with query:', req.query);
-    
+
     const paginationOptions = PaginationHelper.validatePaginationParams(req.query);
     const {
       search,
@@ -23,15 +23,29 @@ export class ResourceController {
       tags,
     } = req.query;
 
+    const user = req.user;
+    const userRole = user?.role;
+
     // Build filter object
     const filter: any = {};
-    
+
+    // Apply workspace-based filtering for basic and admin users
+    if (userRole === 'basic' || userRole === 'admin') {
+      const assignedWorkspaces = user?.assignedWorkspaces || [];
+      if (assignedWorkspaces.length > 0) {
+        filter.workspaceId = { $in: assignedWorkspaces };
+      } else {
+        // User with no workspace assignments - no access
+        filter.workspaceId = null; // This will return no results
+      }
+    }
+
     if (type) filter.type = type;
     if (classification) filter['metadata.classification'] = classification;
     if (active !== undefined) filter.active = active === 'true';
     if (parentId) filter.parentId = parentId;
     if (owner) filter['metadata.owner'] = owner;
-    
+
     if (tags) {
       const tagArray = Array.isArray(tags) ? tags : [tags];
       filter['metadata.tags'] = { $in: tagArray };
@@ -88,13 +102,34 @@ export class ResourceController {
   });
 
   // Get resource by ID
-  static getResourceById = asyncHandler(async (req: Request, res: Response): Promise<any> => {
+  static getResourceById = asyncHandler(async (req: AuthRequest, res: Response): Promise<any> => {
     const { id } = req.params;
+    const user = req.user;
+    const userRole = user?.role;
 
-    // Try to find by custom id first, then by MongoDB _id
-    let resource = await Resource.findOne({ id }).lean();
-    if (!resource) {
+    let resource;
+
+    // Apply workspace filtering for basic and admin users
+    if (userRole === 'basic' || userRole === 'admin') {
+      const assignedWorkspaces = user?.assignedWorkspaces || [];
+      if (assignedWorkspaces.length > 0) {
+        const workspaceFilter = { workspaceId: { $in: assignedWorkspaces } };
+
+        // Try to find by MongoDB _id first, then by custom id field (with workspace filtering)
+        resource = await Resource.findOne({ _id: id, ...workspaceFilter }).lean();
+        if (!resource) {
+          resource = await Resource.findOne({ id, ...workspaceFilter }).lean();
+        }
+      } else {
+        // User with no workspace assignments - no access
+        resource = null;
+      }
+    } else {
+      // Super admin users - no workspace filtering
       resource = await Resource.findById(id).lean();
+      if (!resource) {
+        resource = await Resource.findOne({ id }).lean();
+      }
     }
 
     if (!resource) {

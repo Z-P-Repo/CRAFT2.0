@@ -47,6 +47,7 @@ import {
   Code as CodeIcon,
 } from '@mui/icons-material';
 import DashboardLayout from '@/components/layout/DashboardLayout';
+import RoleProtection from '@/components/auth/RoleProtection';
 
 interface TestResult {
   id: string;
@@ -149,7 +150,8 @@ export default function PolicyTesterPage() {
   ];
 
   return (
-    <DashboardLayout>
+    <RoleProtection allowedRoles={['admin', 'super_admin']}>
+      <DashboardLayout>
       {/* Header */}
       <Paper elevation={1} sx={{ p: 3, mb: 4 }}>
         <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
@@ -458,6 +460,7 @@ export default function PolicyTesterPage() {
           </CardContent>
         </Card>
       )}
-    </DashboardLayout>
+      </DashboardLayout>
+    </RoleProtection>
   );
 }

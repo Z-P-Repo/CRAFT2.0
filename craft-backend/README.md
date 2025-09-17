@@ -2,7 +2,7 @@
 
 A robust, scalable Node.js backend API for the CRAFT (Attribute-Based Access Control) Permission System. Built with Express.js, TypeScript, MongoDB, and comprehensive security features.
 
-![Version](https://img.shields.io/badge/version-1.3.2-blue.svg)
+![Version](https://img.shields.io/badge/version-1.3.4-blue.svg)
 ![Node.js](https://img.shields.io/badge/Node.js-18+-green.svg)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.5-blue.svg)
 ![Express](https://img.shields.io/badge/Express-4.19-black.svg)
@@ -27,6 +27,7 @@ A robust, scalable Node.js backend API for the CRAFT (Attribute-Based Access Con
 - **🎨 Standardized UI Integration** - Backend supports frontend's standardized delete confirmation dialogs with consistent error responses and system protection features
 - **🏢 Hierarchical Architecture** - Multi-tenant workspace system with complete Workspace → Applications → Environments hierarchy and comprehensive context integration
 - **⚙️ Settings Management** - Unified API endpoints for creating complete workspace hierarchies with transaction support and template system
+- **🏗️ Environment Management** - Intelligent environment name auto-generation, comprehensive error tracking, and robust creation workflows with silent failure resolution
 - **🚀 Advanced API Performance** - Intelligent request batching, deduplication, and optimized MongoDB queries for enhanced performance
 - **⚡ Request Optimization** - Sophisticated caching mechanisms, response compression, and database query optimization
 - **🎯 Enhanced Boolean Support** - Improved backend handling of boolean attributes with enhanced validation and serialization
@@ -71,7 +72,7 @@ JWT_SECRET=your-super-secret-jwt-key
 JWT_EXPIRES_IN=7d
 
 # Server
-PORT=3001
+PORT=3005
 NODE_ENV=development
 
 # CORS
@@ -352,10 +353,24 @@ For support and questions:
 
 ---
 
-*Last updated: September 12, 2025*  
+*Last updated: September 17, 2025*
 🤖 *Generated and maintained with [Claude Code](https://claude.ai/code)*
 
-## 🔄 Recent Updates (Version 1.3.1)
+## 🔄 Recent Updates (Version 1.3.4)
+
+### Role-Based Access Control & Environment API Enhancement (September 17, 2025)
+- **🔐 Advanced RBAC System**: Implemented comprehensive three-tier role-based access control (super_admin, admin, basic)
+- **🛡️ Workspace-Based Access Control**: Enhanced all controllers to restrict admin and basic users to their assigned workspaces
+- **👤 Basic User Support**: Added view-only access for basic users across all ABAC entities (policies, subjects, resources, actions, attributes)
+- **🔧 Environment API Enhancement**: Fixed critical environments API access control with proper application validation for basic users
+- **⚙️ Assignment Management**: Enhanced user assignment logic to preserve existing assignments when updating workspaces/applications
+- **🌐 Backend API Routing**: Corrected environment routes with proper hierarchical access control and assignment validation
+- **🏢 Workspace Access Logic**: Refined workspace ownership and admin validation with assignment-based access control
+- **🛡️ Permission Middleware**: Enhanced authentication middleware with proper role-based filtering across all routes
+- **📊 Admin User Restrictions**: Removed super admin-like privileges from admin users, restricting them to assigned workspaces only
+- **🔧 Application Access Control**: Added proper application access validation for basic users in environments and applications routes
+
+### Recent Updates (Version 1.3.3)
 
 ### Critical Backend Fix & Workspace Hierarchy 
 - **🔧 Application/Environment API Fix**: Resolved critical issue causing 404 errors for workspace application and environment endpoints

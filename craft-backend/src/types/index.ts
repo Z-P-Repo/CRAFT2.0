@@ -114,7 +114,8 @@ export interface IUser {
   authProvider?: 'local' | 'azuread';
   azureAdId?: string;
   lastLoginAt?: Date;
-  workspaces?: string[];
+  assignedWorkspaces?: string[];
+  assignedApplications?: string[];
   currentWorkspace?: string;
   workspaceRoles?: Map<string, {
     role: 'owner' | 'admin' | 'member' | 'viewer';

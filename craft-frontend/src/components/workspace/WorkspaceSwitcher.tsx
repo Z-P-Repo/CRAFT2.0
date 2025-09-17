@@ -28,6 +28,8 @@ import {
 } from '@mui/icons-material';
 import { useRouter } from 'next/navigation';
 import { useWorkspace } from '@/contexts/WorkspaceContext';
+import { useAuth } from '@/contexts/AuthContext';
+import { canCreate } from '@/utils/permissions';
 
 interface WorkspaceSwitcherProps {
   variant?: 'header' | 'sidebar';
@@ -41,6 +43,7 @@ const WorkspaceSwitcher: React.FC<WorkspaceSwitcherProps> = ({
   compact = false
 }) => {
   const router = useRouter();
+  const { user } = useAuth();
   const {
     currentWorkspace,
     currentApplication,
@@ -282,13 +285,15 @@ const WorkspaceSwitcher: React.FC<WorkspaceSwitcherProps> = ({
             </Box>
           </MenuItem>
         )}
-        <Divider />
-        <MenuItem onClick={() => router.push('/workspaces')}>
-          <ListItemIcon>
-            <AddIcon />
-          </ListItemIcon>
-          <ListItemText primary="Create New Workspace" />
-        </MenuItem>
+        {canCreate(user) && [
+          <Divider key="divider-workspace" />,
+          <MenuItem key="create-workspace" onClick={() => router.push('/workspaces')}>
+            <ListItemIcon>
+              <AddIcon />
+            </ListItemIcon>
+            <ListItemText primary="Create New Workspace" />
+          </MenuItem>
+        ]}
       </Menu>
 
       {/* Application Selector */}
@@ -348,16 +353,19 @@ const WorkspaceSwitcher: React.FC<WorkspaceSwitcherProps> = ({
             </Typography>
           </MenuItem>
         )}
-        <Divider />
-        <MenuItem 
-          onClick={() => router.push(`/workspaces`)}
-          disabled={!currentWorkspace}
-        >
-          <ListItemIcon>
-            <AddIcon />
-          </ListItemIcon>
-          <ListItemText primary="Create New Application" />
-        </MenuItem>
+        {canCreate(user) && [
+          <Divider key="divider-application" />,
+          <MenuItem
+            key="create-application"
+            onClick={() => router.push(`/workspaces`)}
+            disabled={!currentWorkspace}
+          >
+            <ListItemIcon>
+              <AddIcon />
+            </ListItemIcon>
+            <ListItemText primary="Create New Application" />
+          </MenuItem>
+        ]}
       </Menu>
 
       {/* Environment Selector */}
@@ -424,16 +432,19 @@ const WorkspaceSwitcher: React.FC<WorkspaceSwitcherProps> = ({
             </Typography>
           </MenuItem>
         )}
-        <Divider />
-        <MenuItem 
-          onClick={() => router.push(`/workspaces`)}
-          disabled={!currentApplication}
-        >
-          <ListItemIcon>
-            <AddIcon />
-          </ListItemIcon>
-          <ListItemText primary="Create New Environment" />
-        </MenuItem>
+        {canCreate(user) && [
+          <Divider key="divider-environment" />,
+          <MenuItem
+            key="create-environment"
+            onClick={() => router.push(`/workspaces`)}
+            disabled={!currentApplication}
+          >
+            <ListItemIcon>
+              <AddIcon />
+            </ListItemIcon>
+            <ListItemText primary="Create New Environment" />
+          </MenuItem>
+        ]}
       </Menu>
     </Box>
   );

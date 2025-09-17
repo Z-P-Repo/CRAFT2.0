@@ -8,7 +8,7 @@ import { Policy, IPolicy } from '@/models/Policy';
 
 export class PolicyController {
   // Get all policies with pagination and filtering
-  static getPolicies = asyncHandler(async (req: Request, res: Response): Promise<any> => {
+  static getPolicies = asyncHandler(async (req: AuthRequest, res: Response): Promise<any> => {
     const paginationOptions = PaginationHelper.validatePaginationParams(req.query);
     const {
       search,
@@ -18,13 +18,27 @@ export class PolicyController {
       tags,
     } = req.query;
 
+    const user = req.user;
+    const userRole = user?.role;
+
     // Build filter object
     const filter: any = {};
-    
+
+    // Apply workspace-based filtering for basic and admin users
+    if (userRole === 'basic' || userRole === 'admin') {
+      const assignedWorkspaces = user?.assignedWorkspaces || [];
+      if (assignedWorkspaces.length > 0) {
+        filter.workspaceId = { $in: assignedWorkspaces };
+      } else {
+        // User with no workspace assignments - no access
+        filter.workspaceId = null; // This will return no results
+      }
+    }
+
     if (effect) filter.effect = effect;
     if (status) filter.status = status;
     if (createdBy) filter['metadata.createdBy'] = createdBy;
-    
+
     if (tags) {
       const tagArray = Array.isArray(tags) ? tags : [tags];
       filter['metadata.tags'] = { $in: tagArray };
@@ -65,10 +79,25 @@ export class PolicyController {
   });
 
   // Get policy by ID
-  static getPolicyById = asyncHandler(async (req: Request, res: Response): Promise<any> => {
+  static getPolicyById = asyncHandler(async (req: AuthRequest, res: Response): Promise<any> => {
     const { id } = req.params;
+    const user = req.user;
+    const userRole = user?.role;
 
-    const policy = await Policy.findOne({ id }).lean();
+    // Build query with workspace filtering for basic and admin users
+    const query: any = { id };
+
+    if (userRole === 'basic' || userRole === 'admin') {
+      const assignedWorkspaces = user?.assignedWorkspaces || [];
+      if (assignedWorkspaces.length > 0) {
+        query.workspaceId = { $in: assignedWorkspaces };
+      } else {
+        // User with no workspace assignments - no access
+        query.workspaceId = null; // This will return no results
+      }
+    }
+
+    const policy = await Policy.findOne(query).lean();
 
     if (!policy) {
       throw new NotFoundError('Policy not found');

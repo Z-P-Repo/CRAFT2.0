@@ -2,7 +2,7 @@
 
 A modern, responsive React-based dashboard for managing the CRAFT (Attribute-Based Access Control) Permission System. Built with Next.js 15, TypeScript, and Material-UI with a professional collapsible sidebar layout.
 
-![Version](https://img.shields.io/badge/version-1.3.2-blue.svg)
+![Version](https://img.shields.io/badge/version-1.3.4-blue.svg)
 ![Next.js](https://img.shields.io/badge/Next.js-15.4.6-black.svg)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.5-blue.svg)
 ![Material-UI](https://img.shields.io/badge/Material--UI-7.3-blue.svg)
@@ -29,6 +29,7 @@ A modern, responsive React-based dashboard for managing the CRAFT (Attribute-Bas
 - **📋 Activity Monitoring** - Comprehensive activity logging and audit trail system with real-time activity feed, advanced filtering, and detailed activity views
 - **🧪 Policy Tester** - Interactive policy evaluation and testing with detailed results
 - **🏢 Hierarchical Workspace Management** - Complete multi-tenant workspace system with Workspace → Applications → Environments hierarchy and authentication integration
+- **🏗️ Environment Management** - Intelligent environment name auto-generation, enhanced creation workflows, and improved validation with display name synchronization
 - **⚙️ Unified Settings Page** - Single-page setup wizard with enhanced stepper UI and step-by-step guidance for creating complete workspace hierarchies
 - **🎨 Enhanced Stepper UI** - Policy Creation-inspired stepper design with circular progress indicators, completion states, and Material-UI theming
 - **🔄 Workspace Context Management** - Comprehensive React context providers with authentication-aware workspace, application, and environment state management
@@ -43,7 +44,7 @@ A modern, responsive React-based dashboard for managing the CRAFT (Attribute-Bas
 
 - Node.js 18+
 - npm 9+
-- CRAFT Backend API running on port 3001
+- CRAFT Backend API running on port 3005
 
 ## 🛠️ Installation
 
@@ -68,7 +69,7 @@ Update the `.env.local` file with your settings:
 
 ```env
 # API Configuration
-NEXT_PUBLIC_API_URL=http://localhost:3001/api/v1
+NEXT_PUBLIC_API_URL=http://localhost:3005/api/v1
 NEXT_PUBLIC_APP_URL=http://localhost:3002
 
 # Environment
@@ -76,7 +77,7 @@ NODE_ENV=development
 
 # Application Settings
 NEXT_PUBLIC_APP_NAME=CRAFT Permission System
-NEXT_PUBLIC_APP_VERSION=1.3.2
+NEXT_PUBLIC_APP_VERSION=1.3.4
 ```
 
 ## 🚀 Development
@@ -411,10 +412,36 @@ await trackUser('updated', 'user-456', 'John Doe');
 
 ---
 
-*Last updated: September 12, 2025*  
+*Last updated: September 17, 2025*
 🤖 *Generated and maintained with [Claude Code](https://claude.ai/code)*
 
-## 🔄 Recent Updates (Version 1.3.2)
+## 🔄 Recent Updates (Version 1.3.4)
+
+### Role-Based Access Control & Enhanced UI (September 17, 2025)
+- **🔐 Comprehensive RBAC Implementation**: Three-tier role system (super_admin, admin, basic) with proper access control throughout the UI
+- **👤 Basic User Interface**: Basic users now have view-only access to all ABAC entities with disabled create/edit/delete buttons
+- **🏢 Workspace Assignment System**: Admin users restricted to their assigned workspaces with proper context management
+- **🔧 Environment API Configuration**: Fixed critical API connection issue by updating frontend to connect to correct backend port (3005)
+- **🎨 Role-Based UI Filtering**: Conditional rendering of actions based on user roles across all components and navigation
+- **📝 Workspace Name Display**: Fixed workspace edit form to show correct displayName instead of internal name field
+- **💼 Professional Workspace Detail**: Redesigned workspace detail page with compact header, metrics cards, and professional table layout
+- **🔧 React Fragment Resolution**: Fixed Material-UI Menu component errors by replacing React Fragments with arrays
+- **⚙️ Context-Aware Navigation**: Enhanced WorkspaceSwitcher with proper role-based create button visibility
+- **🛡️ Permission-Based Menu**: Updated DashboardLayout to show/hide menu items based on user roles and permissions
+- **🌐 API Client Enhancement**: Corrected frontend API configuration to properly connect to backend services
+
+### Recent Updates (Version 1.3.3)
+
+### Environment Management Enhancement
+- **🏗️ Environment Name Auto-Generation**: Intelligent generation of environment names from display names ensuring consistency and eliminating validation issues
+- **📝 Synchronized Display Names**: Environment display names and internal names are now automatically synchronized for better user experience
+- **✅ Improved Validation**: Streamlined environment validation process with automatic name normalization and sanitization
+- **🔧 Silent Failure Resolution**: Fixed silent environment creation failures during workspace setup with comprehensive error tracking
+- **🌐 Enhanced Workspace Creation**: Improved reliability of complete workspace hierarchy creation with better error reporting and recovery
+- **📊 Better Error Tracking**: Added comprehensive error tracking for failed environments during bulk creation operations
+- **🎯 Consistent Naming Pattern**: Environment names follow the same auto-generation pattern as applications for consistency across the platform
+
+### Previous Updates (Version 1.3.2)
 
 ### UI/UX Polish & User Management Enhancement
 - **🎨 Enhanced Workspace Cards**: Complete redesign of application count display with professional badge-like styling, improved visual hierarchy, and consistent Material-UI theming

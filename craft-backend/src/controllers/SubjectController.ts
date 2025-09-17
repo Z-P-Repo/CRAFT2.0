@@ -9,7 +9,7 @@ import { Policy } from '@/models/Policy';
 
 export class SubjectController {
   // Get all subjects with pagination and filtering
-  static getSubjects = asyncHandler(async (req: Request, res: Response): Promise<any> => {
+  static getSubjects = asyncHandler(async (req: AuthRequest, res: Response): Promise<any> => {
     const paginationOptions = PaginationHelper.validatePaginationParams(req.query);
     const {
       search,
@@ -20,9 +20,23 @@ export class SubjectController {
       active,
     } = req.query;
 
+    const user = req.user;
+    const userRole = user?.role;
+
     // Build filter object
     const filter: any = {};
-    
+
+    // Apply workspace-based filtering for basic and admin users
+    if (userRole === 'basic' || userRole === 'admin') {
+      const assignedWorkspaces = user?.assignedWorkspaces || [];
+      if (assignedWorkspaces.length > 0) {
+        filter.workspaceId = { $in: assignedWorkspaces };
+      } else {
+        // User with no workspace assignments - no access
+        filter.workspaceId = null; // This will return no results
+      }
+    }
+
     if (type) filter.type = type;
     if (status) filter.status = status;
     if (department) filter.department = department;
@@ -80,13 +94,34 @@ export class SubjectController {
   });
 
   // Get subject by ID
-  static getSubjectById = asyncHandler(async (req: Request, res: Response): Promise<any> => {
+  static getSubjectById = asyncHandler(async (req: AuthRequest, res: Response): Promise<any> => {
     const { id } = req.params;
+    const user = req.user;
+    const userRole = user?.role;
 
-    // Try to find by MongoDB _id first, then by custom id field
-    let subject = await Subject.findById(id).lean();
-    if (!subject) {
-      subject = await Subject.findOne({ id }).lean();
+    let subject;
+
+    // Apply workspace filtering for basic and admin users
+    if (userRole === 'basic' || userRole === 'admin') {
+      const assignedWorkspaces = user?.assignedWorkspaces || [];
+      if (assignedWorkspaces.length > 0) {
+        const workspaceFilter = { workspaceId: { $in: assignedWorkspaces } };
+
+        // Try to find by MongoDB _id first, then by custom id field (with workspace filtering)
+        subject = await Subject.findOne({ _id: id, ...workspaceFilter }).lean();
+        if (!subject) {
+          subject = await Subject.findOne({ id, ...workspaceFilter }).lean();
+        }
+      } else {
+        // User with no workspace assignments - no access
+        subject = null;
+      }
+    } else {
+      // Super admin users - no workspace filtering
+      subject = await Subject.findById(id).lean();
+      if (!subject) {
+        subject = await Subject.findOne({ id }).lean();
+      }
     }
 
     if (!subject) {

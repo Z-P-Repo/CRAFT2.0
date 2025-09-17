@@ -91,7 +91,7 @@ export class UserController {
 
   // Create new user
   static createUser = asyncHandler(async (req: AuthRequest, res: Response): Promise<any> => {
-    const { email, password, name, role, department, managerId, attributes } = req.body;
+    const { email, password, name, role, department, managerId, attributes, assignedWorkspaces, assignedApplications } = req.body;
 
     // Validate required fields
     if (!email || !password || !name) {
@@ -125,6 +125,8 @@ export class UserController {
       department,
       managerId,
       attributes: new Map(Object.entries(attributes || {})),
+      assignedWorkspaces: assignedWorkspaces || [],
+      assignedApplications: assignedApplications || [],
     };
 
     const user = new User(userData);
@@ -154,6 +156,12 @@ export class UserController {
       throw new ValidationError('Invalid user ID');
     }
 
+    // Get the existing user to preserve assignments if not explicitly provided
+    const existingUser = await User.findById(id);
+    if (!existingUser) {
+      throw new NotFoundError('User not found');
+    }
+
     // Remove sensitive fields from updates
     delete updates.password;
     delete updates._id;
@@ -174,6 +182,19 @@ export class UserController {
     // Convert attributes to Map if provided
     if (updates.attributes) {
       updates.attributes = new Map(Object.entries(updates.attributes));
+    }
+
+    // Handle assignment fields more carefully
+    // If assignedWorkspaces is being updated but assignedApplications is not provided,
+    // preserve the existing assignedApplications
+    if (updates.hasOwnProperty('assignedWorkspaces') && !updates.hasOwnProperty('assignedApplications')) {
+      updates.assignedApplications = existingUser.assignedApplications || [];
+    }
+
+    // Similarly, if assignedApplications is being updated but assignedWorkspaces is not provided,
+    // preserve the existing assignedWorkspaces
+    if (updates.hasOwnProperty('assignedApplications') && !updates.hasOwnProperty('assignedWorkspaces')) {
+      updates.assignedWorkspaces = existingUser.assignedWorkspaces || [];
     }
 
     const user = await User.findByIdAndUpdate(

@@ -56,6 +56,8 @@ import {
 } from '@mui/icons-material';
 import { useSnackbar } from '@/contexts/SnackbarContext';
 import { useWorkspace } from '@/contexts/WorkspaceContext';
+import { useAuth } from '@/contexts/AuthContext';
+import { canCreate, canManage } from '@/utils/permissions';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import { useRouter } from 'next/navigation';
 import { apiClient } from '@/lib/api';
@@ -129,6 +131,7 @@ const formatCreatedBy = (createdBy: any) => {
 export default function WorkspacesPage() {
   const [workspaces, setWorkspaces] = useState<IWorkspaceData[]>([]);
   const [loading, setLoading] = useState(true);
+  const { user } = useAuth();
   const [error, setError] = useState<string | null>(null);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [selectedWorkspace, setSelectedWorkspace] = useState<IWorkspaceData | null>(null);
@@ -332,14 +335,16 @@ export default function WorkspacesPage() {
             <Typography variant="body2" color="text.secondary">
               Manage your workspaces, applications, and environments
             </Typography>
-            <Button
-              variant="contained"
-              startIcon={<AddIcon />}
-              onClick={handleCreateWorkspace}
-              sx={{ px: 3 }}
-            >
-              Create Workspace
-            </Button>
+            {canCreate(user) && (
+              <Button
+                variant="contained"
+                startIcon={<AddIcon />}
+                onClick={handleCreateWorkspace}
+                sx={{ px: 3 }}
+              >
+                Create Workspace
+              </Button>
+            )}
           </Box>
         </Paper>
 
@@ -363,13 +368,15 @@ export default function WorkspacesPage() {
                 <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
                   Create your first workspace to get started
                 </Typography>
-                <Button
-                  variant="contained"
-                  startIcon={<AddIcon />}
-                  onClick={handleCreateWorkspace}
-                >
-                  Create Workspace
-                </Button>
+                {canCreate(user) && (
+                  <Button
+                    variant="contained"
+                    startIcon={<AddIcon />}
+                    onClick={handleCreateWorkspace}
+                  >
+                    Create Workspace
+                  </Button>
+                )}
               </Box>
             ) : (
               <Box>
@@ -621,25 +628,29 @@ export default function WorkspacesPage() {
             </ListItemIcon>
             <ListItemText>View Details</ListItemText>
           </MenuItem>
-          <MenuItem onClick={() => selectedWorkspace && handleEditWorkspace(selectedWorkspace)}>
-            <ListItemIcon>
-              <EditIcon fontSize="small" />
-            </ListItemIcon>
-            <ListItemText>Edit Workspace</ListItemText>
-          </MenuItem>
-          <MenuItem onClick={() => selectedWorkspace && handleSettingsWorkspace(selectedWorkspace)}>
-            <ListItemIcon>
-              <SettingsIcon fontSize="small" />
-            </ListItemIcon>
-            <ListItemText>Settings</ListItemText>
-          </MenuItem>
-          <Divider />
-          <MenuItem onClick={() => selectedWorkspace && handleDeleteWorkspace(selectedWorkspace)}>
-            <ListItemIcon>
-              <DeleteIcon fontSize="small" />
-            </ListItemIcon>
-            <ListItemText>Delete</ListItemText>
-          </MenuItem>
+          {user?.role !== 'basic' && (
+            <>
+              <MenuItem onClick={() => selectedWorkspace && handleEditWorkspace(selectedWorkspace)}>
+                <ListItemIcon>
+                  <EditIcon fontSize="small" />
+                </ListItemIcon>
+                <ListItemText>Edit Workspace</ListItemText>
+              </MenuItem>
+              <MenuItem onClick={() => selectedWorkspace && handleSettingsWorkspace(selectedWorkspace)}>
+                <ListItemIcon>
+                  <SettingsIcon fontSize="small" />
+                </ListItemIcon>
+                <ListItemText>Settings</ListItemText>
+              </MenuItem>
+              <Divider />
+              <MenuItem onClick={() => selectedWorkspace && handleDeleteWorkspace(selectedWorkspace)}>
+                <ListItemIcon>
+                  <DeleteIcon fontSize="small" />
+                </ListItemIcon>
+                <ListItemText>Delete</ListItemText>
+              </MenuItem>
+            </>
+          )}
         </Menu>
 
         {/* Delete Confirmation Dialog */}

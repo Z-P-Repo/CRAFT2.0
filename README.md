@@ -202,7 +202,7 @@ REFRESH_TOKEN_SECRET=your-refresh-token-secret
 REFRESH_TOKEN_EXPIRES_IN=7d
 
 # Server Configuration
-PORT=3001
+PORT=3005
 NODE_ENV=development
 
 # CORS Configuration
@@ -219,7 +219,7 @@ AZURE_AD_REDIRECT_URI=http://localhost:3002/auth/callback
 #### Frontend (.env.local)
 ```env
 # API Configuration
-NEXT_PUBLIC_API_URL=http://localhost:3001/api/v1
+NEXT_PUBLIC_API_URL=http://localhost:3005/api/v1
 
 # App Configuration
 NEXT_PUBLIC_APP_NAME=CRAFT 2.0
@@ -265,7 +265,7 @@ NEXT_PUBLIC_AZURE_AD_AUTHORITY=https://login.microsoftonline.com/your-tenant-id
    cd craft-backend
    npm run dev
    ```
-   Backend will run on http://localhost:3001
+   Backend will run on http://localhost:3005
 
 3. **Start the frontend**:
    ```bash
@@ -280,7 +280,7 @@ NEXT_PUBLIC_AZURE_AD_AUTHORITY=https://login.microsoftonline.com/your-tenant-id
 # Backend
 cd craft-backend
 npm run build
-npm start
+PORT=3005 npm start
 
 # Frontend
 cd craft-frontend
@@ -383,8 +383,8 @@ git push origin main
 
 1. **Port already in use**:
    ```bash
-   # Kill process on port 3001 (backend)
-   lsof -ti:3001 | xargs kill -9
+   # Kill process on port 3005 (backend)
+   lsof -ti:3005 | xargs kill -9
    
    # Kill process on port 3002 (frontend)
    lsof -ti:3002 | xargs kill -9
@@ -412,7 +412,7 @@ git push origin main
    - Hard refresh the page (Ctrl+F5 or Cmd+Shift+R)
    - Clear browser cache or open in incognito mode
    - Check browser console for JavaScript errors
-   - Verify backend is running on port 3001
+   - Verify backend is running on port 3005
    - Ensure frontend API client is pointing to correct backend URL
 
 6. **API Response caching issues**:
@@ -454,10 +454,33 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 **Built with ❤️ using Next.js, Node.js, and MongoDB**
 
-*Last updated: September 12, 2025*  
+*Last updated: September 17, 2025*
 🤖 *Generated and maintained with [Claude Code](https://claude.ai/code)*
 
 ## ⭐ Latest Updates
+
+### Version 1.3.4 - Role-Based Access Control & Environments API Fix (September 17, 2025)
+- **🔐 Role-Based Access Control**: Implemented comprehensive RBAC system with three user roles (super_admin, admin, basic)
+- **👤 Basic User Permissions**: Basic users have view-only access to Policies, Subjects, Resources, Actions, and Attributes within assigned workspaces
+- **🏢 Workspace Assignment System**: Admin users restricted to only their assigned workspaces, removing super admin privileges
+- **🔧 Environment API Fix**: Resolved critical environments API failure by fixing port configuration mismatch (3001 → 3005)
+- **🛡️ Enhanced Access Control**: Added proper application access validation for basic users in environments routes
+- **⚙️ Workspace Context**: Fixed workspace hierarchy access control for admin and basic users with proper assignment validation
+- **🎨 UI Role Filtering**: Conditional rendering of create/edit/delete actions based on user roles across all components
+- **📝 Workspace Name Display**: Fixed workspace edit form to display correct displayName instead of internal name
+- **💼 Professional UI**: Redesigned workspace detail page with compact header, metrics dashboard, and professional table layout
+- **🔧 React Fragment Fix**: Resolved Material-UI Menu component errors by replacing React Fragments with arrays
+- **🌐 API Configuration**: Updated frontend configuration to connect to correct backend port for all API operations
+
+### Version 1.3.3 - Environment Management & Name Consistency (September 14, 2025)
+- **🏗️ Environment Name Auto-Generation**: Implemented intelligent environment name generation from display names, ensuring consistency and valid naming conventions
+- **🔧 Silent Failure Resolution**: Fixed critical silent failure pattern in workspace creation where environments were failing validation but not being reported to users
+- **✨ Name Consistency**: Environment names now auto-generate from display names (similar to applications), removing need for manual name field validation
+- **🛡️ Enhanced Error Tracking**: Added comprehensive environment creation failure tracking with detailed error categorization and reporting
+- **⚡ Workspace Creation Reliability**: Resolved environment insertion and listing issues ensuring all requested environments are properly created and displayed
+- **📝 Validation Improvements**: Streamlined environment validation by removing redundant name validation (auto-generated) while maintaining display name requirements
+- **🔍 Debug Enhancement**: Added proper error logging and tracking for failed environment creation attempts during workspace setup
+- **💪 Robustness**: Enhanced environment creation logic in both direct API calls and workspace creation workflows
 
 ### Version 1.3.2 - UI/UX Polish & User Management 
 - **🔐 Superadmin User Creation**: Added automated superadmin user creation script with secure credentials and database integration

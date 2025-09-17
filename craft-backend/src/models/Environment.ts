@@ -6,17 +6,17 @@ export interface IEnvironmentConfiguration {
   features: Record<string, boolean>;
   secrets?: Record<string, string>; // Encrypted in database
   databases?: {
-    primary: {
-      host: string;
-      port: number;
-      database: string;
-      ssl: boolean;
+    primary?: {
+      host?: string;
+      port?: number;
+      database?: string;
+      ssl?: boolean;
     };
     replica?: {
-      host: string;
-      port: number;
-      database: string;
-      ssl: boolean;
+      host?: string;
+      port?: number;
+      database?: string;
+      ssl?: boolean;
     };
   };
   cache?: {
@@ -106,34 +106,16 @@ const EnvironmentConfigurationSchema = new Schema<IEnvironmentConfiguration>({
     select: false // Don't return secrets by default
   },
   databases: {
-    primary: {
-      host: { type: String, required: false },
-      port: { type: Number, min: 1, max: 65535, required: false },
-      database: { type: String, required: false },
-      ssl: { type: Boolean, default: true }
-    },
-    replica: {
-      host: { type: String, required: false },
-      port: { type: Number, min: 1, max: 65535, required: false },
-      database: { type: String, required: false },
-      ssl: { type: Boolean, default: true }
-    }
+    type: Schema.Types.Mixed,
+    required: false
   },
   cache: {
-    enabled: { type: Boolean, default: false },
-    type: { type: String, enum: ['redis', 'memory'], default: 'memory' },
-    host: { type: String },
-    port: { type: Number, min: 1, max: 65535 },
-    ttl: { type: Number, default: 3600, min: 60, max: 86400 } // 1 hour default, max 24 hours
+    type: Schema.Types.Mixed,
+    required: false
   },
   monitoring: {
-    enabled: { type: Boolean, default: false },
-    metricsEndpoint: { type: String },
-    logsEndpoint: { type: String },
-    alerting: {
-      enabled: { type: Boolean, default: false },
-      channels: [{ type: String, enum: ['email', 'slack', 'webhook'] }]
-    }
+    type: Schema.Types.Mixed,
+    required: false
   }
 }, { _id: false });
 

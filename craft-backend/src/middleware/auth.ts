@@ -17,21 +17,7 @@ const userRepository = new UserRepository();
 
 export const requireAuth = asyncHandler(
   async (req: AuthRequest, res: Response, next: NextFunction): Promise<any> => {
-    // TEMPORARY: Development bypass for testing
-    if (config.isDevelopment && req.query.bypass === 'dev') {
-      // Create a mock user for development with proper ObjectId
-      // Using the actual admin user ID from database to match workspace ownership
-      req.user = {
-        _id: new Types.ObjectId('68c3d5afaf7c6f1e88aa8a53'),
-        globalUserId: 'test-user-global',
-        email: 'test@example.com',
-        name: 'Test User',
-        role: 'super_admin',
-        isActive: true,
-        currentWorkspace: 'seed-workspace'
-      } as any;
-      return next();
-    }
+    // Development bypass removed for security - proper authentication required
     
     const authHeader = req.headers.authorization;
     

@@ -79,10 +79,7 @@ class ApiClient {
           config.headers.Authorization = `Bearer ${token}`;
         }
         
-        // TEMPORARY: Add development bypass for testing
-        if (process.env.NODE_ENV === 'development') {
-          config.params = { ...config.params, bypass: 'dev' };
-        }
+        // Development bypass removed for security - permissions must be properly tested
 
         // Add request ID for tracking
         config.headers['X-Request-ID'] = this.generateRequestId();

@@ -41,6 +41,14 @@ import {
   OutlinedInput,
   Alert,
   AlertTitle,
+  Grid,
+  Divider,
+  ListItemIcon,
+  FormHelperText,
+  Autocomplete,
+  AccordionSummary,
+  AccordionDetails,
+  Accordion,
 } from '@mui/material';
 import {
   Person as PersonIcon,
@@ -58,6 +66,13 @@ import {
   AdminPanelSettings as SuperAdminIcon,
   Security as AdminIcon,
   AccountCircle as BasicIcon,
+  Business as WorkspaceIcon,
+  Apps as ApplicationIcon,
+  Layers as EnvironmentIcon,
+  Assignment as AssignmentIcon,
+  ExpandMore as ExpandMoreIcon,
+  Info as InfoIcon,
+  Warning as WarningIcon,
 } from '@mui/icons-material';
 import { useRouter } from 'next/navigation';
 import DashboardLayout from '@/components/layout/DashboardLayout';
@@ -67,10 +82,31 @@ import { User, ApiResponse } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
 import { useWorkspace } from '@/contexts/WorkspaceContext';
 import { canManage, canEdit, canDelete, canCreate } from '@/utils/permissions';
+import RoleProtection from '@/components/auth/RoleProtection';
 
 interface ExtendedUser extends User {
   id?: string;
   displayName?: string;
+  workspaceRoles?: Map<string, {
+    role: string;
+    permissions: string[];
+    joinedAt: Date;
+  }>;
+  assignedWorkspaces?: string[];
+  assignedApplications?: string[];
+}
+
+interface Workspace {
+  _id: string;
+  name: string;
+  description?: string;
+}
+
+interface Application {
+  _id: string;
+  name: string;
+  workspaceId: string;
+  description?: string;
 }
 
 
@@ -85,6 +121,15 @@ export default function UsersPage() {
   const [activeCount, setActiveCount] = useState(0);
   const [inactiveCount, setInactiveCount] = useState(0);
 
+  // Data for dropdowns
+  const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
+  const [applications, setApplications] = useState<Application[]>([]);
+  const [loadingWorkspaces, setLoadingWorkspaces] = useState(false);
+  const [loadingApplications, setLoadingApplications] = useState(false);
+
+  // Store applications that belong to user's assigned apps (for value display)
+  const [userAssignedApps, setUserAssignedApps] = useState<Application[]>([]);
+
   const [open, setOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [page, setPage] = useState(0);
@@ -98,6 +143,10 @@ export default function UsersPage() {
   const [department, setDepartment] = useState('');
   const [password, setPassword] = useState('');
   const [passwordError, setPasswordError] = useState('');
+  
+  // Assignment states
+  const [assignedWorkspaces, setAssignedWorkspaces] = useState<string[]>([]);
+  const [assignedApplications, setAssignedApplications] = useState<string[]>([]);
   
   // Search and filter states
   const [searchTerm, setSearchTerm] = useState('');
@@ -123,6 +172,111 @@ export default function UsersPage() {
   const [sortAnchorEl, setSortAnchorEl] = useState<HTMLElement | null>(null);
   const filterOpen = Boolean(filterAnchorEl);
   const sortOpen = Boolean(sortAnchorEl);
+
+  // Fetch workspaces for assignment
+  const fetchWorkspaces = useCallback(async () => {
+    if (currentUser?.role !== 'super_admin') return;
+    
+    try {
+      setLoadingWorkspaces(true);
+      const response = await apiClient.get('/workspaces');
+      
+      if (response.success && response.data) {
+        setWorkspaces(response.data);
+      }
+    } catch (err: any) {
+      console.error('Failed to fetch workspaces:', err);
+    } finally {
+      setLoadingWorkspaces(false);
+    }
+  }, [currentUser]);
+
+  // Fetch applications for assignment - dynamically based on selected workspaces
+  const fetchApplications = useCallback(async (targetWorkspaces?: string[]) => {
+    try {
+      setLoadingApplications(true);
+
+      // Use selected workspaces in dialog or all available workspaces
+      const workspacesToFetch = targetWorkspaces || assignedWorkspaces;
+      const allApplications: Application[] = [];
+
+      if (workspacesToFetch.length > 0) {
+        // Filter workspaces to only include those that exist and user has access to
+        const validWorkspaces = workspaces.filter(ws => workspacesToFetch.includes(ws._id));
+
+        if (validWorkspaces.length === 0) {
+          console.warn('No valid/accessible workspaces found for application fetch:', workspacesToFetch);
+          setApplications([]);
+          return;
+        }
+
+        // Fetch applications only for valid workspaces
+        const applicationPromises = validWorkspaces.map(async (workspace) => {
+          try {
+            const response = await apiClient.get(`/workspaces/${workspace._id}/applications`);
+            if (response.success && response.data) {
+              return response.data.map((app: Application) => ({
+                ...app,
+                workspaceId: workspace._id // Ensure workspaceId is set
+              }));
+            }
+            return [];
+          } catch (error: any) {
+            console.warn(`Failed to fetch applications for workspace ${workspace._id} (${workspace.name}):`, error?.response?.data?.error || error.message);
+            return [];
+          }
+        });
+
+        const applicationArrays = await Promise.all(applicationPromises);
+        applicationArrays.forEach(apps => {
+          allApplications.push(...apps);
+        });
+      }
+
+      setApplications(allApplications);
+    } catch (err: any) {
+      console.error('Failed to fetch applications:', err);
+      setApplications([]);
+    } finally {
+      setLoadingApplications(false);
+    }
+  }, [assignedWorkspaces, workspaces]);
+
+  // Fetch user's currently assigned applications for editing
+  const fetchUserAssignedApplications = useCallback(async (userApplicationIds: string[]) => {
+    if (userApplicationIds.length === 0) {
+      setUserAssignedApps([]);
+      return;
+    }
+
+    try {
+      const allApps: Application[] = [];
+
+      // Fetch applications from all accessible workspaces to find user's assigned apps
+      for (const workspace of workspaces) {
+        try {
+          const response = await apiClient.get(`/workspaces/${workspace._id}/applications`);
+          if (response.success && response.data) {
+            const workspaceApps = response.data.map((app: Application) => ({
+              ...app,
+              workspaceId: workspace._id
+            }));
+            allApps.push(...workspaceApps);
+          }
+        } catch (error) {
+          // Continue if workspace is not accessible
+          console.warn(`Cannot access workspace ${workspace._id} for user app lookup`);
+        }
+      }
+
+      // Filter to only user's assigned applications
+      const userApps = allApps.filter(app => userApplicationIds.includes(app._id));
+      setUserAssignedApps(userApps);
+    } catch (error) {
+      console.error('Failed to fetch user assigned applications:', error);
+      setUserAssignedApps([]);
+    }
+  }, [workspaces]);
 
   const fetchUsers = useCallback(async () => {
     try {
@@ -172,6 +326,22 @@ export default function UsersPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page, rowsPerPage, sortBy, sortOrder, searchTerm]);
 
+  // Load workspaces when component mounts or user changes
+  useEffect(() => {
+    if (currentUser?.role === 'super_admin') {
+      fetchWorkspaces();
+    }
+  }, [currentUser, fetchWorkspaces]);
+
+  // Load initial applications when component mounts and workspaces are available
+  useEffect(() => {
+    if (workspaces.length > 0 && assignedWorkspaces.length === 0) {
+      // Only load all applications initially when no workspaces are selected
+      // This helps with the initial dropdown population
+      setApplications([]);
+    }
+  }, [workspaces, assignedWorkspaces]);
+
   const handleSubmit = async () => {
     // Reset errors
     setNameError('');
@@ -199,6 +369,12 @@ export default function UsersPage() {
       hasError = true;
     }
 
+    // Role-based validation
+    if (role === 'admin' && assignedWorkspaces.length === 0) {
+      setError('Admin users must be assigned to at least one workspace');
+      hasError = true;
+    }
+
     if (hasError) return;
 
     setIsSubmitting(true);
@@ -209,6 +385,11 @@ export default function UsersPage() {
         role,
         department: department.trim(),
         ...(password && { password }),
+        // Include assignments for non-super-admin users
+        ...(role !== 'super_admin' && {
+          assignedWorkspaces,
+          assignedApplications,
+        }),
       };
 
       let response;
@@ -220,7 +401,7 @@ export default function UsersPage() {
 
       if (response.success) {
         await fetchUsers();
-        handleClose();
+        handleSuccessClose();
       } else {
         throw new Error(response.error || 'Failed to save user');
       }
@@ -304,6 +485,28 @@ export default function UsersPage() {
     setNameError('');
     setEmailError('');
     setPasswordError('');
+
+    // Set assignments for editing
+    const userWorkspaces = user?.assignedWorkspaces || [];
+    const userApps = user?.assignedApplications || [];
+    setAssignedWorkspaces(userWorkspaces);
+    setAssignedApplications(userApps);
+
+    // Clear previous user assigned apps
+    setUserAssignedApps([]);
+
+    // Fetch applications for user's assigned workspaces when editing
+    if (user && userWorkspaces.length > 0) {
+      fetchApplications(userWorkspaces);
+    } else {
+      setApplications([]);
+    }
+
+    // Fetch user's currently assigned applications to show in value
+    if (user && userApps.length > 0) {
+      fetchUserAssignedApplications(userApps);
+    }
+
     setOpen(true);
   };
 
@@ -313,7 +516,9 @@ export default function UsersPage() {
                        email.trim() || 
                        role !== 'basic' ||
                        department.trim() ||
-                       password.trim();
+                       password.trim() ||
+                       assignedWorkspaces.length > 0 ||
+                       assignedApplications.length > 0;
     
     if (hasFormData) {
       setCancelDialogOpen(true);
@@ -331,6 +536,9 @@ export default function UsersPage() {
     setNameError('');
     setEmailError('');
     setPasswordError('');
+    setAssignedWorkspaces([]);
+    setAssignedApplications([]);
+    setUserAssignedApps([]);
   };
 
   // Cancel confirmation handlers
@@ -346,10 +554,31 @@ export default function UsersPage() {
     setNameError('');
     setEmailError('');
     setPasswordError('');
+    setAssignedWorkspaces([]);
+    setAssignedApplications([]);
+    setUserAssignedApps([]);
   };
 
   const handleCancelCancel = () => {
     setCancelDialogOpen(false);
+  };
+
+  // Success handler that closes modal without cancel confirmation
+  const handleSuccessClose = () => {
+    setOpen(false);
+    setSelectedUser(null);
+    setName('');
+    setEmail('');
+    setRole('basic');
+    setDepartment('');
+    setPassword('');
+    setNameError('');
+    setEmailError('');
+    setPasswordError('');
+    setError('');
+    setAssignedWorkspaces([]);
+    setAssignedApplications([]);
+    setUserAssignedApps([]);
   };
 
   const handleViewOpen = (user: ExtendedUser) => {
@@ -407,8 +636,47 @@ export default function UsersPage() {
     switch (role) {
       case 'super_admin': return 'Super Admin';
       case 'admin': return 'Admin';
-      case 'basic': return 'Basic';
+      case 'basic': return 'Basic User';
       default: return role;
+    }
+  };
+
+  const getRoleDescription = (role: string) => {
+    switch (role) {
+      case 'super_admin': return 'Full system access across all workspaces and applications';
+      case 'admin': return 'Workspace-specific administration and user management';
+      case 'basic': return 'Limited access to assigned workspaces and applications';
+      default: return '';
+    }
+  };
+
+  const getRolePermissions = (role: string) => {
+    switch (role) {
+      case 'super_admin':
+        return [
+          'Access to all workspaces and applications',
+          'Create and manage workspaces',
+          'Manage all users and assign roles',
+          'Configure global settings and policies',
+          'Full CRUD operations on all entities'
+        ];
+      case 'admin':
+        return [
+          'Access to assigned workspaces only',
+          'Manage users within assigned scope',
+          'Configure environments and applications',
+          'Oversee day-to-day operations',
+          'Limited to assigned workspace/application'
+        ];
+      case 'basic':
+        return [
+          'View assigned workspaces and applications',
+          'Monitor activities and dashboards',
+          'Update own profile settings',
+          'Read-only access to most features',
+          'No administrative privileges'
+        ];
+      default: return [];
     }
   };
 
@@ -473,7 +741,8 @@ export default function UsersPage() {
   const canCreateEntity = currentWorkspace && currentApplication && canCreate(currentUser);
 
   return (
-    <DashboardLayout>
+    <RoleProtection allowedRoles={['admin', 'super_admin']}>
+      <DashboardLayout>
       {(!currentWorkspace || !currentApplication) && (
         <Alert severity="info" sx={{ mb: 3 }}>
           <AlertTitle>Workspace and Application Required</AlertTitle>
@@ -484,11 +753,11 @@ export default function UsersPage() {
       
       {/* Header */}
       <Paper elevation={0} sx={{ p: 3, mb: 3, border: '1px solid', borderColor: 'grey.200' }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
           <Box sx={{ display: 'flex', alignItems: 'center' }}>
             <PersonIcon sx={{ mr: 2, color: 'text.secondary' }} />
             <Typography variant="h5" component="h1" fontWeight="600">
-              Users
+              User Management
             </Typography>
           </Box>
           <Box sx={{ display: 'flex', gap: 3, textAlign: 'center' }}>
@@ -497,7 +766,7 @@ export default function UsersPage() {
                 {loading ? '...' : total}
               </Typography>
               <Typography variant="caption" color="text.secondary">
-                Total
+                Total Users
               </Typography>
             </Box>
             <Box>
@@ -510,17 +779,125 @@ export default function UsersPage() {
             </Box>
             <Box>
               <Typography variant="h6" color="error.main" fontWeight="600">
-                {loading ? '...' : inactiveCount}
+                {loading ? '...' : users.filter(u => u.role === 'super_admin').length}
               </Typography>
               <Typography variant="caption" color="text.secondary">
-                Inactive
+                Super Admins
+              </Typography>
+            </Box>
+            <Box>
+              <Typography variant="h6" color="warning.main" fontWeight="600">
+                {loading ? '...' : users.filter(u => u.role === 'admin').length}
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                Admins
+              </Typography>
+            </Box>
+            <Box>
+              <Typography variant="h6" color="info.main" fontWeight="600">
+                {loading ? '...' : users.filter(u => u.role === 'basic').length}
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                Basic Users
               </Typography>
             </Box>
           </Box>
         </Box>
+
+        {/* Role Information Cards */}
+        <Grid container spacing={2} sx={{ mb: 3 }}>
+          <Grid size={4}>
+            <Card variant="outlined" sx={{ height: '100%' }}>
+              <CardContent sx={{ p: 2 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                  <SuperAdminIcon sx={{ mr: 1, color: 'error.main' }} />
+                  <Typography variant="subtitle2" fontWeight="600">
+                    Super Admin
+                  </Typography>
+                </Box>
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                  {getRoleDescription('super_admin')}
+                </Typography>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Chip
+                    size="small"
+                    label={`${users.filter(u => u.role === 'super_admin').length} users`}
+                    color="error"
+                    variant="outlined"
+                  />
+                  <Chip
+                    size="small"
+                    label="Full Access"
+                    color="error"
+                    variant="filled"
+                  />
+                </Box>
+              </CardContent>
+            </Card>
+          </Grid>
+          <Grid size={4}>
+            <Card variant="outlined" sx={{ height: '100%' }}>
+              <CardContent sx={{ p: 2 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                  <AdminIcon sx={{ mr: 1, color: 'warning.main' }} />
+                  <Typography variant="subtitle2" fontWeight="600">
+                    Admin
+                  </Typography>
+                </Box>
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                  {getRoleDescription('admin')}
+                </Typography>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Chip
+                    size="small"
+                    label={`${users.filter(u => u.role === 'admin').length} users`}
+                    color="warning"
+                    variant="outlined"
+                  />
+                  <Chip
+                    size="small"
+                    label="Workspace Scoped"
+                    color="warning"
+                    variant="filled"
+                  />
+                </Box>
+              </CardContent>
+            </Card>
+          </Grid>
+          <Grid size={4}>
+            <Card variant="outlined" sx={{ height: '100%' }}>
+              <CardContent sx={{ p: 2 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                  <BasicIcon sx={{ mr: 1, color: 'info.main' }} />
+                  <Typography variant="subtitle2" fontWeight="600">
+                    Basic User
+                  </Typography>
+                </Box>
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                  {getRoleDescription('basic')}
+                </Typography>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Chip
+                    size="small"
+                    label={`${users.filter(u => u.role === 'basic').length} users`}
+                    color="info"
+                    variant="outlined"
+                  />
+                  <Chip
+                    size="small"
+                    label="Limited Access"
+                    color="info"
+                    variant="filled"
+                  />
+                </Box>
+              </CardContent>
+            </Card>
+          </Grid>
+        </Grid>
+
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 2 }}>
           <Typography variant="body2" color="text.secondary">
-            Manage user accounts and roles in your system
+            Hierarchical user management with role-based access control
           </Typography>
           <Button
             variant="contained"
@@ -631,7 +1008,10 @@ export default function UsersPage() {
                       User
                     </TableCell>
                     <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', color: 'text.primary' }}>
-                      Role
+                      Role & Access Level
+                    </TableCell>
+                    <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', color: 'text.primary' }}>
+                      Workspace Access
                     </TableCell>
                     <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', color: 'text.primary' }}>
                       Department
@@ -639,7 +1019,7 @@ export default function UsersPage() {
                     <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', color: 'text.primary' }}>
                       Status
                     </TableCell>
-                    <TableCell align="center" sx={{ fontWeight: 600, fontSize: '0.875rem', color: 'text.primary', width: '120px', minWidth: '120px' }}>
+                    <TableCell align="center" sx={{ fontWeight: 600, fontSize: '0.875rem', color: 'text.primary', width: '140px', minWidth: '140px' }}>
                       Actions
                     </TableCell>
                   </TableRow>
@@ -647,7 +1027,7 @@ export default function UsersPage() {
                 <TableBody>
                   {loading ? (
                     <TableRow>
-                      <TableCell colSpan={5} sx={{ textAlign: 'center', py: 4 }}>
+                      <TableCell colSpan={6} sx={{ textAlign: 'center', py: 4 }}>
                         <Typography variant="body1" color="text.secondary">
                           Loading users...
                         </Typography>
@@ -655,7 +1035,7 @@ export default function UsersPage() {
                     </TableRow>
                   ) : paginatedUsers.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={5} sx={{ textAlign: 'center', py: 4 }}>
+                      <TableCell colSpan={6} sx={{ textAlign: 'center', py: 4 }}>
                         <Typography variant="body1" color="text.secondary">
                           No users found
                         </Typography>
@@ -680,13 +1060,61 @@ export default function UsersPage() {
                           </Box>
                         </TableCell>
                         <TableCell>
-                          <Chip
-                            icon={getRoleIcon(user.role)}
-                            label={getRoleDisplayName(user.role)}
-                            size="small"
-                            color={getRoleColor(user.role) as any}
-                            variant="outlined"
-                          />
+                          <Box>
+                            <Chip
+                              icon={getRoleIcon(user.role)}
+                              label={getRoleDisplayName(user.role)}
+                              size="small"
+                              color={getRoleColor(user.role) as any}
+                              variant="outlined"
+                              sx={{ mb: 0.5 }}
+                            />
+                            <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                              {getRoleDescription(user.role)}
+                            </Typography>
+                          </Box>
+                        </TableCell>
+                        <TableCell>
+                          <Box>
+                            {user.role === 'super_admin' ? (
+                              <Chip
+                                icon={<WorkspaceIcon />}
+                                label="All Workspaces"
+                                size="small"
+                                color="error"
+                                variant="filled"
+                              />
+                            ) : user.assignedWorkspaces && user.assignedWorkspaces.length > 0 ? (
+                              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                                {user.assignedWorkspaces.slice(0, 2).map((workspaceId, index) => {
+                                  const workspace = workspaces.find(w => w._id === workspaceId);
+                                  return (
+                                    <Chip
+                                      key={workspaceId}
+                                      icon={<WorkspaceIcon />}
+                                      label={workspace?.name || 'Unknown Workspace'}
+                                      size="small"
+                                      color={user.role === 'admin' ? 'warning' : 'info'}
+                                      variant="outlined"
+                                    />
+                                  );
+                                })}
+                                {user.assignedWorkspaces.length > 2 && (
+                                  <Typography variant="caption" color="text.secondary">
+                                    +{user.assignedWorkspaces.length - 2} more
+                                  </Typography>
+                                )}
+                              </Box>
+                            ) : (
+                              <Chip
+                                icon={<WarningIcon />}
+                                label="No Access"
+                                size="small"
+                                color="error"
+                                variant="outlined"
+                              />
+                            )}
+                          </Box>
                         </TableCell>
                         <TableCell>
                           <Typography variant="body2">
@@ -808,7 +1236,186 @@ export default function UsersPage() {
                 <MenuItem value="admin">Admin</MenuItem>
                 <MenuItem value="super_admin">Super Admin</MenuItem>
               </Select>
+              <FormHelperText>
+                {getRoleDescription(role)}
+              </FormHelperText>
             </FormControl>
+
+            {/* Role-based Access Management */}
+            {role !== 'super_admin' && (
+              <Accordion sx={{ mt: 2, mb: 1 }}>
+                <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <AssignmentIcon color="primary" />
+                    <Typography variant="subtitle1" fontWeight="600">
+                      Access Assignment {role === 'admin' ? '(Required)' : '(Optional)'}
+                    </Typography>
+                  </Box>
+                </AccordionSummary>
+                <AccordionDetails>
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                    <Alert severity={role === 'admin' ? 'warning' : 'info'} sx={{ mb: 1 }}>
+                      <Typography variant="body2">
+                        {role === 'admin' 
+                          ? 'Admins must be assigned to specific workspaces and applications they can manage.'
+                          : 'Basic users can be assigned to specific workspaces and applications for limited access.'
+                        }
+                      </Typography>
+                    </Alert>
+                    
+                    <Autocomplete
+                      multiple
+                      options={workspaces}
+                      getOptionLabel={(option) => `${(option as any).displayName || option.name} (${option.name})`}
+                      value={workspaces.filter(ws => assignedWorkspaces.includes(ws._id))}
+                      onChange={(event, newValue) => {
+                        const newWorkspaceIds = newValue.map(ws => ws._id);
+                        setAssignedWorkspaces(newWorkspaceIds);
+
+                        // When editing a user, preserve existing applications that are still valid
+                        // (i.e., applications that belong to workspaces that are still selected)
+                        if (selectedUser && userAssignedApps.length > 0) {
+                          // Keep applications that belong to the currently selected workspaces
+                          const validExistingApps = assignedApplications.filter(appId => {
+                            const app = userAssignedApps.find(a => a._id === appId);
+                            return app && newWorkspaceIds.includes(app.workspaceId);
+                          });
+                          setAssignedApplications(validExistingApps);
+                        } else {
+                          // For new users or when no existing apps, clear applications
+                          setAssignedApplications([]);
+                        }
+
+                        // Fetch applications for the newly selected workspaces
+                        if (newWorkspaceIds.length > 0) {
+                          fetchApplications(newWorkspaceIds);
+                        } else {
+                          setApplications([]);
+                        }
+                      }}
+                      loading={loadingWorkspaces}
+                      disabled={loadingWorkspaces}
+                      renderInput={(params) => (
+                        <TextField
+                          {...params}
+                          label="Assigned Workspaces"
+                          placeholder="Select workspaces..."
+                          InputProps={{
+                            ...params.InputProps,
+                            startAdornment: (
+                              <>
+                                <WorkspaceIcon sx={{ color: 'text.secondary', mr: 1 }} />
+                                {params.InputProps.startAdornment}
+                              </>
+                            ),
+                          }}
+                        />
+                      )}
+                      renderTags={(tagValue, getTagProps) =>
+                        tagValue.map((option, index) => (
+                          <Chip
+                            {...getTagProps({ index })}
+                            key={option._id}
+                            label={(option as any).displayName || option.name}
+                            size="small"
+                            color="primary"
+                            variant="outlined"
+                          />
+                        ))
+                      }
+                    />
+
+                    {assignedWorkspaces.length > 0 && (
+                      <Autocomplete
+                        multiple
+                        options={applications.filter(app => assignedWorkspaces.includes(app.workspaceId))}
+                        getOptionLabel={(option) => {
+                          const workspace = workspaces.find(ws => ws._id === option.workspaceId);
+                          const workspaceName = (workspace as any)?.displayName || workspace?.name || 'Unknown';
+                          return `${(option as any).displayName || option.name} (${workspaceName})`;
+                        }}
+                        value={(() => {
+                          // Combine applications from current workspace selection and user's assigned apps
+                          const allAvailableApps = [...applications, ...userAssignedApps];
+                          // Remove duplicates by _id
+                          const uniqueApps = allAvailableApps.filter((app, index, arr) =>
+                            arr.findIndex(a => a._id === app._id) === index
+                          );
+                          // Return only apps that are in assignedApplications
+                          return uniqueApps.filter(app => assignedApplications.includes(app._id));
+                        })()}
+                        onChange={(event, newValue) => {
+                          setAssignedApplications(newValue.map(app => app._id));
+                        }}
+                        loading={loadingApplications}
+                        disabled={loadingApplications || applications.length === 0}
+                        noOptionsText={
+                          loadingApplications
+                            ? "Loading applications..."
+                            : applications.length === 0
+                              ? "No applications found in selected workspaces"
+                              : "No applications match filter"
+                        }
+                        renderInput={(params) => (
+                          <TextField
+                            {...params}
+                            label="Assigned Applications"
+                            placeholder={
+                              loadingApplications
+                                ? "Loading..."
+                                : applications.length === 0
+                                  ? "No applications available"
+                                  : "Select applications..."
+                            }
+                            InputProps={{
+                              ...params.InputProps,
+                              startAdornment: (
+                                <>
+                                  <ApplicationIcon sx={{ color: 'text.secondary', mr: 1 }} />
+                                  {params.InputProps.startAdornment}
+                                </>
+                              ),
+                            }}
+                          />
+                        )}
+                        renderTags={(tagValue, getTagProps) =>
+                          tagValue.map((option, index) => (
+                            <Chip
+                              {...getTagProps({ index })}
+                              key={option._id}
+                              label={(option as any).displayName || option.name}
+                              size="small"
+                              color="secondary"
+                              variant="outlined"
+                            />
+                          ))
+                        }
+                      />
+                    )}
+
+                    {assignedWorkspaces.length === 0 && (
+                      <Box sx={{ p: 2, border: '1px dashed', borderColor: 'grey.300', borderRadius: 1 }}>
+                        <Typography variant="body2" color="text.secondary" align="center">
+                          Select workspaces first to see available applications
+                        </Typography>
+                      </Box>
+                    )}
+                  </Box>
+                </AccordionDetails>
+              </Accordion>
+            )}
+
+            {role === 'super_admin' && (
+              <Alert severity="success" sx={{ mt: 2 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <SuperAdminIcon />
+                  <Typography variant="body2" fontWeight="600">
+                    Super Admin Access: Full system access to all workspaces and applications
+                  </Typography>
+                </Box>
+              </Alert>
+            )}
+
             <TextField
               fullWidth
               label="Department"
@@ -918,6 +1525,94 @@ export default function UsersPage() {
                     />
                   </Box>
                 </Box>
+                
+                {/* Role-based Access Information */}
+                {viewUser.role !== 'super_admin' && (
+                  <>
+                    <Divider sx={{ my: 2 }} />
+                    <Box>
+                      <Typography variant="subtitle2" sx={{ mb: 1.5, display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <AssignmentIcon color="primary" fontSize="small" />
+                        Access Assignments
+                      </Typography>
+                      
+                      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                        <Box>
+                          <Typography variant="caption" color="text.secondary">
+                            Assigned Workspaces
+                          </Typography>
+                          <Box sx={{ mt: 0.5 }}>
+                            {viewUser.assignedWorkspaces && viewUser.assignedWorkspaces.length > 0 ? (
+                              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                                {workspaces
+                                  .filter(ws => viewUser.assignedWorkspaces?.includes(ws._id))
+                                  .map(workspace => (
+                                    <Chip
+                                      key={workspace._id}
+                                      label={(workspace as any).displayName || workspace.name}
+                                      size="small"
+                                      color="primary"
+                                      variant="outlined"
+                                      icon={<WorkspaceIcon />}
+                                    />
+                                  ))
+                                }
+                              </Box>
+                            ) : (
+                              <Typography variant="body2" color="text.secondary">
+                                No workspace assignments
+                              </Typography>
+                            )}
+                          </Box>
+                        </Box>
+                        
+                        <Box>
+                          <Typography variant="caption" color="text.secondary">
+                            Assigned Applications
+                          </Typography>
+                          <Box sx={{ mt: 0.5 }}>
+                            {viewUser.assignedApplications && viewUser.assignedApplications.length > 0 ? (
+                              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                                {applications
+                                  .filter(app => viewUser.assignedApplications?.includes(app._id))
+                                  .map(application => (
+                                    <Chip
+                                      key={application._id}
+                                      label={(application as any).displayName || application.name}
+                                      size="small"
+                                      color="secondary"
+                                      variant="outlined"
+                                      icon={<ApplicationIcon />}
+                                    />
+                                  ))
+                                }
+                              </Box>
+                            ) : (
+                              <Typography variant="body2" color="text.secondary">
+                                No application assignments
+                              </Typography>
+                            )}
+                          </Box>
+                        </Box>
+                      </Box>
+                    </Box>
+                  </>
+                )}
+                
+                {viewUser.role === 'super_admin' && (
+                  <>
+                    <Divider sx={{ my: 2 }} />
+                    <Alert severity="info" icon={<SuperAdminIcon />}>
+                      <Typography variant="body2" fontWeight="600">
+                        Super Admin Access
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        Full system access to all workspaces, applications, and environments
+                      </Typography>
+                    </Alert>
+                  </>
+                )}
+                
                 <Box>
                   <Typography variant="caption" color="text.secondary">
                     Created
@@ -1097,6 +1792,7 @@ export default function UsersPage() {
           </List>
         </Box>
       </Popover>
-    </DashboardLayout>
+      </DashboardLayout>
+    </RoleProtection>
   );
 }

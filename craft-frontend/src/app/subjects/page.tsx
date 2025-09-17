@@ -78,6 +78,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { canManage, canEdit, canDelete, canCreate } from '@/utils/permissions';
 import { useApiSnackbar } from '@/contexts/SnackbarContext';
 import { useWorkspace } from '@/contexts/WorkspaceContext';
+import RoleProtection from '@/components/auth/RoleProtection';
 
 interface Subject {
   _id: string;
@@ -468,7 +469,8 @@ export default function SubjectsPage() {
   const canCreateEntity = currentWorkspace && currentApplication && canCreate(currentUser);
 
   return (
-    <DashboardLayout>
+    <RoleProtection allowedRoles={['basic', 'admin', 'super_admin']}>
+      <DashboardLayout>
       {/* Workspace Selection Alert */}
       {(!currentWorkspace || !currentApplication) && (
         <Alert severity="info" sx={{ mb: 3 }}>
@@ -1163,6 +1165,7 @@ export default function SubjectsPage() {
           ))}
         </List>
       </Popover>
-    </DashboardLayout>
+      </DashboardLayout>
+    </RoleProtection>
   );
 }

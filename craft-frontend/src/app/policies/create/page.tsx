@@ -60,6 +60,7 @@ import { useWorkspace } from '@/contexts/WorkspaceContext';
 import SubjectCreationDialog from '@/components/subjects/SubjectCreationDialog';
 import ActionCreationDialog from '@/components/actions/ActionCreationDialog';
 import ResourceCreationDialog from '@/components/resources/ResourceCreationDialog';
+import RoleProtection from '@/components/auth/RoleProtection';
 
 interface Subject {
   _id: string;
@@ -2134,7 +2135,8 @@ export default function CreatePolicyPage() {
   };
 
   return (
-    <DashboardLayout>
+    <RoleProtection allowedRoles={['admin', 'super_admin']}>
+      <DashboardLayout>
       {/* Header */}
       <Paper elevation={0} sx={{ p: 3, mb: 3, border: '1px solid', borderColor: 'grey.200' }}>
         <Box sx={{ mb: 1 }}>
@@ -2733,6 +2735,7 @@ export default function CreatePolicyPage() {
           </DialogActions>
         </Dialog>
 
-    </DashboardLayout>
+      </DashboardLayout>
+    </RoleProtection>
   );
 }

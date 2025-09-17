@@ -64,6 +64,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useApiSnackbar } from '@/contexts/SnackbarContext';
 import { useWorkspace } from '@/contexts/WorkspaceContext';
 import { canManage, canEdit, canDelete, canCreate } from '@/utils/permissions';
+import RoleProtection from '@/components/auth/RoleProtection';
 
 interface Policy {
   _id: string;
@@ -350,7 +351,8 @@ export default function PoliciesPage() {
   const canCreateEntity = currentWorkspace && currentApplication && canCreate(currentUser);
 
   return (
-    <DashboardLayout>
+    <RoleProtection allowedRoles={['basic', 'admin', 'super_admin']}>
+      <DashboardLayout>
       {/* Workspace Selection Alert */}
       {(!currentWorkspace || !currentApplication) && (
         <Alert severity="info" sx={{ mb: 3 }}>
@@ -801,6 +803,7 @@ export default function PoliciesPage() {
         >
           <AddIcon />
         </Fab>
-    </DashboardLayout>
+      </DashboardLayout>
+    </RoleProtection>
   );
 }

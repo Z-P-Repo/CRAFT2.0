@@ -13,7 +13,16 @@ import {
   Divider,
   IconButton,
   Breadcrumbs,
-  Link
+  Link,
+  Button,
+  Paper,
+  Stack,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow
 } from '@mui/material';
 import {
   Business as WorkspaceIcon,
@@ -21,7 +30,11 @@ import {
   Settings as SettingsIcon,
   ArrowBack as ArrowBackIcon,
   Apps as ApplicationIcon,
-  Science as EnvironmentIcon
+  Science as EnvironmentIcon,
+  Storage as StorageIcon,
+  Group as GroupIcon,
+  Policy as PolicyIcon,
+  CalendarToday as CalendarIcon
 } from '@mui/icons-material';
 import { useParams, useRouter } from 'next/navigation';
 import { useSnackbar } from '@/contexts/SnackbarContext';
@@ -112,226 +125,291 @@ export default function WorkspaceDetailPage() {
 
   return (
     <DashboardLayout>
-      <Box>
-        {/* Breadcrumbs */}
-        <Breadcrumbs sx={{ mb: 2 }}>
-          <Link
-            color="inherit"
-            href="/workspaces"
-            onClick={(e) => {
-              e.preventDefault();
-              handleBack();
-            }}
-            sx={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}
-          >
-            <WorkspaceIcon sx={{ mr: 0.5 }} fontSize="inherit" />
-            Workspaces
-          </Link>
-          <Typography color="text.primary">
-            {workspace.displayName}
-          </Typography>
-        </Breadcrumbs>
-
-        {/* Header */}
-        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center' }}>
-            <IconButton onClick={handleBack} sx={{ mr: 1 }}>
+      {/* Compact Header */}
+      <Paper elevation={0} sx={{ p: 2, mb: 2, border: '1px solid', borderColor: 'grey.200' }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            <IconButton
+              onClick={handleBack}
+              size="small"
+              sx={{ bgcolor: 'grey.100', '&:hover': { bgcolor: 'grey.200' } }}
+            >
               <ArrowBackIcon />
             </IconButton>
-            <WorkspaceIcon sx={{ mr: 2, color: 'primary.main' }} />
+            <WorkspaceIcon sx={{ color: 'primary.main' }} />
             <Box>
-              <Typography variant="h4" component="h1" fontWeight="600">
+              <Typography variant="h5" component="h1" fontWeight="600">
                 {workspace.displayName}
               </Typography>
-              <Typography variant="body2" color="text.secondary">
-                {workspace.description || workspace.name}
-              </Typography>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mt: 0.5 }}>
+                <Chip
+                  label={workspace.status}
+                  color={workspace.status === 'active' ? 'success' : 'default'}
+                  size="small"
+                />
+                <Typography variant="caption" color="text.secondary" sx={{ fontFamily: 'monospace' }}>
+                  {workspace.name}
+                </Typography>
+              </Box>
             </Box>
           </Box>
           <Box sx={{ display: 'flex', gap: 1 }}>
-            <IconButton onClick={handleEdit} color="primary">
-              <EditIcon />
-            </IconButton>
-            <IconButton onClick={handleSettings} color="default">
-              <SettingsIcon />
-            </IconButton>
+            <Button
+              variant="outlined"
+              startIcon={<EditIcon />}
+              onClick={handleEdit}
+              size="small"
+            >
+              Edit
+            </Button>
+            <Button
+              variant="outlined"
+              startIcon={<SettingsIcon />}
+              onClick={handleSettings}
+              size="small"
+            >
+              Settings
+            </Button>
           </Box>
         </Box>
+      </Paper>
 
-        <Grid container spacing={3}>
-          {/* Workspace Overview */}
-          <Grid size={{ xs: 12, md: 8 }}>
-            <Card>
-              <CardContent>
-                <Typography variant="h6" gutterBottom>
-                  Workspace Overview
-                </Typography>
-                <Box sx={{ mb: 2 }}>
-                  <Typography variant="body2" color="text.secondary" gutterBottom>
-                    Status
-                  </Typography>
-                  <Chip
-                    label={workspace.status}
-                    color={workspace.status === 'active' ? 'success' : 'default'}
-                    size="small"
-                  />
-                </Box>
-                <Box sx={{ mb: 2 }}>
-                  <Typography variant="body2" color="text.secondary" gutterBottom>
-                    System Name
-                  </Typography>
-                  <Typography variant="body1" sx={{ fontFamily: 'monospace', bgcolor: 'grey.100', p: 1, borderRadius: 1 }}>
-                    {workspace.name}
-                  </Typography>
-                </Box>
-                {workspace.description && (
-                  <Box sx={{ mb: 2 }}>
-                    <Typography variant="body2" color="text.secondary" gutterBottom>
-                      Description
-                    </Typography>
-                    <Typography variant="body1">
-                      {workspace.description}
-                    </Typography>
-                  </Box>
-                )}
-                <Divider sx={{ my: 2 }} />
-                <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <Box>
-                    <Typography variant="body2" color="text.secondary">
-                      Created
-                    </Typography>
-                    <Typography variant="body1">
-                      {new Date(workspace.createdAt).toLocaleDateString()}
-                    </Typography>
-                  </Box>
-                  <Box>
-                    <Typography variant="body2" color="text.secondary">
-                      Last Modified
-                    </Typography>
-                    <Typography variant="body1">
-                      {new Date(workspace.updatedAt).toLocaleDateString()}
-                    </Typography>
-                  </Box>
-                </Box>
-              </CardContent>
-            </Card>
-          </Grid>
-
-          {/* Workspace Stats */}
-          <Grid size={{ xs: 12, md: 4 }}>
-            <Card>
-              <CardContent>
-                <Typography variant="h6" gutterBottom>
-                  Statistics
-                </Typography>
-                <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                  <ApplicationIcon sx={{ mr: 1, color: 'primary.main' }} />
-                  <Box>
-                    <Typography variant="h4" color="primary.main">
-                      {workspace.applications?.length || 0}
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      Applications
-                    </Typography>
-                  </Box>
-                </Box>
-                <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                  <EnvironmentIcon sx={{ mr: 1, color: 'secondary.main' }} />
-                  <Box>
-                    <Typography variant="h4" color="secondary.main">
-                      {workspace.applications?.reduce((total: number, app: any) => 
-                        total + (app.environments?.length || 0), 0) || 0}
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      Environments
-                    </Typography>
-                  </Box>
-                </Box>
-              </CardContent>
-            </Card>
-
-            {/* Resource Limits */}
-            <Card sx={{ mt: 2 }}>
-              <CardContent>
-                <Typography variant="h6" gutterBottom>
-                  Resource Limits
-                </Typography>
-                <Box sx={{ mb: 1 }}>
-                  <Typography variant="body2" color="text.secondary">
-                    Max Applications: {workspace.limits?.maxApplications || 'N/A'}
-                  </Typography>
-                </Box>
-                <Box sx={{ mb: 1 }}>
-                  <Typography variant="body2" color="text.secondary">
-                    Max Users: {workspace.limits?.maxUsers || 'N/A'}
-                  </Typography>
-                </Box>
-                <Box sx={{ mb: 1 }}>
-                  <Typography variant="body2" color="text.secondary">
-                    Storage Quota: {workspace.limits?.storageQuota || 'N/A'} MB
-                  </Typography>
-                </Box>
+      <Grid container spacing={2}>
+        {/* Key Metrics Row */}
+        <Grid size={{ xs: 12 }}>
+          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr 1fr', md: '1fr 1fr 1fr 1fr' }, gap: 2 }}>
+            <Card variant="outlined" sx={{ p: 2 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                <ApplicationIcon sx={{ color: 'primary.main' }} />
                 <Box>
-                  <Typography variant="body2" color="text.secondary">
-                    Plan: {workspace.metadata?.plan?.toUpperCase() || 'FREE'}
+                  <Typography variant="h6" fontWeight="600" color="primary.main">
+                    {workspace.applications?.length || 0}
                   </Typography>
-                </Box>
-              </CardContent>
-            </Card>
-          </Grid>
-
-          {/* Applications List */}
-          {workspace.applications && workspace.applications.length > 0 && (
-            <Grid size={{ xs: 12 }}>
-              <Card>
-                <CardContent>
-                  <Typography variant="h6" gutterBottom>
+                  <Typography variant="caption" color="text.secondary">
                     Applications
                   </Typography>
-                  {workspace.applications.map((app: any) => (
-                    <Box key={app._id} sx={{ mb: 2, p: 2, bgcolor: 'grey.50', borderRadius: 1 }}>
-                      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                          <ApplicationIcon sx={{ mr: 1 }} />
-                          <Box>
-                            <Typography variant="subtitle1" fontWeight="600">
-                              {app.displayName}
-                            </Typography>
-                            <Typography variant="body2" color="text.secondary">
-                              {app.description || app.name}
-                            </Typography>
-                          </Box>
-                        </Box>
-                        <Chip label={app.type} size="small" variant="outlined" />
-                      </Box>
-                      {app.environments && app.environments.length > 0 && (
-                        <Box sx={{ mt: 1, ml: 4 }}>
-                          <Typography variant="body2" color="text.secondary" gutterBottom>
-                            Environments:
-                          </Typography>
-                          <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-                            {app.environments.map((env: any) => (
-                              <Chip
-                                key={env._id}
-                                label={env.displayName}
-                                size="small"
-                                color={env.type === 'production' ? 'error' : 
-                                      env.type === 'staging' ? 'warning' : 
-                                      env.type === 'development' ? 'success' : 'default'}
-                                variant="outlined"
-                              />
-                            ))}
-                          </Box>
-                        </Box>
-                      )}
+                </Box>
+              </Box>
+            </Card>
+
+            <Card variant="outlined" sx={{ p: 2 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                <EnvironmentIcon sx={{ color: 'secondary.main' }} />
+                <Box>
+                  <Typography variant="h6" fontWeight="600" color="secondary.main">
+                    {workspace.applications?.reduce((total: number, app: any) =>
+                      total + (app.environments?.length || 0), 0) || 0}
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    Environments
+                  </Typography>
+                </Box>
+              </Box>
+            </Card>
+
+            <Card variant="outlined" sx={{ p: 2 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                <StorageIcon sx={{ color: 'info.main' }} />
+                <Box>
+                  <Typography variant="h6" fontWeight="600" color="info.main">
+                    {workspace.limits?.storageQuota || 'N/A'}
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    Storage (MB)
+                  </Typography>
+                </Box>
+              </Box>
+            </Card>
+
+            <Card variant="outlined" sx={{ p: 2 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                <CalendarIcon sx={{ color: 'success.main' }} />
+                <Box>
+                  <Typography variant="h6" fontWeight="600" color="success.main">
+                    {workspace.metadata?.plan?.toUpperCase() || 'FREE'}
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    Plan
+                  </Typography>
+                </Box>
+              </Box>
+            </Card>
+          </Box>
+        </Grid>
+
+        {/* Main Content */}
+        <Grid size={{ xs: 12, lg: 8 }}>
+          <Stack spacing={2}>
+            {/* Workspace Details */}
+            <Card variant="outlined">
+              <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
+                <Typography variant="subtitle1" fontWeight="600" gutterBottom>
+                  Workspace Details
+                </Typography>
+                <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
+                  {workspace.description && (
+                    <Box>
+                      <Typography variant="caption" color="text.secondary" fontWeight="500">
+                        Description
+                      </Typography>
+                      <Typography variant="body2" sx={{ mt: 0.5 }}>
+                        {workspace.description}
+                      </Typography>
                     </Box>
-                  ))}
+                  )}
+                  <Box>
+                    <Typography variant="caption" color="text.secondary" fontWeight="500">
+                      Created
+                    </Typography>
+                    <Typography variant="body2" sx={{ mt: 0.5 }}>
+                      {new Date(workspace.createdAt).toLocaleDateString('en-US', {
+                        year: 'numeric',
+                        month: 'short',
+                        day: 'numeric'
+                      })}
+                    </Typography>
+                  </Box>
+                  <Box>
+                    <Typography variant="caption" color="text.secondary" fontWeight="500">
+                      Last Modified
+                    </Typography>
+                    <Typography variant="body2" sx={{ mt: 0.5 }}>
+                      {new Date(workspace.updatedAt).toLocaleDateString('en-US', {
+                        year: 'numeric',
+                        month: 'short',
+                        day: 'numeric'
+                      })}
+                    </Typography>
+                  </Box>
+                </Box>
+              </CardContent>
+            </Card>
+
+            {/* Applications Table */}
+            {workspace.applications && workspace.applications.length > 0 && (
+              <Card variant="outlined">
+                <CardContent sx={{ p: 0 }}>
+                  <Box sx={{ p: 2, borderBottom: '1px solid', borderColor: 'divider' }}>
+                    <Typography variant="subtitle1" fontWeight="600">
+                      Applications ({workspace.applications.length})
+                    </Typography>
+                  </Box>
+                  <TableContainer>
+                    <Table size="small">
+                      <TableHead>
+                        <TableRow>
+                          <TableCell sx={{ fontWeight: 600 }}>Name</TableCell>
+                          <TableCell sx={{ fontWeight: 600 }}>Type</TableCell>
+                          <TableCell sx={{ fontWeight: 600 }}>Environments</TableCell>
+                          <TableCell sx={{ fontWeight: 600 }}>Description</TableCell>
+                        </TableRow>
+                      </TableHead>
+                      <TableBody>
+                        {workspace.applications.map((app: any) => (
+                          <TableRow key={app._id} hover>
+                            <TableCell>
+                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                <ApplicationIcon fontSize="small" color="primary" />
+                                <Typography variant="body2" fontWeight="500">
+                                  {app.displayName}
+                                </Typography>
+                              </Box>
+                            </TableCell>
+                            <TableCell>
+                              <Chip label={app.type} size="small" variant="outlined" />
+                            </TableCell>
+                            <TableCell>
+                              <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
+                                {app.environments?.map((env: any) => (
+                                  <Chip
+                                    key={env._id}
+                                    label={env.displayName}
+                                    size="small"
+                                    color={
+                                      env.type === 'production' ? 'error' :
+                                      env.type === 'staging' ? 'warning' :
+                                      env.type === 'development' ? 'success' : 'default'
+                                    }
+                                    variant="outlined"
+                                    sx={{ fontSize: '0.6rem', height: 20 }}
+                                  />
+                                )) || (
+                                  <Typography variant="caption" color="text.secondary">
+                                    No environments
+                                  </Typography>
+                                )}
+                              </Box>
+                            </TableCell>
+                            <TableCell>
+                              <Typography variant="body2" color="text.secondary" noWrap>
+                                {app.description || '-'}
+                              </Typography>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </TableContainer>
                 </CardContent>
               </Card>
-            </Grid>
-          )}
+            )}
+          </Stack>
         </Grid>
-      </Box>
+
+        {/* Resource Limits Sidebar */}
+        <Grid size={{ xs: 12, lg: 4 }}>
+          <Card variant="outlined">
+            <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
+              <Typography variant="subtitle1" fontWeight="600" gutterBottom>
+                Resource Limits
+              </Typography>
+              <Stack spacing={1.5}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <ApplicationIcon fontSize="small" color="primary" />
+                    <Typography variant="body2">Max Applications</Typography>
+                  </Box>
+                  <Typography variant="body2" fontWeight="500">
+                    {workspace.limits?.maxApplications || '∞'}
+                  </Typography>
+                </Box>
+
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <GroupIcon fontSize="small" color="secondary" />
+                    <Typography variant="body2">Max Users</Typography>
+                  </Box>
+                  <Typography variant="body2" fontWeight="500">
+                    {workspace.limits?.maxUsers || '∞'}
+                  </Typography>
+                </Box>
+
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <PolicyIcon fontSize="small" color="info" />
+                    <Typography variant="body2">Max Policies</Typography>
+                  </Box>
+                  <Typography variant="body2" fontWeight="500">
+                    {workspace.limits?.maxPolicies || '∞'}
+                  </Typography>
+                </Box>
+
+                <Divider sx={{ my: 1 }} />
+
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <Typography variant="body2" fontWeight="500">Plan Type</Typography>
+                  <Chip
+                    label={workspace.metadata?.plan?.toUpperCase() || 'FREE'}
+                    size="small"
+                    color="primary"
+                    variant="outlined"
+                  />
+                </Box>
+              </Stack>
+            </CardContent>
+          </Card>
+        </Grid>
+      </Grid>
     </DashboardLayout>
   );
 }

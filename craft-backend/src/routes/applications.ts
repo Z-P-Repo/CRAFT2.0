@@ -33,16 +33,37 @@ router.get('/', requireAuth, validateIds, async (req: Request, res: Response): P
     const { workspaceId } = req.params;
     const { page = 1, limit = 10, search, type, status = 'all' } = req.query;
     const userId = (req as any).user._id;
+    const userRole = (req as any).user.role;
+    const user = (req as any).user;
 
-    // Verify workspace access
-    const workspace = await Workspace.findOne({
+    // Verify workspace access - include basic users with assigned workspaces
+    let workspaceQuery: any = {
       _id: workspaceId,
-      $or: [
+      active: true
+    };
+
+    if (userRole === 'basic' || userRole === 'admin') {
+      // Admin and basic users can only access workspaces they're assigned to
+      const assignedWorkspaces = user.assignedWorkspaces || [];
+      if (assignedWorkspaces.length > 0) {
+        workspaceQuery.$or = [
+          { 'metadata.owner': userId },
+          { 'metadata.admins': userId },
+          { _id: { $in: assignedWorkspaces } }
+        ];
+      } else {
+        // User with no assigned workspaces - no access
+        workspaceQuery._id = null;
+      }
+    } else {
+      // Super admin users - only owner/admin access
+      workspaceQuery.$or = [
         { 'metadata.owner': userId },
         { 'metadata.admins': userId }
-      ],
-      active: true
-    });
+      ];
+    }
+
+    const workspace = await Workspace.findOne(workspaceQuery);
 
     if (!workspace) {
       return void res.status(404).json({
@@ -51,7 +72,18 @@ router.get('/', requireAuth, validateIds, async (req: Request, res: Response): P
       });
     }
 
-    const query: any = { workspaceId };
+    const query: any = { workspaceId, active: true };
+
+    // Apply application filtering for admin and basic users
+    if (userRole === 'basic' || userRole === 'admin') {
+      const assignedApplications = user.assignedApplications || [];
+      if (assignedApplications.length > 0) {
+        query._id = { $in: assignedApplications };
+      } else {
+        // User with no assigned applications - no access
+        query._id = null; // This will return no results
+      }
+    }
 
     // Note: We filter by active field, not status field
     // The status field is for application lifecycle, active field is for soft delete
@@ -136,8 +168,8 @@ router.post('/', requireAuth, validateIds, validateApplication, async (req: Requ
       });
     }
 
-    // Check if application name exists in workspace
-    const existingApp = await Application.findOne({ workspaceId, name });
+    // Check if application name exists in workspace (only active applications)
+    const existingApp = await Application.findOne({ workspaceId, name, active: true });
     if (existingApp) {
       return void res.status(409).json({
         success: false,

@@ -9,17 +9,46 @@ import { ApiResponse, PaginatedResponse } from '../types';
 
 const router = Router({ mergeParams: true });
 
+// Helper function to generate valid environment name from display name
+function generateValidEnvName(displayName: string, originalName?: string): string {
+  // If original name exists and is valid, use it
+  if (originalName && originalName.length >= 2 && /^[a-z0-9][a-z0-9-]*[a-z0-9]$/.test(originalName)) {
+    return originalName;
+  }
+  
+  // Generate environment name from display name
+  let envName = displayName
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9\s-]/g, '') // Remove invalid characters
+    .replace(/\s+/g, '-') // Replace spaces with hyphens
+    .replace(/^[^a-z0-9]+|[^a-z0-9]+$/g, ''); // Remove leading/trailing invalid chars
+  
+  // Ensure minimum length
+  if (envName.length < 2) {
+    envName = 'env-' + Date.now().toString().slice(-4);
+  }
+  
+  // Ensure it starts and ends with alphanumeric
+  if (!/^[a-z0-9]/.test(envName)) {
+    envName = 'env-' + envName;
+  }
+  if (!/[a-z0-9]$/.test(envName)) {
+    envName = envName + '-env';
+  }
+  
+  return envName;
+}
+
 // Validation middleware
 const validateEnvironment = [
-  body('name')
-    .matches(/^[a-z0-9][a-z0-9-]*[a-z0-9]$/)
-    .withMessage('Name must be lowercase alphanumeric with hyphens'),
   body('displayName')
     .isLength({ min: 2, max: 100 })
     .withMessage('Display name must be 2-100 characters'),
   body('type')
     .isIn(['development', 'testing', 'staging', 'production', 'preview', 'hotfix'])
-    .withMessage('Invalid environment type')
+    .withMessage('Invalid environment type'),
+  // We don't validate 'name' directly anymore since it's auto-generated from displayName
 ];
 
 const validateIds = [
@@ -32,18 +61,46 @@ const validateIds = [
 router.get('/', requireAuth, validateIds, async (req: Request, res: Response): Promise<void> => {
   try {
     const { workspaceId, applicationId } = req.params;
+
+    if (!applicationId) {
+      return void res.status(400).json({
+        success: false,
+        error: 'Application ID is required'
+      });
+    }
     const { page = 1, limit = 10, search, type, status = 'all' } = req.query;
     const userId = (req as any).user._id;
+    const userRole = (req as any).user.role;
+    const user = (req as any).user;
 
-    // Verify access
-    const workspace = await Workspace.findOne({
+    // Verify workspace access - include basic users with assigned workspaces
+    let workspaceQuery: any = {
       _id: workspaceId,
-      $or: [
+      active: true
+    };
+
+    if (userRole === 'basic' || userRole === 'admin') {
+      // Admin and basic users can only access workspaces they're assigned to
+      const assignedWorkspaces = user.assignedWorkspaces || [];
+      if (assignedWorkspaces.length > 0) {
+        workspaceQuery.$or = [
+          { 'metadata.owner': userId },
+          { 'metadata.admins': userId },
+          { _id: { $in: assignedWorkspaces } }
+        ];
+      } else {
+        // User with no assigned workspaces - no access
+        workspaceQuery._id = null;
+      }
+    } else {
+      // Super admin users - only owner/admin access
+      workspaceQuery.$or = [
         { 'metadata.owner': userId },
         { 'metadata.admins': userId }
-      ],
-      active: true
-    });
+      ];
+    }
+
+    const workspace = await Workspace.findOne(workspaceQuery);
 
     if (!workspace) {
       return void res.status(404).json({
@@ -52,11 +109,36 @@ router.get('/', requireAuth, validateIds, async (req: Request, res: Response): P
       });
     }
 
-    const application = await Application.findOne({
+    // Verify application access - include basic users with assigned applications
+    let applicationQuery: any = {
       _id: applicationId,
       workspaceId,
       active: true
-    });
+    };
+
+    if (userRole === 'basic') {
+      // Basic users can only access applications they're assigned to
+      const assignedApplications = user.assignedApplications || [];
+      if (assignedApplications.length > 0) {
+        // Check if this specific applicationId is in their assignments
+        if (!assignedApplications.some((appId: string) => appId.toString() === applicationId.toString())) {
+          return void res.status(404).json({
+            success: false,
+            error: 'Application not found'
+          });
+        }
+        // Update query to only include assigned applications
+        applicationQuery._id = { $in: assignedApplications };
+      } else {
+        // Basic user with no assigned applications - no access
+        return void res.status(404).json({
+          success: false,
+          error: 'Application not found'
+        });
+      }
+    }
+
+    const application = await Application.findOne(applicationQuery);
 
     if (!application) {
       return void res.status(404).json({
@@ -130,6 +212,9 @@ router.post('/', requireAuth, validateIds, validateEnvironment, async (req: Requ
     const { workspaceId, applicationId } = req.params;
     const userId = (req as any).user._id;
     const { name, displayName, description, type, configuration, isDefault = false } = req.body;
+    
+    // Generate a valid environment name from display name
+    const validEnvName = generateValidEnvName(displayName, name);
 
     // Verify access
     const workspace = await Workspace.findOne({
@@ -162,7 +247,7 @@ router.post('/', requireAuth, validateIds, validateEnvironment, async (req: Requ
     }
 
     // Check if environment name exists in application
-    const existingEnv = await Environment.findOne({ workspaceId, applicationId, name });
+    const existingEnv = await Environment.findOne({ workspaceId, applicationId, name: validEnvName, active: true });
     if (existingEnv) {
       return void res.status(409).json({
         success: false,
@@ -173,7 +258,7 @@ router.post('/', requireAuth, validateIds, validateEnvironment, async (req: Requ
     const environment = new Environment({
       workspaceId,
       applicationId,
-      name,
+      name: validEnvName,
       displayName,
       description,
       type,
@@ -213,23 +298,64 @@ router.post('/', requireAuth, validateIds, validateEnvironment, async (req: Requ
 router.get('/:environmentId', requireAuth, validateIds, async (req: Request, res: Response): Promise<void> => {
   try {
     const { workspaceId, applicationId, environmentId } = req.params;
-    const userId = (req as any).user._id;
 
-    // Verify access
-    const workspace = await Workspace.findOne({
+    if (!applicationId) {
+      return void res.status(400).json({
+        success: false,
+        error: 'Application ID is required'
+      });
+    }
+
+    const userId = (req as any).user._id;
+    const userRole = (req as any).user.role;
+    const user = (req as any).user;
+
+    // Verify workspace access - include basic users with assigned workspaces
+    let workspaceQuery: any = {
       _id: workspaceId,
-      $or: [
+      active: true
+    };
+
+    if (userRole === 'basic' || userRole === 'admin') {
+      // Admin and basic users can only access workspaces they're assigned to
+      const assignedWorkspaces = user.assignedWorkspaces || [];
+      if (assignedWorkspaces.length > 0) {
+        workspaceQuery.$or = [
+          { 'metadata.owner': userId },
+          { 'metadata.admins': userId },
+          { _id: { $in: assignedWorkspaces } }
+        ];
+      } else {
+        // User with no assigned workspaces - no access
+        workspaceQuery._id = null;
+      }
+    } else {
+      // Super admin users - only owner/admin access
+      workspaceQuery.$or = [
         { 'metadata.owner': userId },
         { 'metadata.admins': userId }
-      ],
-      active: true
-    });
+      ];
+    }
+
+    const workspace = await Workspace.findOne(workspaceQuery);
 
     if (!workspace) {
       return void res.status(404).json({
         success: false,
         error: 'Workspace not found'
       });
+    }
+
+    // Verify application access for basic users
+    if (userRole === 'basic') {
+      const assignedApplications = user.assignedApplications || [];
+      if (assignedApplications.length === 0 ||
+          !assignedApplications.some((appId: string) => appId.toString() === applicationId.toString())) {
+        return void res.status(404).json({
+          success: false,
+          error: 'Application not found'
+        });
+      }
     }
 
     const environment = await Environment.findOne({

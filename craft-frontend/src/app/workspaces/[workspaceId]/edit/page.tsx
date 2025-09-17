@@ -365,37 +365,41 @@ export default function EditWorkspacePage() {
       const timeoutId = setTimeout(() => {
         validateWorkspaceName(formData.name);
       }, 500);
-      
+
       return () => clearTimeout(timeoutId);
-    } else if (formData.name && formData.name.length < 2) {
-      // Handle short names immediately
-      setNameValidation({ 
-        isValidating: false, 
-        isValid: false, 
-        message: 'Name must be at least 2 characters' 
+    } else if (formData.displayName && formData.displayName.length < 2) {
+      // Handle short displayNames immediately
+      setNameValidation({
+        isValidating: false,
+        isValid: false,
+        message: 'Name must be at least 2 characters'
       });
-    } else {
-      // Empty name case
-      setNameValidation({ 
-        isValidating: false, 
-        isValid: false, 
-        message: '' 
+    } else if (!formData.displayName) {
+      // Empty displayName case
+      setNameValidation({
+        isValidating: false,
+        isValid: false,
+        message: ''
       });
     }
     return undefined;
-  }, [formData.name, validateWorkspaceName]);
+  }, [formData.name, formData.displayName, validateWorkspaceName]);
 
-  const handleWorkspaceChange = useCallback((field: keyof Pick<WorkspaceFormData, 'name' | 'description'>, value: string) => {
+  const handleWorkspaceChange = useCallback((field: keyof Pick<WorkspaceFormData, 'name' | 'displayName' | 'description'>, value: string) => {
     setFormData(prev => ({
       ...prev,
-      [field]: value
+      [field]: value,
+      // When displayName changes, also update internal name
+      ...(field === 'displayName' ? { name: generateValidSystemName(value) } : {}),
+      // When name changes, also update displayName to keep them in sync
+      ...(field === 'name' ? { displayName: value } : {})
     }));
 
-    // Reset validation when name changes
-    if (field === 'name') {
+    // Reset validation when name or displayName changes
+    if (field === 'name' || field === 'displayName') {
       setNameValidation({ isValidating: false, isValid: true, message: '' });
     }
-  }, []);
+  }, [generateValidSystemName]);
 
   const handleSettingsChange = useCallback((field: string, value: any) => {
     setFormData(prev => ({
@@ -507,7 +511,7 @@ export default function EditWorkspacePage() {
       setSaving(true);
       hideSnackbar();
 
-      if (!formData.name) {
+      if (!formData.displayName) {
         showError('Workspace name is required');
         return;
       }
@@ -515,7 +519,7 @@ export default function EditWorkspacePage() {
       // Step 1: Update workspace basic details
       const workspaceUpdateData = {
         name: formData.name,
-        displayName: formData.name,
+        displayName: formData.displayName,
         description: formData.description,
         settings: formData.settings,
         status: status
@@ -636,10 +640,10 @@ export default function EditWorkspacePage() {
     switch (step) {
       case 0:
         // Step 0: Length and duplicate check required
-        return formData.name && 
-               formData.name.trim().length >= 2 &&
-               formData.name.trim().length <= 25 &&
-               nameValidation.isValid && 
+        return formData.displayName &&
+               formData.displayName.trim().length >= 2 &&
+               formData.displayName.trim().length <= 100 &&
+               nameValidation.isValid &&
                !nameValidation.isValidating;
       case 1:
         // Step 1: Must have at least one application with at least one environment
@@ -678,12 +682,12 @@ export default function EditWorkspacePage() {
             <Stack spacing={3}>
               <TextField
                 label="Workspace Name"
-                value={formData.name}
-                onChange={(e) => handleWorkspaceChange('name', e.target.value)}
+                value={formData.displayName}
+                onChange={(e) => handleWorkspaceChange('displayName', e.target.value)}
                 placeholder="e.g., my-awesome-workspace"
                 fullWidth
                 required
-                error={!nameValidation.isValid && !nameValidation.isValidating && formData.name.length > 0 && formData.name !== originalData?.name}
+                error={!nameValidation.isValid && !nameValidation.isValidating && formData.displayName.length > 0 && formData.displayName !== originalData?.displayName}
                 helperText={
                   nameValidation.isValidating 
                     ? "Checking availability..." 

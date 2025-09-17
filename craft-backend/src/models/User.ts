@@ -71,9 +71,13 @@ const UserSchema = new Schema<UserDocument>({
   },
   
   // Workspace associations
-  workspaces: [{
+  assignedWorkspaces: [{
     type: String,
     ref: 'Workspace'
+  }],
+  assignedApplications: [{
+    type: String,
+    ref: 'Application'
   }],
   currentWorkspace: {
     type: String,
@@ -96,7 +100,9 @@ const UserSchema = new Schema<UserDocument>({
       }
     },
     default: new Map()
-  }
+  },
+  
+  // Role-based access assignments for Admin and Basic users
 }, {
   timestamps: true,
   toJSON: {
@@ -116,7 +122,7 @@ UserSchema.index({ authProvider: 1 });
 // Instance methods
 UserSchema.methods.comparePassword = async function(candidatePassword: string): Promise<boolean> {
   try {
-    return await bcrypt.compare(candidatePassword, this.password);
+    return await bcrypt.compare(candidatePassword, (this as any).password);
   } catch {
     return false;
   }
@@ -124,7 +130,7 @@ UserSchema.methods.comparePassword = async function(candidatePassword: string): 
 
 // Virtual for full user info without password
 UserSchema.virtual('safeUser').get(function() {
-  const { password, ...safeUser } = this.toObject();
+  const { password, ...safeUser } = (this as any).toObject();
   return safeUser;
 });
 

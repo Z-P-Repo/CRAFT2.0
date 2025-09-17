@@ -36,7 +36,28 @@ When user prompts "deploy", prepare the application for production deployment:
 - Frontend: `/craft-frontend` (Next.js 15.4.6, TypeScript 5.5, Material-UI v7, Azure AD MSAL, Jest 29 Testing)
 - Backend: `/craft-backend` (Node.js 18+, Express 4.19, TypeScript 5.5, MongoDB 7.0+, Azure AD SSO, Advanced Rate Limiting)
 
-## Latest Features (v1.3.1)
+## Latest Features (v1.3.4)
+- Role-based access control (RBAC) with three user roles: super_admin, admin, basic
+- Basic users have view-only access to all ABAC entities within assigned workspaces
+- Admin users restricted to their assigned workspaces, no longer have super admin privileges
+- Environment API fix - resolved critical API connection issue (port 3001 → 3005)
+- Enhanced workspace-based access control across all backend controllers
+- UI role filtering with conditional rendering of create/edit/delete actions
+- Fixed workspace name display in edit forms (displayName vs internal name)
+- Professional workspace detail page redesign with compact header and metrics
+- React Fragment fix for Material-UI Menu components
+- Workspace assignment system preserving existing assignments during updates
+
+## Previous Features (v1.3.3)
+- Environment name auto-generation from display names ensuring consistency across workspace hierarchy
+- Synchronized environment display names and internal names for improved user experience
+- Fixed silent environment creation failures during workspace setup with comprehensive error tracking
+- Enhanced workspace creation reliability with better error reporting and recovery mechanisms
+- Improved environment validation with automatic name normalization and sanitization
+- Consistent environment naming pattern matching application auto-generation for platform consistency
+- Better error tracking for failed environments during bulk creation operations with detailed reporting
+
+## Previous Features (v1.3.1)
 - Consistent dropdown format across all policy creation dropdowns (Subjects, Actions, Resources) showing only essential information
 - Subject selection dropdowns now show only displayName + email for cleaner interface
 - Action selection dropdowns display only displayName + description without category/risk clutter
@@ -68,5 +89,5 @@ When user prompts "deploy", prepare the application for production deployment:
 - Backend: `cd craft-backend && npm run build`
 
 ## Development Commands
-- Frontend: `cd craft-frontend && npm run dev`
-- Backend: `cd craft-backend && npm run dev`
+- Frontend: `cd craft-frontend && npm run dev` (runs on port 3002)
+- Backend: `cd craft-backend && PORT=3005 npm run dev` (runs on port 3005)

@@ -3,8 +3,67 @@ import { body, param, query, validationResult } from 'express-validator';
 import { Workspace, IWorkspace } from '../models/Workspace';
 import { Application } from '../models/Application';
 import { Environment } from '../models/Environment';
-import { requireAuth } from '../middleware/auth';
+import { User } from '../models/User';
+import { requireAuth, requireAdminOrSuperAdmin } from '../middleware/auth';
 import { ApiResponse, PaginatedResponse } from '../types';
+
+// Helper function to generate a valid application name from display name
+function generateValidAppName(displayName: string, originalName?: string): string {
+  // First try the original name if it exists and is valid
+  if (originalName && originalName.length >= 2 && /^[a-zA-Z0-9][a-zA-Z0-9\s\-_\.]*[a-zA-Z0-9]$/.test(originalName)) {
+    return originalName;
+  }
+  
+  // Generate from display name
+  let appName = displayName
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-zA-Z0-9\s\-_\.]/g, '') // Remove invalid characters
+    .replace(/\s+/g, '-') // Replace spaces with hyphens
+    .replace(/^[^a-zA-Z0-9]+|[^a-zA-Z0-9]+$/g, ''); // Remove leading/trailing non-alphanumeric
+  
+  // Ensure minimum length
+  if (appName.length < 2) {
+    appName = 'app-' + Date.now().toString().slice(-4); // Fallback name
+  }
+  
+  // Ensure maximum length  
+  if (appName.length > 50) {
+    appName = appName.substring(0, 47) + '...';
+  }
+  
+  return appName;
+}
+
+function generateValidEnvName(displayName: string, originalName?: string): string {
+  // If original name exists and is valid, use it
+  if (originalName && originalName.length >= 2 && /^[a-z0-9][a-z0-9-]*[a-z0-9]$/.test(originalName)) {
+    return originalName;
+  }
+  
+  // Generate environment name from display name
+  let envName = displayName
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9\s-]/g, '') // Remove invalid characters
+    .replace(/\s+/g, '-') // Replace spaces with hyphens
+    .replace(/^[^a-z0-9]+|[^a-z0-9]+$/g, ''); // Remove leading/trailing invalid chars
+  
+  // Ensure minimum length
+  if (envName.length < 2) {
+    envName = 'env-' + Date.now().toString().slice(-4);
+  }
+  
+  // Ensure it starts and ends with alphanumeric
+  if (!/^[a-z0-9]/.test(envName)) {
+    envName = 'env-' + envName;
+  }
+  if (!/[a-z0-9]$/.test(envName)) {
+    envName = envName + '-env';
+  }
+  
+  return envName;
+}
 
 const router = Router();
 
@@ -43,12 +102,22 @@ router.get('/', requireAuth, async (req: Request, res: Response): Promise<void> 
       active: true
     };
 
-    // Super admin and admin can see all workspaces, basic users only see their own
-    if (userRole !== 'super_admin' && userRole !== 'admin') {
-      query.$or = [
-        { 'metadata.owner': userId },
-        { 'metadata.admins': userId }
-      ];
+    // Only super admin can see all workspaces, admin and basic users only see assigned ones
+    if (userRole !== 'super_admin') {
+      // Get user's assigned workspaces
+      const user = (req as any).user;
+      const assignedWorkspaces = user.assignedWorkspaces || [];
+
+      // If user has no assigned workspaces, they should see nothing
+      if (assignedWorkspaces.length === 0) {
+        query._id = null; // This will return no results
+      } else {
+        query.$or = [
+          { 'metadata.owner': userId },
+          { 'metadata.admins': userId },
+          { _id: { $in: assignedWorkspaces } } // User's assigned workspaces
+        ];
+      }
     }
 
     if (status !== 'all') {
@@ -75,9 +144,24 @@ router.get('/', requireAuth, async (req: Request, res: Response): Promise<void> 
     // Fetch applications and environments for each workspace
     const workspacesWithDetails = await Promise.all(
       workspaces.map(async (workspace) => {
-        const applications = await Application.find({ 
-          workspaceId: workspace._id
-        }).lean();
+        let applicationQuery: any = {
+          workspaceId: workspace._id,
+          active: true
+        };
+
+        // Admin and basic users can only see applications they're assigned to
+        if (userRole === 'basic' || userRole === 'admin') {
+          const user = (req as any).user;
+          const assignedApplications = user.assignedApplications || [];
+
+          if (assignedApplications.length > 0) {
+            applicationQuery._id = { $in: assignedApplications };
+          } else {
+            applicationQuery._id = null; // No results
+          }
+        }
+
+        const applications = await Application.find(applicationQuery).lean();
         
         const applicationsWithEnvs = await Promise.all(
           applications.map(async (app) => {
@@ -124,7 +208,7 @@ router.get('/', requireAuth, async (req: Request, res: Response): Promise<void> 
 });
 
 // POST /api/workspaces - Create new workspace with applications and environments
-router.post('/', requireAuth, validateWorkspace, async (req: Request, res: Response): Promise<void> => {
+router.post('/', requireAuth, requireAdminOrSuperAdmin, validateWorkspace, async (req: Request, res: Response): Promise<void> => {
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -171,24 +255,35 @@ router.post('/', requireAuth, validateWorkspace, async (req: Request, res: Respo
 
     // Create applications and their environments
     const createdApplications = [];
+    const failedApplications = [];
     for (const appData of applications) {
       try {
+        // Generate a valid application name first
+        const validAppName = generateValidAppName(appData.displayName, appData.name);
+        
         // Validate application name uniqueness within workspace
         const existingApp = await Application.findOne({
           workspaceId,
-          name: appData.name,
+          name: validAppName,
           active: true
         });
 
         if (existingApp) {
-          console.warn(`Skipping duplicate application name: ${appData.name}`);
+          const error = `Application name '${validAppName}' already exists in this workspace`;
+          console.warn(`Skipping duplicate application name: ${validAppName}`);
+          failedApplications.push({
+            name: appData.name || validAppName,
+            displayName: appData.displayName,
+            error: error,
+            reason: 'duplicate_name'
+          });
           continue;
         }
-
+        
         // Create application
         const application = new Application({
           workspaceId,
-          name: appData.name,
+          name: validAppName,
           displayName: appData.displayName,
           description: appData.description,
           type: appData.type,
@@ -216,25 +311,35 @@ router.post('/', requireAuth, validateWorkspace, async (req: Request, res: Respo
 
         // Create environments for this application
         const createdEnvironments = [];
+        const failedEnvironments = [];
         for (const envData of appData.environments || []) {
           try {
+            // Generate a valid environment name from display name
+            const validEnvName = generateValidEnvName(envData.displayName, envData.name);
+            
             // Validate environment name uniqueness within application
             const existingEnv = await Environment.findOne({
               workspaceId,
               applicationId,
-              name: envData.name,
+              name: validEnvName,
               active: true
             });
 
             if (existingEnv) {
-              console.warn(`Skipping duplicate environment name: ${envData.name} in app ${appData.name}`);
+              console.warn(`Skipping duplicate environment name: ${validEnvName} in app ${appData.name}`);
+              failedEnvironments.push({
+                name: validEnvName,
+                displayName: envData.displayName,
+                error: `Environment name '${validEnvName}' already exists in this application`,
+                reason: 'duplicate_name'
+              });
               continue;
             }
 
             const environment = new Environment({
               workspaceId,
               applicationId,
-              name: envData.name,
+              name: validEnvName,
               displayName: envData.displayName,
               description: envData.description,
               type: envData.type,
@@ -263,6 +368,22 @@ router.post('/', requireAuth, validateWorkspace, async (req: Request, res: Respo
             });
           } catch (envError) {
             console.error(`Error creating environment ${envData.name}:`, envError);
+            const errorMessage = (envError as any).message || 'Unknown error during environment creation';
+            let reason = 'creation_error';
+            
+            // Determine specific error reason
+            if (errorMessage.includes('validation failed')) {
+              reason = 'validation_error';
+            } else if (errorMessage.includes('duplicate')) {
+              reason = 'duplicate_name';
+            }
+            
+            failedEnvironments.push({
+              name: envData.name,
+              displayName: envData.displayName,
+              error: errorMessage,
+              reason: reason
+            });
           }
         }
 
@@ -271,16 +392,51 @@ router.post('/', requireAuth, validateWorkspace, async (req: Request, res: Respo
           name: application.name,
           displayName: application.displayName,
           type: application.type,
-          environments: createdEnvironments
+          environments: createdEnvironments,
+          ...(failedEnvironments.length > 0 && { failedEnvironments })
         });
       } catch (appError) {
         console.error(`Error creating application ${appData.name}:`, appError);
+        const errorMessage = (appError as any).message || 'Unknown error during application creation';
+        let reason = 'creation_error';
+        
+        // Determine specific error reason
+        if (errorMessage.includes('validation failed')) {
+          reason = 'validation_error';
+        } else if (errorMessage.includes('duplicate')) {
+          reason = 'duplicate_name';
+        }
+        
+        failedApplications.push({
+          name: appData.name,
+          displayName: appData.displayName,
+          error: errorMessage,
+          reason: reason
+        });
       }
     }
 
     // Return complete workspace with created applications
+    const totalRequestedApps = applications.length;
+    const hasApplicationFailures = failedApplications.length > 0;
+    const environmentsCreated = createdApplications.reduce((total, app) => total + app.environments.length, 0);
+    const totalFailedEnvironments = createdApplications.reduce((total, app) => total + (app.failedEnvironments ? app.failedEnvironments.length : 0), 0);
+    const totalRequestedEnvironments = applications.reduce((total: number, app: any) => total + (app.environments ? app.environments.length : 0), 0);
+    const hasEnvironmentFailures = totalFailedEnvironments > 0;
+    const hasAnyFailures = hasApplicationFailures || hasEnvironmentFailures;
+    
+    let message = `Workspace created successfully`;
+    if (hasAnyFailures) {
+      message += ` with ${createdApplications.length} of ${totalRequestedApps} applications created`;
+      if (environmentsCreated > 0 || totalFailedEnvironments > 0) {
+        message += ` and ${environmentsCreated} of ${totalRequestedEnvironments} environments`;
+      }
+    } else {
+      message += ` with ${createdApplications.length} applications and ${environmentsCreated} environments`;
+    }
+    
     const response: ApiResponse<any> = {
-      success: true,
+      success: !hasAnyFailures, // Set success to false if there are failures
       data: {
         workspace: {
           _id: workspace._id,
@@ -296,14 +452,35 @@ router.post('/', requireAuth, validateWorkspace, async (req: Request, res: Respo
         },
         applications: createdApplications,
         summary: {
+          applicationsRequested: totalRequestedApps,
           applicationsCreated: createdApplications.length,
-          environmentsCreated: createdApplications.reduce((total, app) => total + app.environments.length, 0)
-        }
+          applicationsFailed: failedApplications.length,
+          environmentsRequested: totalRequestedEnvironments,
+          environmentsCreated: environmentsCreated,
+          environmentsFailed: totalFailedEnvironments
+        },
+        ...(hasApplicationFailures && { failedApplications }),
+        ...(hasEnvironmentFailures && { 
+          failedEnvironments: createdApplications
+            .filter(app => app.failedEnvironments && app.failedEnvironments.length > 0)
+            .map(app => ({
+              applicationName: app.name,
+              environments: app.failedEnvironments
+            }))
+        })
       },
-      message: `Workspace created successfully with ${createdApplications.length} applications and ${createdApplications.reduce((total, app) => total + app.environments.length, 0)} environments`
+      message: message,
+      ...(hasAnyFailures && { 
+        warning: [
+          ...(hasApplicationFailures ? [`${failedApplications.length} application(s) could not be created`] : []),
+          ...(hasEnvironmentFailures ? [`${totalFailedEnvironments} environment(s) could not be created`] : [])
+        ].join(' and ') + ' due to validation errors'
+      })
     };
 
-    res.status(201).json(response);
+    // Return appropriate status code
+    const statusCode = hasAnyFailures ? 422 : 201; // 422 Unprocessable Entity for validation failures
+    res.status(statusCode).json(response);
   } catch (error) {
     console.error('Error creating workspace:', error);
     res.status(500).json({
@@ -333,12 +510,21 @@ router.get('/:workspaceId', requireAuth, validateWorkspaceId, async (req: Reques
       _id: workspaceId
     };
 
-    // Super admin and admin can access any workspace, basic users only their own
-    if (userRole !== 'super_admin' && userRole !== 'admin') {
-      query.$or = [
-        { 'metadata.owner': userId },
-        { 'metadata.admins': userId }
-      ];
+    // Only super admin can access any workspace, admin and basic users only assigned ones
+    if (userRole !== 'super_admin') {
+      const user = (req as any).user;
+      const assignedWorkspaces = user.assignedWorkspaces || [];
+
+      // If user has no assigned workspaces, they cannot access any workspace
+      if (assignedWorkspaces.length === 0) {
+        query._id = null; // This will return no results
+      } else {
+        query.$or = [
+          { 'metadata.owner': userId },
+          { 'metadata.admins': userId },
+          { _id: { $in: assignedWorkspaces } } // User's assigned workspaces
+        ];
+      }
     }
 
     const workspace = await Workspace.findOne(query).populate('applicationsCount');
@@ -351,9 +537,22 @@ router.get('/:workspaceId', requireAuth, validateWorkspaceId, async (req: Reques
     }
 
     // Fetch applications and environments for this workspace
-    const applications = await Application.find({ 
-      workspaceId: workspace._id
-    }).lean();
+    let applicationQuery: any = {
+      workspaceId: workspace._id,
+      active: true
+    };
+
+    // Basic users can only see applications they're assigned to
+    if (userRole === 'basic') {
+      const user = await User.findById(userId);
+      if (user && user.assignedApplications && user.assignedApplications.length > 0) {
+        applicationQuery._id = { $in: user.assignedApplications };
+      } else {
+        applicationQuery._id = null; // No results
+      }
+    }
+
+    const applications = await Application.find(applicationQuery).lean();
     
     const applicationsWithEnvs = await Promise.all(
       applications.map(async (app) => {
@@ -411,12 +610,21 @@ router.put('/:workspaceId', requireAuth, validateWorkspaceId, validateWorkspace,
       active: true
     };
 
-    // Super admin and admin can update any workspace, basic users only their own
-    if (userRole !== 'super_admin' && userRole !== 'admin') {
-      query.$or = [
-        { 'metadata.owner': userId },
-        { 'metadata.admins': userId }
-      ];
+    // Only super admin can update any workspace, admin and basic users only assigned ones
+    if (userRole !== 'super_admin') {
+      const user = (req as any).user;
+      const assignedWorkspaces = user.assignedWorkspaces || [];
+
+      // If user has no assigned workspaces, they cannot update any workspace
+      if (assignedWorkspaces.length === 0) {
+        query._id = null; // This will return no results
+      } else {
+        query.$or = [
+          { 'metadata.owner': userId },
+          { 'metadata.admins': userId },
+          { _id: { $in: assignedWorkspaces } } // User's assigned workspaces
+        ];
+      }
     }
 
     const workspace = await Workspace.findOne(query);
@@ -489,9 +697,21 @@ router.delete('/:workspaceId', requireAuth, validateWorkspaceId, async (req: Req
       active: true
     };
 
-    // Super admin and admin can delete any workspace, basic users only their own
-    if (userRole !== 'super_admin' && userRole !== 'admin') {
-      query['metadata.owner'] = userId;
+    // Only super admin can delete any workspace, admin and basic users only assigned ones
+    if (userRole !== 'super_admin') {
+      const user = (req as any).user;
+      const assignedWorkspaces = user.assignedWorkspaces || [];
+
+      // If user has no assigned workspaces, they cannot delete any workspace
+      if (assignedWorkspaces.length === 0) {
+        query._id = null; // This will return no results
+      } else {
+        query.$or = [
+          { 'metadata.owner': userId },
+          { 'metadata.admins': userId },
+          { _id: { $in: assignedWorkspaces } } // User's assigned workspaces
+        ];
+      }
     }
 
     const workspace = await Workspace.findOne(query);
@@ -554,12 +774,21 @@ router.get('/:workspaceId/stats', requireAuth, validateWorkspaceId, async (req: 
       _id: workspaceId
     };
 
-    // Super admin and admin can view stats for any workspace, basic users only their own
-    if (userRole !== 'super_admin' && userRole !== 'admin') {
-      query.$or = [
-        { 'metadata.owner': userId },
-        { 'metadata.admins': userId }
-      ];
+    // Only super admin can view stats for any workspace, admin and basic users only assigned ones
+    if (userRole !== 'super_admin') {
+      const user = (req as any).user;
+      const assignedWorkspaces = user.assignedWorkspaces || [];
+
+      // If user has no assigned workspaces, they cannot view stats for any workspace
+      if (assignedWorkspaces.length === 0) {
+        query._id = null; // This will return no results
+      } else {
+        query.$or = [
+          { 'metadata.owner': userId },
+          { 'metadata.admins': userId },
+          { _id: { $in: assignedWorkspaces } } // User's assigned workspaces
+        ];
+      }
     }
 
     const workspace = await Workspace.findOne(query);
@@ -688,7 +917,7 @@ router.post('/:workspaceId/admins', requireAuth, validateWorkspaceId, async (req
   try {
     const { workspaceId } = req.params;
     const { userId: newAdminId } = req.body;
-    const currentUserId = (req as any).user.id;
+    const currentUserId = (req as any).user._id?.toString() || (req as any).user.id;
 
     const workspace = await Workspace.findOne({
       _id: workspaceId,
@@ -718,6 +947,88 @@ router.post('/:workspaceId/admins', requireAuth, validateWorkspaceId, async (req
     res.status(500).json({
       success: false,
       error: 'Failed to add admin'
+    });
+  }
+});
+
+// GET /api/workspaces/:workspaceId/applications - Get applications for a workspace
+router.get('/:workspaceId/applications', requireAuth, validateWorkspaceId, async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { workspaceId } = req.params;
+
+    if (!workspaceId) {
+      return void res.status(400).json({
+        success: false,
+        error: 'Workspace ID is required'
+      });
+    }
+
+    const userId = (req as any).user._id?.toString() || (req as any).user.id;
+    const userRole = (req as any).user.role;
+
+    // Check workspace access
+    let workspace;
+    if (userRole === 'super_admin') {
+      workspace = await Workspace.findOne({ _id: workspaceId, active: true });
+    } else {
+      // For non-super-admin users, check if they have access to this workspace
+      const query: any = { _id: workspaceId, active: true };
+
+      // Basic users can only access workspaces they're assigned to
+      if (userRole === 'basic') {
+        const user = await User.findById(userId);
+        if (user && user.assignedWorkspaces && user.assignedWorkspaces.includes(workspaceId)) {
+          // User has access to this workspace - query remains as is
+        } else {
+          // Basic user doesn't have access to this workspace
+          return void res.status(404).json({
+            success: false,
+            error: 'Workspace not found'
+          });
+        }
+      }
+
+      workspace = await Workspace.findOne(query);
+    }
+
+    if (!workspace) {
+      return void res.status(404).json({
+        success: false,
+        error: 'Workspace not found'
+      });
+    }
+
+    // Fetch applications for this workspace
+    let applicationQuery: any = {
+      workspaceId,
+      active: true
+    };
+
+    // Basic users can only see applications they're assigned to
+    if (userRole === 'basic') {
+      const user = await User.findById(userId);
+      if (user && user.assignedApplications && user.assignedApplications.length > 0) {
+        applicationQuery._id = { $in: user.assignedApplications };
+      } else {
+        // Basic user with no application assignments - no access
+        applicationQuery._id = null; // This will return no results
+      }
+    }
+
+    const applications = await Application.find(applicationQuery).populate('environments');
+
+    const response = {
+      success: true,
+      data: applications,
+      message: `Found ${applications.length} applications`
+    };
+
+    res.json(response);
+  } catch (error) {
+    console.error('Error fetching workspace applications:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch workspace applications'
     });
   }
 });

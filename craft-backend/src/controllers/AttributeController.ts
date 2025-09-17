@@ -10,7 +10,7 @@ import { Policy } from '@/models/Policy';
 
 export class AttributeController {
   // Get all attributes with pagination and filtering
-  static getAttributes = asyncHandler(async (req: Request, res: Response): Promise<any> => {
+  static getAttributes = asyncHandler(async (req: AuthRequest, res: Response): Promise<any> => {
     const paginationOptions = PaginationHelper.validatePaginationParams(req.query);
     const {
       search,
@@ -22,9 +22,23 @@ export class AttributeController {
       isCustom,
     } = req.query;
 
+    const user = req.user;
+    const userRole = user?.role;
+
     // Build filter object
     const filter: any = {};
-    
+
+    // Apply workspace-based filtering for basic and admin users
+    if (userRole === 'basic' || userRole === 'admin') {
+      const assignedWorkspaces = user?.assignedWorkspaces || [];
+      if (assignedWorkspaces.length > 0) {
+        filter.workspaceId = { $in: assignedWorkspaces };
+      } else {
+        // User with no workspace assignments - no access
+        filter.workspaceId = null; // This will return no results
+      }
+    }
+
     if (categories) {
       if (typeof categories === 'string') {
         filter.categories = categories;
@@ -89,13 +103,34 @@ export class AttributeController {
   });
 
   // Get attribute by ID
-  static getAttributeById = asyncHandler(async (req: Request, res: Response): Promise<any> => {
+  static getAttributeById = asyncHandler(async (req: AuthRequest, res: Response): Promise<any> => {
     const { id } = req.params;
+    const user = req.user;
+    const userRole = user?.role;
 
-    // Try to find by MongoDB _id first, then by custom id field
-    let attribute = await Attribute.findById(id).lean();
-    if (!attribute) {
-      attribute = await Attribute.findOne({ id }).lean();
+    let attribute;
+
+    // Apply workspace filtering for basic and admin users
+    if (userRole === 'basic' || userRole === 'admin') {
+      const assignedWorkspaces = user?.assignedWorkspaces || [];
+      if (assignedWorkspaces.length > 0) {
+        const workspaceFilter = { workspaceId: { $in: assignedWorkspaces } };
+
+        // Try to find by MongoDB _id first, then by custom id field (with workspace filtering)
+        attribute = await Attribute.findOne({ _id: id, ...workspaceFilter }).lean();
+        if (!attribute) {
+          attribute = await Attribute.findOne({ id, ...workspaceFilter }).lean();
+        }
+      } else {
+        // User with no workspace assignments - no access
+        attribute = null;
+      }
+    } else {
+      // Super admin users - no workspace filtering
+      attribute = await Attribute.findById(id).lean();
+      if (!attribute) {
+        attribute = await Attribute.findOne({ id }).lean();
+      }
     }
 
     if (!attribute) {

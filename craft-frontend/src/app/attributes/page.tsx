@@ -78,6 +78,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useWorkspace } from '@/contexts/WorkspaceContext';
 import { useApiSnackbar } from '@/contexts/SnackbarContext';
 import { canManage, canEdit, canDelete, canCreate } from '@/utils/permissions';
+import RoleProtection from '@/components/auth/RoleProtection';
 
 interface Attribute {
   _id: string;
@@ -926,7 +927,8 @@ export default function AttributesPage() {
   const paginatedAttributes = attributes;
 
   return (
-    <DashboardLayout>
+    <RoleProtection allowedRoles={['basic', 'admin', 'super_admin']}>
+      <DashboardLayout>
       {(!currentWorkspace || !currentApplication || !currentEnvironment) && (
         <Alert severity="info" sx={{ mb: 3 }}>
           <AlertTitle>Workspace, Application, and Environment Required</AlertTitle>
@@ -2761,6 +2763,7 @@ export default function AttributesPage() {
       />
 
 
-    </DashboardLayout>
+      </DashboardLayout>
+    </RoleProtection>
   );
 }
