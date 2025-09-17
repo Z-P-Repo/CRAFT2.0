@@ -3,6 +3,7 @@ import './types/express-augmentation';
 import express from 'express';
 import cors from 'cors';
 import compression from 'compression';
+import http from 'http';
 import morgan from 'morgan';
 
 // Import configuration and utilities
@@ -100,8 +101,16 @@ class Server {
       // Connect to database
       await databaseConnection.connect();
       
+      // Create HTTP server with increased header size limits to prevent 431 errors
+      const server = http.createServer(this.app);
+
+      // Set server options to handle large headers (JWT tokens, etc.)
+      server.maxHeadersCount = 1000;
+      server.headersTimeout = 60000; // 60 seconds
+      server.requestTimeout = 60000; // 60 seconds
+
       // Start server with error handling
-      const server = this.app.listen(this.port, () => {
+      server.listen(this.port, () => {
         logger.info(`✅ Server running on port ${this.port}`);
         logger.info(`🌍 Environment: ${config.env}`);
         logger.info(`📊 Health check: http://localhost:${this.port}/health`);
