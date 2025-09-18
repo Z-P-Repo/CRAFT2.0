@@ -22,7 +22,7 @@ const envSchema = Joi.object({
   
   // CORS
   FRONTEND_URL: Joi.string().default('http://localhost:3000'),
-  ALLOWED_ORIGINS: Joi.string().default('http://localhost:3000,http://localhost:3001'),
+  ALLOWED_ORIGINS: Joi.string().default('http://localhost:3000,http://localhost:3001,http://192.168.10.83:3000,http://192.168.10.83:3001'),
   
   // Security
   BCRYPT_ROUNDS: Joi.number().default(12),
