@@ -84,7 +84,7 @@ router.get('/', requireAuth, validateIds, async (req: Request, res: Response): P
       const assignedWorkspaces = user.assignedWorkspaces || [];
       if (assignedWorkspaces.length > 0) {
         // Check if the requested workspace is in their assigned workspaces
-        if (!assignedWorkspaces.some((assignedId: string) => assignedId.toString() === workspaceId.toString())) {
+        if (!assignedWorkspaces.some((assignedId: string) => assignedId.toString() === workspaceId?.toString())) {
           return void res.status(404).json({
             success: false,
             error: 'Workspace not found'
@@ -327,7 +327,7 @@ router.get('/:environmentId', requireAuth, validateIds, async (req: Request, res
       const assignedWorkspaces = user.assignedWorkspaces || [];
       if (assignedWorkspaces.length > 0) {
         // Check if the requested workspace is in their assigned workspaces
-        if (!assignedWorkspaces.some((assignedId: string) => assignedId.toString() === workspaceId.toString())) {
+        if (!assignedWorkspaces.some((assignedId: string) => assignedId.toString() === workspaceId?.toString())) {
           return void res.status(404).json({
             success: false,
             error: 'Workspace not found'
