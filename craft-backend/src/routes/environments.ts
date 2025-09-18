@@ -83,11 +83,20 @@ router.get('/', requireAuth, validateIds, async (req: Request, res: Response): P
       // Admin and basic users can only access workspaces they're assigned to
       const assignedWorkspaces = user.assignedWorkspaces || [];
       if (assignedWorkspaces.length > 0) {
-        // Admin and basic users can only access workspaces they are assigned to
-        workspaceQuery._id = { $in: assignedWorkspaces };
+        // Check if the requested workspace is in their assigned workspaces
+        if (!assignedWorkspaces.some((assignedId: string) => assignedId.toString() === workspaceId.toString())) {
+          return void res.status(404).json({
+            success: false,
+            error: 'Workspace not found'
+          });
+        }
+        // Keep the original workspace query since we've already validated access
       } else {
         // User with no assigned workspaces - no access
-        workspaceQuery._id = null;
+        return void res.status(404).json({
+          success: false,
+          error: 'Workspace not found'
+        });
       }
     } else {
       // Super admin users - only owner/admin access
@@ -317,11 +326,20 @@ router.get('/:environmentId', requireAuth, validateIds, async (req: Request, res
       // Admin and basic users can only access workspaces they're assigned to
       const assignedWorkspaces = user.assignedWorkspaces || [];
       if (assignedWorkspaces.length > 0) {
-        // Admin and basic users can only access workspaces they are assigned to
-        workspaceQuery._id = { $in: assignedWorkspaces };
+        // Check if the requested workspace is in their assigned workspaces
+        if (!assignedWorkspaces.some((assignedId: string) => assignedId.toString() === workspaceId.toString())) {
+          return void res.status(404).json({
+            success: false,
+            error: 'Workspace not found'
+          });
+        }
+        // Keep the original workspace query since we've already validated access
       } else {
         // User with no assigned workspaces - no access
-        workspaceQuery._id = null;
+        return void res.status(404).json({
+          success: false,
+          error: 'Workspace not found'
+        });
       }
     } else {
       // Super admin users - only owner/admin access

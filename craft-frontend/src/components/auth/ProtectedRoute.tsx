@@ -25,15 +25,13 @@ export default function ProtectedRoute({ children }: ProtectedRouteProps) {
     }
   }, [mounted, isAuthenticated, isLoading, router]);
 
-  // Show loading states
-  const shouldShowLoading = !mounted || isLoading || (mounted && !isAuthenticated);
-
-  if (shouldShowLoading) {
+  // Show loading while checking auth or during redirect
+  if (!mounted || isLoading || (mounted && !isAuthenticated && !user)) {
     return (
-      <Box 
-        display="flex" 
-        justifyContent="center" 
-        alignItems="center" 
+      <Box
+        display="flex"
+        justifyContent="center"
+        alignItems="center"
         minHeight="100vh"
         sx={{ backgroundColor: 'grey.50' }}
       >
@@ -42,6 +40,20 @@ export default function ProtectedRoute({ children }: ProtectedRouteProps) {
     );
   }
 
-  // Render children only if authenticated and has user data
-  return isAuthenticated && user ? <>{children}</> : null;
+  // Only render children if we have both authentication and user data
+  if (!isAuthenticated || !user) {
+    return (
+      <Box
+        display="flex"
+        justifyContent="center"
+        alignItems="center"
+        minHeight="100vh"
+        sx={{ backgroundColor: 'grey.50' }}
+      >
+        <CircularProgress />
+      </Box>
+    );
+  }
+
+  return <>{children}</>;
 }

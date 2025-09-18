@@ -91,19 +91,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       // Ensure we're on the client side
       if (typeof window === 'undefined') {
-        dispatch({ type: 'SET_LOADING', payload: false });
+        dispatch({ type: 'AUTH_FAILURE', payload: 'Server-side rendering' });
         return;
       }
-      
+
       const token = localStorage.getItem('token');
-      
+
       if (!token) {
-        dispatch({ type: 'SET_LOADING', payload: false });
+        dispatch({ type: 'AUTH_FAILURE', payload: 'No token found' });
         return;
       }
 
       const response = await apiClient.getProfile();
-      
+
       if (response.success && response.data) {
         dispatch({
           type: 'AUTH_SUCCESS',
@@ -119,13 +119,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // Invalid token, clear it
         localStorage.removeItem('token');
         localStorage.removeItem('refreshToken');
-        dispatch({ type: 'SET_LOADING', payload: false });
+        dispatch({ type: 'AUTH_FAILURE', payload: 'Invalid token' });
       }
     } catch (error) {
       // Token validation failed, clear it
       localStorage.removeItem('token');
       localStorage.removeItem('refreshToken');
-      dispatch({ type: 'SET_LOADING', payload: false });
+      dispatch({ type: 'AUTH_FAILURE', payload: 'Token validation failed' });
     }
   }, []);
 
@@ -133,13 +133,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     // Only check auth once on initial mount
     let mounted = true;
-    
+
     const initAuth = async () => {
       if (mounted) {
-        await checkAuth();
+        // Add a small delay to prevent flicker during hydration
+        await new Promise(resolve => setTimeout(resolve, 100));
+        if (mounted) {
+          await checkAuth();
+        }
       }
     };
-    
+
     initAuth();
     
     // Listen for auth errors from API client
