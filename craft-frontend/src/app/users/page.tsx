@@ -1075,43 +1075,183 @@ export default function UsersPage() {
                           </Box>
                         </TableCell>
                         <TableCell>
-                          <Box>
+                          <Box sx={{ minHeight: '32px', display: 'flex', alignItems: 'center' }}>
                             {user.role === 'super_admin' ? (
                               <Chip
-                                icon={<WorkspaceIcon />}
+                                icon={<WorkspaceIcon sx={{ fontSize: '16px !important' }} />}
                                 label="All Workspaces"
                                 size="small"
-                                color="error"
-                                variant="filled"
+                                sx={{
+                                  background: 'linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%)',
+                                  color: 'white',
+                                  fontWeight: 600,
+                                  border: 'none',
+                                  '& .MuiChip-icon': {
+                                    color: 'white',
+                                  },
+                                  '&:hover': {
+                                    background: 'linear-gradient(135deg, #ee5a24 0%, #ff6b6b 100%)',
+                                    transform: 'translateY(-1px)',
+                                    boxShadow: '0 4px 12px rgba(255, 107, 107, 0.3)',
+                                  },
+                                  transition: 'all 0.2s ease-in-out',
+                                }}
                               />
                             ) : user.assignedWorkspaces && user.assignedWorkspaces.length > 0 ? (
-                              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
-                                {user.assignedWorkspaces.slice(0, 2).map((workspaceId, index) => {
+                              <Box sx={{
+                                display: 'flex',
+                                flexWrap: 'wrap',
+                                gap: 0.5,
+                                alignItems: 'center',
+                                maxWidth: '220px'
+                              }}>
+                                {user.assignedWorkspaces.slice(0, 1).map((workspaceId) => {
                                   const workspace = workspaces.find(w => w._id === workspaceId);
                                   return (
                                     <Chip
                                       key={workspaceId}
-                                      icon={<WorkspaceIcon />}
-                                      label={workspace?.name || 'Unknown Workspace'}
+                                      icon={<WorkspaceIcon sx={{ fontSize: '12px !important' }} />}
+                                      label={workspace?.name || 'Unknown'}
                                       size="small"
-                                      color={user.role === 'admin' ? 'warning' : 'info'}
-                                      variant="outlined"
+                                      sx={{
+                                        background: user.role === 'admin'
+                                          ? 'linear-gradient(135deg, #ffa726 0%, #fb8c00 100%)'
+                                          : 'linear-gradient(135deg, #42a5f5 0%, #1e88e5 100%)',
+                                        color: 'white',
+                                        fontWeight: 500,
+                                        fontSize: '0.7rem',
+                                        height: '22px',
+                                        border: 'none',
+                                        maxWidth: '140px',
+                                        '& .MuiChip-icon': {
+                                          color: 'white',
+                                          marginLeft: '4px',
+                                        },
+                                        '& .MuiChip-label': {
+                                          overflow: 'hidden',
+                                          textOverflow: 'ellipsis',
+                                          whiteSpace: 'nowrap',
+                                          paddingLeft: '4px',
+                                          paddingRight: '8px',
+                                        },
+                                        '&:hover': {
+                                          background: user.role === 'admin'
+                                            ? 'linear-gradient(135deg, #fb8c00 0%, #ffa726 100%)'
+                                            : 'linear-gradient(135deg, #1e88e5 0%, #42a5f5 100%)',
+                                          transform: 'scale(1.02)',
+                                          boxShadow: user.role === 'admin'
+                                            ? '0 2px 6px rgba(255, 167, 38, 0.4)'
+                                            : '0 2px 6px rgba(66, 165, 245, 0.4)',
+                                        },
+                                        transition: 'all 0.15s ease-in-out',
+                                      }}
                                     />
                                   );
                                 })}
-                                {user.assignedWorkspaces.length > 2 && (
-                                  <Typography variant="caption" color="text.secondary">
-                                    +{user.assignedWorkspaces.length - 2} more
-                                  </Typography>
+                                {user.assignedWorkspaces.length > 1 && (
+                                  <Tooltip
+                                    title={
+                                      <Box sx={{ p: 0.5 }}>
+                                        <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600 }}>
+                                          All Assigned Workspaces:
+                                        </Typography>
+                                        {user.assignedWorkspaces.map((workspaceId, index) => {
+                                          const workspace = workspaces.find(w => w._id === workspaceId);
+                                          return (
+                                            <Typography
+                                              key={workspaceId}
+                                              variant="body2"
+                                              sx={{
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                gap: 0.5,
+                                                py: 0.25,
+                                                fontSize: '0.8rem'
+                                              }}
+                                            >
+                                              <Box
+                                                component="span"
+                                                sx={{
+                                                  width: 6,
+                                                  height: 6,
+                                                  borderRadius: '50%',
+                                                  backgroundColor: user.role === 'admin' ? '#ffa726' : '#42a5f5',
+                                                  flexShrink: 0
+                                                }}
+                                              />
+                                              {workspace?.name || 'Unknown Workspace'}
+                                            </Typography>
+                                          );
+                                        })}
+                                      </Box>
+                                    }
+                                    arrow
+                                    placement="top"
+                                    PopperProps={{
+                                      sx: {
+                                        '& .MuiTooltip-tooltip': {
+                                          backgroundColor: 'background.paper',
+                                          color: 'text.primary',
+                                          border: '1px solid',
+                                          borderColor: 'divider',
+                                          boxShadow: 3,
+                                          maxWidth: 280,
+                                        },
+                                        '& .MuiTooltip-arrow': {
+                                          color: 'background.paper',
+                                          '&::before': {
+                                            border: '1px solid',
+                                            borderColor: 'divider',
+                                          },
+                                        },
+                                      },
+                                    }}
+                                  >
+                                    <Chip
+                                      label={`+${user.assignedWorkspaces.length - 1}`}
+                                      size="small"
+                                      sx={{
+                                        backgroundColor: 'rgba(0, 0, 0, 0.04)',
+                                        color: 'text.secondary',
+                                        fontWeight: 600,
+                                        fontSize: '0.65rem',
+                                        height: '22px',
+                                        minWidth: '32px',
+                                        border: '1px solid rgba(0, 0, 0, 0.08)',
+                                        cursor: 'help',
+                                        '& .MuiChip-label': {
+                                          paddingLeft: '6px',
+                                          paddingRight: '6px',
+                                        },
+                                        '&:hover': {
+                                          backgroundColor: 'rgba(0, 0, 0, 0.08)',
+                                          transform: 'scale(1.05)',
+                                        },
+                                        transition: 'all 0.15s ease-in-out',
+                                      }}
+                                    />
+                                  </Tooltip>
                                 )}
                               </Box>
                             ) : (
                               <Chip
-                                icon={<WarningIcon />}
+                                icon={<WarningIcon sx={{ fontSize: '16px !important' }} />}
                                 label="No Access"
                                 size="small"
-                                color="error"
-                                variant="outlined"
+                                sx={{
+                                  backgroundColor: 'rgba(255, 193, 7, 0.1)',
+                                  color: '#f57c00',
+                                  border: '1px solid rgba(245, 124, 0, 0.3)',
+                                  fontWeight: 500,
+                                  '& .MuiChip-icon': {
+                                    color: '#f57c00',
+                                  },
+                                  '&:hover': {
+                                    backgroundColor: 'rgba(255, 193, 7, 0.15)',
+                                    border: '1px solid rgba(245, 124, 0, 0.5)',
+                                  },
+                                  transition: 'all 0.2s ease-in-out',
+                                }}
                               />
                             )}
                           </Box>
