@@ -112,11 +112,8 @@ router.get('/', requireAuth, async (req: Request, res: Response): Promise<void> 
       if (assignedWorkspaces.length === 0) {
         query._id = null; // This will return no results
       } else {
-        query.$or = [
-          { 'metadata.owner': userId },
-          { 'metadata.admins': userId },
-          { _id: { $in: assignedWorkspaces } } // User's assigned workspaces
-        ];
+        // Admin and basic users can only see workspaces they are assigned to
+        query._id = { $in: assignedWorkspaces };
       }
     }
 
@@ -519,11 +516,8 @@ router.get('/:workspaceId', requireAuth, validateWorkspaceId, async (req: Reques
       if (assignedWorkspaces.length === 0) {
         query._id = null; // This will return no results
       } else {
-        query.$or = [
-          { 'metadata.owner': userId },
-          { 'metadata.admins': userId },
-          { _id: { $in: assignedWorkspaces } } // User's assigned workspaces
-        ];
+        // Admin and basic users can only access workspaces they are assigned to
+        query._id = { $in: assignedWorkspaces };
       }
     }
 
@@ -619,11 +613,8 @@ router.put('/:workspaceId', requireAuth, validateWorkspaceId, validateWorkspace,
       if (assignedWorkspaces.length === 0) {
         query._id = null; // This will return no results
       } else {
-        query.$or = [
-          { 'metadata.owner': userId },
-          { 'metadata.admins': userId },
-          { _id: { $in: assignedWorkspaces } } // User's assigned workspaces
-        ];
+        // Admin and basic users can only access workspaces they are assigned to
+        query._id = { $in: assignedWorkspaces };
       }
     }
 
@@ -637,9 +628,11 @@ router.put('/:workspaceId', requireAuth, validateWorkspaceId, validateWorkspace,
     }
 
     // Check if user has permission to update
-    const hasPermission = userRole === 'super_admin' || 
-                         userRole === 'admin' || 
-                         workspace.isOwner(userId) || 
+    // Note: Access control is already enforced by the query above (assignedWorkspaces)
+    // Admin users can edit any workspace they can access (assigned workspaces)
+    const hasPermission = userRole === 'super_admin' ||
+                         userRole === 'admin' ||
+                         workspace.isOwner(userId) ||
                          workspace.isAdmin(userId);
     
     if (!hasPermission) {
@@ -706,11 +699,8 @@ router.delete('/:workspaceId', requireAuth, validateWorkspaceId, async (req: Req
       if (assignedWorkspaces.length === 0) {
         query._id = null; // This will return no results
       } else {
-        query.$or = [
-          { 'metadata.owner': userId },
-          { 'metadata.admins': userId },
-          { _id: { $in: assignedWorkspaces } } // User's assigned workspaces
-        ];
+        // Admin and basic users can only access workspaces they are assigned to
+        query._id = { $in: assignedWorkspaces };
       }
     }
 
@@ -783,11 +773,8 @@ router.get('/:workspaceId/stats', requireAuth, validateWorkspaceId, async (req: 
       if (assignedWorkspaces.length === 0) {
         query._id = null; // This will return no results
       } else {
-        query.$or = [
-          { 'metadata.owner': userId },
-          { 'metadata.admins': userId },
-          { _id: { $in: assignedWorkspaces } } // User's assigned workspaces
-        ];
+        // Admin and basic users can only access workspaces they are assigned to
+        query._id = { $in: assignedWorkspaces };
       }
     }
 
@@ -974,13 +961,13 @@ router.get('/:workspaceId/applications', requireAuth, validateWorkspaceId, async
       // For non-super-admin users, check if they have access to this workspace
       const query: any = { _id: workspaceId, active: true };
 
-      // Basic users can only access workspaces they're assigned to
-      if (userRole === 'basic') {
+      // Admin and basic users can only access workspaces they're assigned to
+      if (userRole === 'admin' || userRole === 'basic') {
         const user = await User.findById(userId);
         if (user && user.assignedWorkspaces && user.assignedWorkspaces.includes(workspaceId)) {
           // User has access to this workspace - query remains as is
         } else {
-          // Basic user doesn't have access to this workspace
+          // User doesn't have access to this workspace
           return void res.status(404).json({
             success: false,
             error: 'Workspace not found'

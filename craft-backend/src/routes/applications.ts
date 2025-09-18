@@ -46,11 +46,8 @@ router.get('/', requireAuth, validateIds, async (req: Request, res: Response): P
       // Admin and basic users can only access workspaces they're assigned to
       const assignedWorkspaces = user.assignedWorkspaces || [];
       if (assignedWorkspaces.length > 0) {
-        workspaceQuery.$or = [
-          { 'metadata.owner': userId },
-          { 'metadata.admins': userId },
-          { _id: { $in: assignedWorkspaces } }
-        ];
+        // Admin and basic users can only access workspaces they are assigned to
+        workspaceQuery._id = { $in: assignedWorkspaces };
       } else {
         // User with no assigned workspaces - no access
         workspaceQuery._id = null;

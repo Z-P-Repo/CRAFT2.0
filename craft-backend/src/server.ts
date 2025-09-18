@@ -32,8 +32,8 @@ class Server {
   }
 
   private initializeMiddleware(): void {
-    // Security middleware
-    this.app.use(helmetConfig);
+    // Security middleware - temporarily disabled for debugging
+    // this.app.use(helmetConfig);
     this.app.use(securityHeaders);
 
     // CORS configuration
@@ -61,13 +61,19 @@ class Server {
       this.app.use(morgan('combined', { stream: loggerStream }));
     }
 
-    // Rate limiting
-    this.app.use(apiRateLimit);
+    // Rate limiting - temporarily disabled for debugging
+    // this.app.use(apiRateLimit);
 
     // Request ID middleware
     this.app.use((req, res, next) => {
-      req.headers['x-request-id'] = req.headers['x-request-id'] || 
+      req.headers['x-request-id'] = req.headers['x-request-id'] ||
         `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      next();
+    });
+
+    // Temporary debug middleware for external access
+    this.app.use((req, res, next) => {
+      console.log(`Request from: ${req.ip}, Host: ${req.get('host')}, URL: ${req.url}`);
       next();
     });
   }
@@ -110,7 +116,7 @@ class Server {
       server.requestTimeout = 60000; // 60 seconds
 
       // Start server with error handling
-      server.listen(this.port, () => {
+      server.listen(this.port, '0.0.0.0', () => {
         logger.info(`✅ Server running on port ${this.port}`);
         logger.info(`🌍 Environment: ${config.env}`);
         logger.info(`📊 Health check: http://localhost:${this.port}/health`);
