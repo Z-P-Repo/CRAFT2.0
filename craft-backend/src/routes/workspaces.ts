@@ -250,6 +250,22 @@ router.post('/', requireAuth, requireAdminOrSuperAdmin, validateWorkspace, async
     await workspace.save();
     const workspaceId = workspace._id.toString();
 
+    // Automatically assign the creating user to the workspace if they're not super_admin
+    // This ensures the creator can see and manage their created workspace
+    const userRole = (req as any).user.role;
+    if (userRole !== 'super_admin') {
+      try {
+        await User.findByIdAndUpdate(
+          userId,
+          { $addToSet: { assignedWorkspaces: workspaceId } },
+          { new: true }
+        );
+        console.log(`Auto-assigned workspace ${workspaceId} to creating user ${userId}`);
+      } catch (assignError) {
+        console.warn(`Failed to auto-assign workspace to creator: ${assignError}`);
+      }
+    }
+
     // Create applications and their environments
     const createdApplications = [];
     const failedApplications = [];
@@ -934,6 +950,231 @@ router.post('/:workspaceId/admins', requireAuth, validateWorkspaceId, async (req
     res.status(500).json({
       success: false,
       error: 'Failed to add admin'
+    });
+  }
+});
+
+// POST /api/workspaces/:workspaceId/assign-users - Assign users to workspace
+router.post('/:workspaceId/assign-users', requireAuth, requireAdminOrSuperAdmin, validateWorkspaceId, async (req: Request, res: Response): Promise<void> => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return void res.status(400).json({
+        success: false,
+        error: 'Invalid workspace ID',
+        details: errors.array()
+      });
+    }
+
+    const { workspaceId } = req.params;
+    const { userIds } = req.body;
+    const currentUserId = (req as any).user._id;
+    const userRole = (req as any).user.role;
+
+    if (!Array.isArray(userIds) || userIds.length === 0) {
+      return void res.status(400).json({
+        success: false,
+        error: 'User IDs array is required'
+      });
+    }
+
+    // Verify workspace exists and user has access
+    const query: any = { _id: workspaceId, active: true };
+
+    if (userRole !== 'super_admin') {
+      const user = (req as any).user;
+      const assignedWorkspaces = user.assignedWorkspaces || [];
+
+      if (assignedWorkspaces.length === 0 || !assignedWorkspaces.includes(workspaceId)) {
+        return void res.status(404).json({
+          success: false,
+          error: 'Workspace not found or access denied'
+        });
+      }
+    }
+
+    const workspace = await Workspace.findOne(query);
+    if (!workspace) {
+      return void res.status(404).json({
+        success: false,
+        error: 'Workspace not found'
+      });
+    }
+
+    // Validate all user IDs exist
+    const users = await User.find({ _id: { $in: userIds }, active: true });
+    if (users.length !== userIds.length) {
+      return void res.status(400).json({
+        success: false,
+        error: 'One or more user IDs are invalid or inactive'
+      });
+    }
+
+    // Assign workspace to users
+    const result = await User.updateMany(
+      { _id: { $in: userIds } },
+      { $addToSet: { assignedWorkspaces: workspaceId } }
+    );
+
+    const response: ApiResponse<any> = {
+      success: true,
+      data: {
+        workspaceId,
+        assignedUsers: userIds.length,
+        modifiedCount: result.modifiedCount
+      },
+      message: `Successfully assigned ${userIds.length} users to workspace`
+    };
+
+    res.json(response);
+  } catch (error) {
+    console.error('Error assigning users to workspace:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to assign users to workspace'
+    });
+  }
+});
+
+// POST /api/workspaces/:workspaceId/unassign-users - Remove users from workspace
+router.post('/:workspaceId/unassign-users', requireAuth, requireAdminOrSuperAdmin, validateWorkspaceId, async (req: Request, res: Response): Promise<void> => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return void res.status(400).json({
+        success: false,
+        error: 'Invalid workspace ID',
+        details: errors.array()
+      });
+    }
+
+    const { workspaceId } = req.params;
+    const { userIds } = req.body;
+    const currentUserId = (req as any).user._id;
+    const userRole = (req as any).user.role;
+
+    if (!Array.isArray(userIds) || userIds.length === 0) {
+      return void res.status(400).json({
+        success: false,
+        error: 'User IDs array is required'
+      });
+    }
+
+    // Verify workspace exists and user has access
+    const query: any = { _id: workspaceId, active: true };
+
+    if (userRole !== 'super_admin') {
+      const user = (req as any).user;
+      const assignedWorkspaces = user.assignedWorkspaces || [];
+
+      if (assignedWorkspaces.length === 0 || !assignedWorkspaces.includes(workspaceId)) {
+        return void res.status(404).json({
+          success: false,
+          error: 'Workspace not found or access denied'
+        });
+      }
+    }
+
+    const workspace = await Workspace.findOne(query);
+    if (!workspace) {
+      return void res.status(404).json({
+        success: false,
+        error: 'Workspace not found'
+      });
+    }
+
+    // Remove workspace assignment from users
+    const result = await User.updateMany(
+      { _id: { $in: userIds } },
+      { $pull: { assignedWorkspaces: workspaceId } }
+    );
+
+    const response: ApiResponse<any> = {
+      success: true,
+      data: {
+        workspaceId,
+        unassignedUsers: userIds.length,
+        modifiedCount: result.modifiedCount
+      },
+      message: `Successfully removed ${userIds.length} users from workspace`
+    };
+
+    res.json(response);
+  } catch (error) {
+    console.error('Error removing users from workspace:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to remove users from workspace'
+    });
+  }
+});
+
+// GET /api/workspaces/:workspaceId/users - Get users assigned to workspace
+router.get('/:workspaceId/users', requireAuth, requireAdminOrSuperAdmin, validateWorkspaceId, async (req: Request, res: Response): Promise<void> => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return void res.status(400).json({
+        success: false,
+        error: 'Invalid workspace ID',
+        details: errors.array()
+      });
+    }
+
+    const { workspaceId } = req.params;
+    const userRole = (req as any).user.role;
+
+    // Verify workspace exists and user has access
+    const query: any = { _id: workspaceId, active: true };
+
+    if (userRole !== 'super_admin') {
+      const user = (req as any).user;
+      const assignedWorkspaces = user.assignedWorkspaces || [];
+
+      if (assignedWorkspaces.length === 0 || !assignedWorkspaces.includes(workspaceId)) {
+        return void res.status(404).json({
+          success: false,
+          error: 'Workspace not found or access denied'
+        });
+      }
+    }
+
+    const workspace = await Workspace.findOne(query);
+    if (!workspace) {
+      return void res.status(404).json({
+        success: false,
+        error: 'Workspace not found'
+      });
+    }
+
+    // Get users assigned to this workspace
+    const assignedUsers = await User.find({
+      assignedWorkspaces: workspaceId,
+      active: true
+    })
+      .select('_id name email role department assignedWorkspaces')
+      .lean();
+
+    const response: ApiResponse<any> = {
+      success: true,
+      data: {
+        workspace: {
+          _id: workspace._id,
+          name: workspace.name,
+          displayName: workspace.displayName
+        },
+        users: assignedUsers,
+        totalUsers: assignedUsers.length
+      },
+      message: `Found ${assignedUsers.length} users assigned to workspace`
+    };
+
+    res.json(response);
+  } catch (error) {
+    console.error('Error fetching workspace users:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch workspace users'
     });
   }
 });
