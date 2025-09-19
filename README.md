@@ -454,10 +454,20 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 **Built with ❤️ using Next.js, Node.js, and MongoDB**
 
-*Last updated: September 17, 2025*
+*Last updated: September 19, 2025*
 🤖 *Generated and maintained with [Claude Code](https://claude.ai/code)*
 
 ## ⭐ Latest Updates
+
+### Version 1.3.5 - UI/UX Polish & System Reliability (September 19, 2025)
+- **🎨 Workspace Access Badge Enhancement**: Redesigned User Management workspace access badges with elegant gradient styling, compact multi-workspace display, and informative tooltips
+- **🏷️ Badge Compactness**: Implemented single workspace display with "+N more" counters to prevent table row height issues with multiple workspace assignments
+- **💡 Interactive Tooltips**: Added comprehensive hover tooltips showing all workspace names when users have multiple workspace assignments
+- **🚀 Environment API Reliability**: Fixed intermittent 404 errors in environment API endpoints by correcting workspace access control logic
+- **✨ Authentication Flow Polish**: Eliminated access denied screen flickering during page reloads with improved hydration timing and auth state management
+- **🎯 Stepper Button Uniformity**: Standardized navigation button styling across workspace and policy creation wizards with consistent icons, variants, and colors
+- **🔧 TypeScript Build Fixes**: Resolved compilation errors in environment routes with proper parameter validation ensuring successful builds
+- **🎨 Visual Consistency**: Enhanced UI consistency across all stepper interfaces with matching Back/Cancel/Next button styles and Material-UI design patterns
 
 ### Version 1.3.4 - Role-Based Access Control & Environments API Fix (September 17, 2025)
 - **🔐 Role-Based Access Control**: Implemented comprehensive RBAC system with three user roles (super_admin, admin, basic)

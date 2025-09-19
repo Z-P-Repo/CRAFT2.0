@@ -2,7 +2,7 @@
 
 A modern, responsive React-based dashboard for managing the CRAFT (Attribute-Based Access Control) Permission System. Built with Next.js 15, TypeScript, and Material-UI with a professional collapsible sidebar layout.
 
-![Version](https://img.shields.io/badge/version-1.3.4-blue.svg)
+![Version](https://img.shields.io/badge/version-1.3.5-blue.svg)
 ![Next.js](https://img.shields.io/badge/Next.js-15.4.6-black.svg)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.5-blue.svg)
 ![Material-UI](https://img.shields.io/badge/Material--UI-7.3-blue.svg)
@@ -77,7 +77,7 @@ NODE_ENV=development
 
 # Application Settings
 NEXT_PUBLIC_APP_NAME=CRAFT Permission System
-NEXT_PUBLIC_APP_VERSION=1.3.4
+NEXT_PUBLIC_APP_VERSION=1.3.5
 ```
 
 ## 🚀 Development
@@ -412,10 +412,22 @@ await trackUser('updated', 'user-456', 'John Doe');
 
 ---
 
-*Last updated: September 17, 2025*
+*Last updated: September 19, 2025*
 🤖 *Generated and maintained with [Claude Code](https://claude.ai/code)*
 
-## 🔄 Recent Updates (Version 1.3.4)
+## 🔄 Recent Updates (Version 1.3.5)
+
+### UI/UX Polish & System Reliability (September 19, 2025)
+- **🎨 Workspace Access Badge Enhancement**: Redesigned User Management workspace access badges with elegant gradient styling, compact multi-workspace display, and interactive tooltips for improved user experience
+- **🏷️ Badge Compactness**: Implemented single workspace display with "+N more" counters to prevent table row height issues when users have multiple workspace assignments
+- **💡 Interactive Tooltips**: Added comprehensive hover tooltips showing all workspace names when users have multiple workspace assignments with rich formatting and detailed workspace information
+- **🚀 Environment API Reliability**: Fixed intermittent 404 errors in environment API endpoints by correcting workspace access control logic and parameter validation
+- **✨ Authentication Flow Polish**: Eliminated access denied screen flickering during page reloads with improved hydration timing, auth state management, and smoother transitions
+- **🎯 Stepper Button Uniformity**: Standardized navigation button styling across workspace and policy creation wizards with consistent icons, variants, colors, and Material-UI design patterns
+- **🔧 Build System Improvements**: Enhanced TypeScript compilation with proper parameter validation and error handling ensuring reliable builds and deployments
+- **🎨 Visual Consistency**: Enhanced UI consistency across all stepper interfaces with matching Back/Cancel/Next button styles, proper icon placement, and cohesive user experience
+
+### Previous Updates (Version 1.3.4)
 
 ### Role-Based Access Control & Enhanced UI (September 17, 2025)
 - **🔐 Comprehensive RBAC Implementation**: Three-tier role system (super_admin, admin, basic) with proper access control throughout the UI

@@ -45,7 +45,8 @@ import {
   ExpandMore as ExpandMoreIcon,
   Apps as AppsIcon,
   CloudQueue as EnvironmentIcon,
-  Check as CheckIcon
+  Check as CheckIcon,
+  NavigateNext as NavigateNextIcon
 } from '@mui/icons-material';
 import { useRouter } from 'next/navigation';
 import { useSnackbar } from '@/contexts/SnackbarContext';
@@ -908,6 +909,7 @@ export default function CreateWorkspacePage() {
             disabled={activeStep === 0}
             onClick={handleBack}
             variant="outlined"
+            startIcon={<ArrowBackIcon />}
           >
             Back
           </Button>
@@ -916,7 +918,6 @@ export default function CreateWorkspacePage() {
             <Button
               onClick={handleCancelClick}
               variant="outlined"
-              color="error"
             >
               Cancel
             </Button>
@@ -945,6 +946,7 @@ export default function CreateWorkspacePage() {
                 variant="contained"
                 onClick={handleNext}
                 disabled={!isStepValid(activeStep)}
+                endIcon={<NavigateNextIcon />}
               >
                 Next
               </Button>
