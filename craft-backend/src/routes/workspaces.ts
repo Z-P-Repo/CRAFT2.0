@@ -381,6 +381,29 @@ router.get('/', requireAuth, async (req: Request, res: Response): Promise<void> 
 
     const total = await Workspace.countDocuments(query);
 
+    // Get global counts for statistics (based on user's accessible workspaces)
+    let statsQuery: any = { active: true };
+    if (userRole !== 'super_admin') {
+      const user = (req as any).user;
+      const assignedWorkspaces = user.assignedWorkspaces || [];
+      if (assignedWorkspaces.length === 0) {
+        statsQuery._id = null;
+      } else {
+        statsQuery._id = { $in: assignedWorkspaces };
+      }
+    }
+
+    const [activeCount, draftCount, totalApplicationsCount] = await Promise.all([
+      Workspace.countDocuments({ ...statsQuery, status: 'active' }),
+      Workspace.countDocuments({ ...statsQuery, status: 'draft' }),
+      // Count total applications across all accessible workspaces
+      (async () => {
+        const accessibleWorkspaces = await Workspace.find(statsQuery).select('_id');
+        const workspaceIds = accessibleWorkspaces.map(w => w._id);
+        return Application.countDocuments({ workspaceId: { $in: workspaceIds }, active: true });
+      })()
+    ]);
+
     const response: PaginatedResponse<any> = {
       success: true,
       data: workspacesWithDetails,
@@ -388,7 +411,10 @@ router.get('/', requireAuth, async (req: Request, res: Response): Promise<void> 
         page: Number(page),
         limit: Number(limit),
         total,
-        pages: Math.ceil(total / Number(limit))
+        pages: Math.ceil(total / Number(limit)),
+        activeCount,
+        draftCount,
+        totalApplications: totalApplicationsCount
       }
     };
 

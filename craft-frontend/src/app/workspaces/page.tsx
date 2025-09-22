@@ -33,7 +33,13 @@ import {
   Dialog,
   DialogTitle,
   DialogContent,
-  DialogActions
+  DialogActions,
+  TablePagination,
+  TextField,
+  InputAdornment,
+  Select,
+  FormControl,
+  InputLabel
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -52,7 +58,9 @@ import {
   Speed as SpeedIcon,
   Person as PersonIcon,
   Schedule as ScheduleIcon,
-  FiberManualRecord as DotIcon
+  FiberManualRecord as DotIcon,
+  Search as SearchIcon,
+  Clear as ClearIcon
 } from '@mui/icons-material';
 import { useSnackbar } from '@/contexts/SnackbarContext';
 import { useWorkspace } from '@/contexts/WorkspaceContext';
@@ -137,6 +145,20 @@ export default function WorkspacesPage() {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [workspaceToDelete, setWorkspaceToDelete] = useState<IWorkspaceData | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  // Pagination state
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [total, setTotal] = useState(0);
+
+  // Search and filter state
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterStatus, setFilterStatus] = useState<string[]>([]);
+
+  // Statistics state
+  const [activeCount, setActiveCount] = useState(0);
+  const [draftCount, setDraftCount] = useState(0);
+  const [totalApplications, setTotalApplications] = useState(0);
   
   const { showError, showSuccess } = useSnackbar();
   const { currentWorkspace, refreshWorkspaces } = useWorkspace();
@@ -146,27 +168,52 @@ export default function WorkspacesPage() {
     try {
       setLoading(true);
       setError(null);
-      
-      const response = await apiClient.get('/workspaces');
-      
-      if (response.success) {
-        // Handle both paginated and direct data structures
-        const workspacesData = response.data?.workspaces || response.data || [];
-        setWorkspaces(workspacesData);
+
+      // Build API parameters
+      const params: any = {
+        page: page + 1, // Backend uses 1-based pagination
+        limit: rowsPerPage,
+      };
+
+      if (searchTerm.trim()) {
+        params.search = searchTerm.trim();
+      }
+
+      if (filterStatus.length > 0) {
+        params.status = filterStatus.length === 1 ? filterStatus[0] : 'all';
+      }
+
+      const response = await apiClient.get('/workspaces', params);
+
+      if (response.success && response.data) {
+        // Backend returns paginated data - use it directly
+        setWorkspaces(response.data);
+        setTotal(response.pagination?.total || 0);
+
+        // Use global statistics from backend pagination response
+        setActiveCount(response.pagination?.activeCount || 0);
+        setDraftCount(response.pagination?.draftCount || 0);
+        setTotalApplications(response.pagination?.totalApplications || 0);
       } else {
         throw new Error(response.error || 'Failed to fetch workspaces');
       }
     } catch (err: any) {
-      setError(err.message || 'Failed to load workspaces');
-      showError('Failed to load workspaces');
+      console.error('Failed to fetch workspaces:', err);
+      setError(err.response?.data?.error || err.message || 'Failed to load workspaces');
     } finally {
       setLoading(false);
     }
-  }, [showError]);
+  }, [page, rowsPerPage, searchTerm, filterStatus]);
 
   useEffect(() => {
-    fetchWorkspaces();
-  }, [fetchWorkspaces]);
+    const timeoutId = setTimeout(() => {
+      fetchWorkspaces();
+    }, 300); // Standard debounce delay
+
+    return () => clearTimeout(timeoutId);
+    // ESLint disable to prevent infinite loop - fetchWorkspaces causes circular dependency
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page, rowsPerPage, searchTerm, filterStatus]);
 
   const handleMenuOpen = (event: React.MouseEvent<HTMLElement>, workspace: IWorkspaceData) => {
     event.stopPropagation();
@@ -235,6 +282,34 @@ export default function WorkspacesPage() {
     router.push('/workspaces/create');
   };
 
+  // Pagination handlers
+  const handleChangePage = (event: unknown, newPage: number) => {
+    setPage(newPage);
+  };
+
+  const handleChangeRowsPerPage = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setRowsPerPage(parseInt(event.target.value, 10));
+    setPage(0);
+  };
+
+  // Search and filter handlers
+  const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchTerm(event.target.value);
+    setPage(0); // Reset to first page when searching
+  };
+
+  const handleStatusFilterChange = (event: any) => {
+    const value = event.target.value;
+    setFilterStatus(typeof value === 'string' ? value.split(',') : value);
+    setPage(0); // Reset to first page when filtering
+  };
+
+  const handleClearFilters = () => {
+    setSearchTerm('');
+    setFilterStatus([]);
+    setPage(0);
+  };
+
 
   const getEnvironmentColor = (type: string) => {
     switch (type) {
@@ -258,11 +333,11 @@ export default function WorkspacesPage() {
     );
   }
 
-  // Calculate statistics
-  const totalWorkspaces = workspaces.length;
-  const activeWorkspaces = workspaces.filter(w => w.status === 'active').length;
-  const draftWorkspaces = workspaces.filter(w => w.status === 'draft').length;
-  const totalApplications = workspaces.reduce((sum, w) => sum + (w.applications?.length || 0), 0);
+  // Use pagination-aware statistics
+  const totalWorkspaces = total; // Total from pagination
+  const activeWorkspaces = activeCount;
+  const draftWorkspaces = draftCount;
+  const totalApplicationsCount = totalApplications;
 
   // Helper function to get status color
   const getStatusColor = (status: string) => {
@@ -321,7 +396,7 @@ export default function WorkspacesPage() {
               </Box>
               <Box>
                 <Typography variant="h6" color="info.main" fontWeight="600">
-                  {loading ? '...' : totalApplications}
+                  {loading ? '...' : totalApplicationsCount}
                 </Typography>
                 <Typography variant="caption" color="text.secondary">
                   Applications
@@ -341,6 +416,52 @@ export default function WorkspacesPage() {
                 sx={{ px: 3 }}
               >
                 Create Workspace
+              </Button>
+            )}
+          </Box>
+        </Paper>
+
+        {/* Search and Filter Controls */}
+        <Paper elevation={0} sx={{ p: 2, mb: 3, border: '1px solid', borderColor: 'grey.200' }}>
+          <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap' }}>
+            <TextField
+              placeholder="Search workspaces..."
+              value={searchTerm}
+              onChange={handleSearchChange}
+              variant="outlined"
+              size="small"
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <SearchIcon />
+                  </InputAdornment>
+                )
+              }}
+              sx={{ minWidth: 300 }}
+            />
+
+            <FormControl size="small" sx={{ minWidth: 150 }}>
+              <InputLabel>Status</InputLabel>
+              <Select
+                multiple
+                value={filterStatus}
+                onChange={handleStatusFilterChange}
+                label="Status"
+              >
+                <MenuItem value="active">Active</MenuItem>
+                <MenuItem value="draft">Draft</MenuItem>
+                <MenuItem value="inactive">Inactive</MenuItem>
+                <MenuItem value="suspended">Suspended</MenuItem>
+              </Select>
+            </FormControl>
+
+            {(searchTerm || filterStatus.length > 0) && (
+              <Button
+                variant="outlined"
+                startIcon={<ClearIcon />}
+                onClick={handleClearFilters}
+              >
+                Clear Filters
               </Button>
             )}
           </Box>
@@ -612,6 +733,26 @@ export default function WorkspacesPage() {
               </Box>
             )}
           </CardContent>
+
+          {/* Pagination Controls */}
+          {total > 0 && (
+            <TablePagination
+              component="div"
+              count={total}
+              page={page}
+              onPageChange={handleChangePage}
+              rowsPerPage={rowsPerPage}
+              onRowsPerPageChange={handleChangeRowsPerPage}
+              rowsPerPageOptions={[5, 10, 25, 50]}
+              sx={{
+                borderTop: 1,
+                borderColor: 'divider',
+                '.MuiTablePagination-toolbar': {
+                  px: 2
+                }
+              }}
+            />
+          )}
         </Card>
 
         {/* Action Menu */}

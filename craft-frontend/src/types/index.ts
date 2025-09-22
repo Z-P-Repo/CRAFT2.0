@@ -48,6 +48,10 @@ export interface ApiResponse<T = any> {
     pages: number;
     hasNext: boolean;
     hasPrev: boolean;
+    activeCount?: number;
+    inactiveCount?: number;
+    draftCount?: number;
+    totalApplications?: number;
   };
 }
 

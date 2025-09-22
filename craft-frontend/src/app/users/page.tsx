@@ -297,13 +297,13 @@ export default function UsersPage() {
       const response = await apiClient.get('/users', params);
 
       if (response.success && response.data) {
+        // Backend returns paginated data - use it directly
         setUsers(response.data);
         setTotal(response.pagination?.total || 0);
-        
-        // Update counts
-        const activeUsers = response.data.filter((user: User) => user.active).length;
-        setActiveCount(activeUsers);
-        setInactiveCount(response.data.length - activeUsers);
+
+        // For counts, use backend pagination info if available, otherwise count current page
+        setActiveCount(response.pagination?.activeCount || response.data.filter((user: User) => user.active).length);
+        setInactiveCount(response.pagination?.inactiveCount || response.data.filter((user: User) => !user.active).length);
       } else {
         throw new Error(response.error || 'Failed to fetch users');
       }
@@ -315,16 +315,15 @@ export default function UsersPage() {
     }
   }, [page, rowsPerPage, sortBy, sortOrder, searchTerm, filterRole, filterStatus]);
 
-
   useEffect(() => {
     const timeoutId = setTimeout(() => {
       fetchUsers();
     }, 300); // Standard debounce delay
-    
+
     return () => clearTimeout(timeoutId);
     // ESLint disable to prevent infinite loop - fetchUsers causes circular dependency
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page, rowsPerPage, sortBy, sortOrder, searchTerm]);
+  }, [page, rowsPerPage, sortBy, sortOrder, searchTerm, filterRole, filterStatus]);
 
   // Load workspaces when component mounts or user changes
   useEffect(() => {
@@ -684,33 +683,9 @@ export default function UsersPage() {
     return active ? 'success' : 'error';
   };
 
-  // Filtering and sorting
-  const filteredUsers = users.filter(user => {
-    const matchesSearch = !searchTerm || 
-      user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (user.department && user.department.toLowerCase().includes(searchTerm.toLowerCase()));
-      
-    const matchesRole = filterRole.length === 0 || filterRole.includes(user.role);
-    const matchesStatus = filterStatus.length === 0 || 
-      (filterStatus.includes('active') && user.active) ||
-      (filterStatus.includes('inactive') && !user.active);
-      
-    return matchesSearch && matchesRole && matchesStatus;
-  });
-
-  // Sort logic
-  const sortedUsers = [...filteredUsers].sort((a, b) => {
-    const aValue = String(a?.[sortBy as keyof ExtendedUser] || '');
-    const bValue = String(b?.[sortBy as keyof ExtendedUser] || '');
-    if (sortOrder === 'asc') {
-      return aValue.localeCompare(bValue);
-    } else {
-      return bValue.localeCompare(aValue);
-    }
-  });
-
-  const paginatedUsers = sortedUsers.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
+  // Backend handles filtering, sorting, and pagination
+  // Use the users data directly from the API response
+  const paginatedUsers = users;
 
   const handleChangePage = (event: unknown, newPage: number) => {
     setPage(newPage);

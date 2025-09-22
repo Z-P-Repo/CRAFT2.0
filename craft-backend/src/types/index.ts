@@ -14,6 +14,9 @@ export interface PaginationMeta {
   limit: number;
   total: number;
   pages: number;
+  activeCount?: number;
+  draftCount?: number;
+  totalApplications?: number;
 }
 
 export interface PaginatedResponse<T = any> extends ApiResponse<T[]> {

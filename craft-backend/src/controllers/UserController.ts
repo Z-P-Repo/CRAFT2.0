@@ -55,11 +55,22 @@ export class UserController {
       User.countDocuments(filter)
     ]);
 
+    // Get counts for filtered results
+    const [activeUsersCount, inactiveUsersCount] = await Promise.all([
+      User.countDocuments({ ...filter, active: true }),
+      User.countDocuments({ ...filter, active: false })
+    ]);
+
     const result = PaginationHelper.buildPaginationResult(users, total, paginationOptions);
 
     res.status(200).json({
       success: true,
       ...result,
+      pagination: {
+        ...result.pagination,
+        activeCount: activeUsersCount,
+        inactiveCount: inactiveUsersCount,
+      },
     });
   });
 
