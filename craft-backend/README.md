@@ -358,7 +358,7 @@ For support and questions:
 
 ## 🔄 Recent Updates (Version 1.3.7)
 
-### Comprehensive Pagination & Global Validation (September 23, 2025)
+### Comprehensive Pagination & Filter/Sort Uniformity (September 23, 2025)
 - **📄 Advanced Pagination Infrastructure**: Implemented comprehensive server-side pagination for workspaces with search, filtering, and sorting capabilities matching users page functionality
 - **🔍 Global Workspace Validation**: Enhanced workspace name validation system to check ALL workspaces across the entire database, preventing duplicate names regardless of user ownership
 - **📊 Enhanced Statistics Endpoints**: Added comprehensive pagination statistics including active/draft workspace counts and total applications with optimized MongoDB aggregation queries
@@ -369,6 +369,7 @@ For support and questions:
 - **📱 API Consistency**: Standardized pagination patterns across users and workspaces endpoints with consistent response formats and error handling
 - **🚀 Query Optimization**: Implemented efficient MongoDB operations with Promise.all for parallel counting and improved database performance
 - **🔧 Access Control Logic**: Enhanced workspace access control with proper role-based filtering and assignment validation across all pagination endpoints
+- **🎨 Backend Sort Support**: Added comprehensive sort parameter handling for workspaces endpoints supporting name and date sorting with ascending/descending options
 
 ### Version 1.3.6 - Workspace Visibility & User Assignment System (September 22, 2025)
 - **🏢 Automatic Workspace Assignment**: Admin-created workspaces are now automatically assigned to their creators, eliminating visibility issues
