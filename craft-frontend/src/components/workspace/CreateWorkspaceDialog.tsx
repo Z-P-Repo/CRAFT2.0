@@ -137,8 +137,16 @@ const CreateWorkspaceDialog: React.FC<CreateWorkspaceDialogProps> = ({
           isValid: true,
           message: '✓ Workspace name is available'
         });
-      } else {
+      } else if (response.success === false) {
         // Handle case where response doesn't indicate availability
+        const errorMessage = response.details?.message || response.error || 'Workspace name is not available';
+        setNameValidation({
+          isChecking: false,
+          isValid: false,
+          message: errorMessage
+        });
+      } else {
+        // Fallback case
         setNameValidation({
           isChecking: false,
           isValid: false,
@@ -146,7 +154,15 @@ const CreateWorkspaceDialog: React.FC<CreateWorkspaceDialogProps> = ({
         });
       }
     } catch (err: any) {
-      if (err.details?.message) {
+      if (err.success === false) {
+        // Handle API error responses (409, etc.)
+        const errorMessage = err.details?.message || err.error || 'Unable to validate workspace name';
+        setNameValidation({
+          isChecking: false,
+          isValid: false,
+          message: errorMessage
+        });
+      } else if (err.details?.message) {
         setNameValidation({
           isChecking: false,
           isValid: false,
@@ -595,6 +611,22 @@ const CreateWorkspaceDialog: React.FC<CreateWorkspaceDialogProps> = ({
                       ? nameValidation.message
                       : "Auto-generated from display name. Must be lowercase alphanumeric with hyphens."
                   }
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      '&.Mui-error': {
+                        '& fieldset': {
+                          borderColor: 'error.main',
+                          borderWidth: '2px',
+                        },
+                      },
+                    },
+                    '& .MuiFormHelperText-root': {
+                      '&.Mui-error': {
+                        color: 'error.main',
+                        fontWeight: 500,
+                      },
+                    },
+                  }}
                   InputProps={{
                     endAdornment: nameValidation.isChecking ? (
                       <InputAdornment position="end">

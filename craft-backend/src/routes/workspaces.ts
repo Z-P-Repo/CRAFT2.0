@@ -90,10 +90,76 @@ const validateWorkspaceId = [
     .withMessage('Invalid workspace ID format')
 ];
 
+// GET /api/workspaces/check-exists - Check what workspaces exist in system
+router.get('/check-exists', requireAuth, async (req: Request, res: Response): Promise<void> => {
+  try {
+    // Get all workspaces
+    const allWorkspaces = await Workspace.find({ active: true })
+      .select('name displayName metadata.createdBy')
+      .populate({
+        path: 'metadata.createdBy',
+        select: 'name email'
+      })
+      .sort({ name: 1 });
+
+    // Specifically check for DXP-related workspaces
+    const dxpWorkspaces = allWorkspaces.filter(w =>
+      w.name.toLowerCase().includes('dxp') ||
+      w.displayName.toLowerCase().includes('dxp')
+    );
+
+    // Check specific names
+    const checks = [
+      'dxp-test-11',
+      'dxp-tets-11',
+      'DXP Test 11',
+      'DXP Tets 11'
+    ];
+
+    const checkResults = await Promise.all(
+      checks.map(async (name) => {
+        const found = await Workspace.findOne({
+          $or: [
+            { name: name },
+            { name: name.toLowerCase() },
+            { displayName: name },
+            { name: { $regex: new RegExp(`^${name.replace(/\s+/g, '-').toLowerCase()}$`, 'i') } }
+          ],
+          active: true
+        }).select('name displayName');
+
+        return { searchTerm: name, found: !!found, workspace: found };
+      })
+    );
+
+    console.log(`🔍 WORKSPACE CHECK RESULTS:`, {
+      totalWorkspaces: allWorkspaces.length,
+      dxpWorkspaces: dxpWorkspaces.length,
+      checkResults
+    });
+
+    res.json({
+      success: true,
+      totalWorkspaces: allWorkspaces.length,
+      dxpWorkspaces: dxpWorkspaces.map(w => ({
+        name: w.name,
+        displayName: w.displayName,
+        createdBy: w.metadata?.createdBy
+      })),
+      checkResults,
+      allWorkspaceNames: allWorkspaces.map(w => ({ name: w.name, displayName: w.displayName }))
+    });
+  } catch (error) {
+    console.error('Error checking workspaces:', error);
+    res.status(500).json({ success: false, error: 'Check failed' });
+  }
+});
+
 // GET /api/workspaces/validate-name/:name - Check if workspace name is available
 router.get('/validate-name/:name', requireAuth, async (req: Request, res: Response): Promise<void> => {
   try {
     const { name } = req.params;
+    const { excludeId } = req.query; // Optional: exclude a specific workspace ID (for edit scenarios)
 
     if (!name || name.length < 2) {
       return void res.status(400).json({
@@ -102,12 +168,50 @@ router.get('/validate-name/:name', requireAuth, async (req: Request, res: Respon
       });
     }
 
-    // Check if workspace name already exists
-    const existingWorkspace = await Workspace.findOne({ name })
+    // Check if workspace name already exists (global check across ALL workspaces, regardless of creator)
+    // Build query with optional exclusion for edit scenarios
+    const baseQuery: any = {
+      name,
+      active: true // Only check active workspaces, ignore soft-deleted ones
+    };
+
+    // Exclude specific workspace ID if provided (for edit scenarios)
+    if (excludeId) {
+      baseQuery._id = { $ne: excludeId };
+    }
+
+    // First try exact match
+    let existingWorkspace = await Workspace.findOne(baseQuery)
       .populate({
         path: 'metadata.createdBy',
         select: 'name email'
       });
+
+    // If no exact match, try case-insensitive
+    if (!existingWorkspace) {
+      const caseInsensitiveQuery = {
+        ...baseQuery,
+        name: { $regex: new RegExp(`^${name}$`, 'i') } // Case-insensitive exact match
+      };
+
+      existingWorkspace = await Workspace.findOne(caseInsensitiveQuery)
+        .populate({
+          path: 'metadata.createdBy',
+          select: 'name email'
+        });
+    }
+
+    // Also get similar names for debugging
+    const similarWorkspaces = await Workspace.find({
+      name: { $regex: new RegExp(name.replace(/-/g, '.*'), 'i') },
+      active: true
+    }).select('name displayName').limit(5);
+
+    console.log(`🔍 DATABASE SEARCH for "${name}":`, {
+      exactMatch: !!existingWorkspace,
+      similarWorkspaces: similarWorkspaces.map(w => ({ name: w.name, displayName: w.displayName }))
+    });
+
 
     if (existingWorkspace) {
       // Get creator information for better error message
@@ -136,7 +240,7 @@ router.get('/validate-name/:name', requireAuth, async (req: Request, res: Respon
       return void res.status(409).json({
         success: false,
         available: false,
-        error: `Workspace name '${name}' is already in use`,
+        error: `Workspace name ${name} is already in use`,
         details: {
           existingWorkspace: {
             displayName: existingWorkspace.displayName,
@@ -144,7 +248,7 @@ router.get('/validate-name/:name', requireAuth, async (req: Request, res: Respon
             createdAt: createdDate,
             status: existingWorkspace.status
           },
-          message: `Workspace name already used by ${createdByInfo} on ${createdDate}`
+          message: `Workspace name ${name} is already in use by ${createdByInfo} on ${createdDate}`
         }
       });
     }
@@ -167,7 +271,7 @@ router.get('/validate-name/:name', requireAuth, async (req: Request, res: Respon
 // GET /api/workspaces - List workspaces user has access to
 router.get('/', requireAuth, async (req: Request, res: Response): Promise<void> => {
   try {
-    const { page = 1, limit = 10, search, status = 'all' } = req.query;
+    const { page = 1, limit = 10, search, status = 'all', validateOnly = 'false' } = req.query;
     const userId = (req as any).user._id.toString();
     const userRole = (req as any).user.role;
 
@@ -176,8 +280,14 @@ router.get('/', requireAuth, async (req: Request, res: Response): Promise<void> 
       active: true
     };
 
+    // Special case: if validateOnly=true, check all workspaces for name validation purposes
+    const isValidationRequest = validateOnly === 'true';
+
+    console.log(`🔍 WORKSPACE LISTING: validateOnly=${validateOnly}, userRole=${userRole}, search="${search}"`);
+
     // Only super admin can see all workspaces, admin and basic users only see assigned ones
-    if (userRole !== 'super_admin') {
+    // EXCEPT when doing validation checks - then we need to see all workspaces
+    if (userRole !== 'super_admin' && !isValidationRequest) {
       // Get user's assigned workspaces
       const user = (req as any).user;
       const assignedWorkspaces = user.assignedWorkspaces || [];
@@ -203,6 +313,12 @@ router.get('/', requireAuth, async (req: Request, res: Response): Promise<void> 
           { displayName: { $regex: search, $options: 'i' } }
         ]
       });
+
+      if (isValidationRequest) {
+        console.log(`🔍 VALIDATION SEARCH: Searching for "${search}" across ALL workspaces`);
+      } else {
+        console.log(`🔍 REGULAR SEARCH: Searching for "${search}" in user's assigned workspaces only`);
+      }
     }
 
     const skip = (Number(page) - 1) * Number(limit);
@@ -301,8 +417,11 @@ router.post('/', requireAuth, requireAdminOrSuperAdmin, validateWorkspace, async
     const userId = (req as any).user._id;
     const { name, displayName, description, settings, limits, applications = [], status = 'draft' } = req.body;
 
-    // Check if workspace name already exists
-    const existingWorkspace = await Workspace.findOne({ name })
+    // Check if workspace name already exists (global check across ALL workspaces)
+    const existingWorkspace = await Workspace.findOne({
+      name,
+      active: true // Only check active workspaces, ignore soft-deleted ones
+    })
       .populate({
         path: 'metadata.createdBy',
         select: 'name email'
@@ -334,7 +453,7 @@ router.post('/', requireAuth, requireAdminOrSuperAdmin, validateWorkspace, async
 
       return void res.status(409).json({
         success: false,
-        error: `Workspace name '${name}' is already in use`,
+        error: `Workspace name ${name} is already in use`,
         details: {
           existingWorkspace: {
             displayName: existingWorkspace.displayName,

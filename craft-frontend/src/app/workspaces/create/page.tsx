@@ -194,42 +194,50 @@ export default function CreateWorkspacePage() {
       setNameValidation({ isValidating: true, isValid: false, message: 'Checking availability...' });
 
       try {
-        // Use search to find similar names, then check for exact match using trimmed name
-        const response = await apiClient.get(`/workspaces?search=${encodeURIComponent(trimmedName)}&limit=100`);
-        
-        if (response.success && response.data) {
-          const workspaces = response.data.workspaces || response.data || [];
-          const exactMatch = workspaces.find((ws: any) => ws.name === trimmedName);
-          
-          if (exactMatch) {
-            setNameValidation({ 
-              isValidating: false, 
-              isValid: false, 
-              message: 'This workspace name is already taken' 
-            });
-          } else {
-            setNameValidation({ 
-              isValidating: false, 
-              isValid: true, 
-              message: 'Name is available' 
-            });
-          }
+        // Use validation endpoint to check ALL workspaces for exact name match
+        const response = await apiClient.get(`/workspaces/validate-name/${encodeURIComponent(trimmedName)}`) as any;
+
+        if (response.success && response.available) {
+          // Name is available
+          setNameValidation({
+            isValidating: false,
+            isValid: true,
+            message: 'Name is available'
+          });
+        } else if (response.success === false) {
+          // Name is taken - use detailed message from backend
+          const errorMessage = response.details?.message || response.error || 'This workspace name is already taken';
+          setNameValidation({
+            isValidating: false,
+            isValid: false,
+            message: errorMessage
+          });
         } else {
           // If search fails, assume name is available (graceful degradation)
-          setNameValidation({ 
-            isValidating: false, 
-            isValid: true, 
-            message: '' 
+          setNameValidation({
+            isValidating: false,
+            isValid: true,
+            message: ''
           });
         }
-      } catch (error) {
+      } catch (error: any) {
         console.error('Name validation error:', error);
-        // Graceful degradation - don't block user if API fails
-        setNameValidation({ 
-          isValidating: false, 
-          isValid: true, 
-          message: '' 
-        });
+        // Handle API error responses (409, etc.)
+        if (error.success === false) {
+          const errorMessage = error.details?.message || error.error || 'This workspace name is already taken';
+          setNameValidation({
+            isValidating: false,
+            isValid: false,
+            message: errorMessage
+          });
+        } else {
+          // Graceful degradation - don't block user if API fails
+          setNameValidation({
+            isValidating: false,
+            isValid: true,
+            message: ''
+          });
+        }
       }
     },
     []
@@ -479,10 +487,26 @@ export default function CreateWorkspacePage() {
                 required
                 error={!nameValidation.isValid && !nameValidation.isValidating && formData.name.length > 0}
                 helperText={
-                  nameValidation.isValidating 
-                    ? "Checking availability..." 
+                  nameValidation.isValidating
+                    ? "Checking availability..."
                     : nameValidation.message || "Enter a unique name for your workspace (2-25 characters)"
                 }
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    '&.Mui-error': {
+                      '& fieldset': {
+                        borderColor: 'error.main',
+                        borderWidth: '2px',
+                      },
+                    },
+                  },
+                  '& .MuiFormHelperText-root': {
+                    '&.Mui-error': {
+                      color: 'error.main',
+                      fontWeight: 500,
+                    },
+                  },
+                }}
                 InputProps={{
                   endAdornment: nameValidation.isValidating ? (
                     <CircularProgress size={20} />
