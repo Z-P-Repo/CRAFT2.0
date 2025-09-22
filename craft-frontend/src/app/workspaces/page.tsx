@@ -121,9 +121,7 @@ const formatCreatedBy = (createdBy: any) => {
   if (!createdBy) return 'Admin';
   if (typeof createdBy === 'string') return 'Admin';
   if (createdBy && typeof createdBy === 'object') {
-    return createdBy.firstName && createdBy.lastName 
-      ? `${createdBy.firstName} ${createdBy.lastName}`
-      : createdBy.email || 'Admin';
+    return createdBy.name || createdBy.email || 'Admin';
   }
   return 'Admin';
 };

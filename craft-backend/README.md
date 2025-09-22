@@ -2,7 +2,7 @@
 
 A robust, scalable Node.js backend API for the CRAFT (Attribute-Based Access Control) Permission System. Built with Express.js, TypeScript, MongoDB, and comprehensive security features.
 
-![Version](https://img.shields.io/badge/version-1.3.4-blue.svg)
+![Version](https://img.shields.io/badge/version-1.3.6-blue.svg)
 ![Node.js](https://img.shields.io/badge/Node.js-18+-green.svg)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.5-blue.svg)
 ![Express](https://img.shields.io/badge/Express-4.19-black.svg)
@@ -353,10 +353,24 @@ For support and questions:
 
 ---
 
-*Last updated: September 17, 2025*
+*Last updated: September 19, 2025*
 🤖 *Generated and maintained with [Claude Code](https://claude.ai/code)*
 
-## 🔄 Recent Updates (Version 1.3.4)
+## 🔄 Recent Updates (Version 1.3.6)
+
+### Workspace Visibility & User Assignment System (September 19, 2025)
+- **🏢 Automatic Workspace Assignment**: Admin-created workspaces are now automatically assigned to their creators, eliminating visibility issues
+- **👥 User Assignment Management**: Added comprehensive endpoints for managing workspace user assignments (assign/unassign/list users)
+- **🔧 Workspace Access Control**: Fixed workspace visibility logic to prevent admin-created workspaces from becoming orphaned or inaccessible
+- **🛡️ Role-Based Assignment**: Proper validation and access control for workspace user management with admin/super_admin restrictions
+- **🔄 Bulk User Operations**: Support for assigning/unassigning multiple users to workspaces with comprehensive validation
+- **📊 User Assignment Queries**: New GET endpoint to retrieve all users assigned to a specific workspace with detailed user information
+- **🚀 Workspace Creator Auto-Assignment**: Non-super_admin users are automatically added to their created workspaces' assignedWorkspaces array
+- **⚡ API Endpoint Enhancement**: Three new workspace management endpoints: `/assign-users`, `/unassign-users`, and `/users`
+- **🔐 Access Validation**: Enhanced workspace access validation with proper error handling and permission checking
+- **🏗️ Workspace Management**: Comprehensive workspace user management system with MongoDB operations and validation
+
+### Previous Updates (Version 1.3.4)
 
 ### Role-Based Access Control & Environment API Enhancement (September 17, 2025)
 - **🔐 Advanced RBAC System**: Implemented comprehensive three-tier role-based access control (super_admin, admin, basic)

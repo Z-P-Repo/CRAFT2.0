@@ -71,8 +71,8 @@ router.get('/', requireAuth, validateIds, async (req: Request, res: Response): P
 
     const query: any = { workspaceId, active: true };
 
-    // Apply application filtering for admin and basic users
-    if (userRole === 'basic' || userRole === 'admin') {
+    // Apply application filtering - only basic users are restricted to assigned applications
+    if (userRole === 'basic') {
       const assignedApplications = user.assignedApplications || [];
       if (assignedApplications.length > 0) {
         query._id = { $in: assignedApplications };

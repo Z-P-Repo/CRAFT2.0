@@ -36,16 +36,17 @@ When user prompts "deploy", prepare the application for production deployment:
 - Frontend: `/craft-frontend` (Next.js 15.4.6, TypeScript 5.5, Material-UI v7, Azure AD MSAL, Jest 29 Testing)
 - Backend: `/craft-backend` (Node.js 18+, Express 4.19, TypeScript 5.5, MongoDB 7.0+, Azure AD SSO, Advanced Rate Limiting)
 
-## Latest Features (v1.3.4)
+## Latest Features (v1.3.6)
+- **Workspace Visibility Fix**: Automatic assignment of admin-created workspaces to their creators, preventing access issues
+- **User Assignment Management**: New endpoints for assigning/unassigning users to workspaces with comprehensive validation
+- **Workspace Access Control**: Enhanced workspace visibility logic with proper role-based access restrictions
+- **Stepper Button Uniformity**: Standardized navigation button styling across workspace and policy creation wizards
 - Role-based access control (RBAC) with three user roles: super_admin, admin, basic
 - Basic users have view-only access to all ABAC entities within assigned workspaces
 - Admin users restricted to their assigned workspaces, no longer have super admin privileges
 - Environment API fix - resolved critical API connection issue (port 3001 → 3005)
 - Enhanced workspace-based access control across all backend controllers
 - UI role filtering with conditional rendering of create/edit/delete actions
-- Fixed workspace name display in edit forms (displayName vs internal name)
-- Professional workspace detail page redesign with compact header and metrics
-- React Fragment fix for Material-UI Menu components
 - Workspace assignment system preserving existing assignments during updates
 
 ## Previous Features (v1.3.3)

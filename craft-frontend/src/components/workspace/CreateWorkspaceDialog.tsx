@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -28,7 +28,8 @@ import {
   IconButton,
   Accordion,
   AccordionSummary,
-  AccordionDetails
+  AccordionDetails,
+  InputAdornment
 } from '@mui/material';
 import {
   Business as WorkspaceIcon,
@@ -109,9 +110,71 @@ const CreateWorkspaceDialog: React.FC<CreateWorkspaceDialogProps> = ({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
+  const [nameValidation, setNameValidation] = useState<{
+    isChecking: boolean;
+    isValid: boolean;
+    message: string | null;
+  }>({ isChecking: false, isValid: true, message: null });
 
   const { showError, showSuccess } = useSnackbar();
   const { refreshWorkspaces } = useWorkspace();
+
+  // Debounced workspace name validation
+  const checkWorkspaceNameAvailability = useCallback(async (name: string) => {
+    if (!name || name.length < 2) {
+      setNameValidation({ isChecking: false, isValid: true, message: null });
+      return;
+    }
+
+    setNameValidation({ isChecking: true, isValid: true, message: null });
+
+    try {
+      const response = await apiClient.get(`/workspaces/validate-name/${encodeURIComponent(name)}`) as any;
+
+      if (response.success && response.available) {
+        setNameValidation({
+          isChecking: false,
+          isValid: true,
+          message: '✓ Workspace name is available'
+        });
+      } else {
+        // Handle case where response doesn't indicate availability
+        setNameValidation({
+          isChecking: false,
+          isValid: false,
+          message: response.error || 'Workspace name is not available'
+        });
+      }
+    } catch (err: any) {
+      if (err.details?.message) {
+        setNameValidation({
+          isChecking: false,
+          isValid: false,
+          message: err.details.message
+        });
+      } else {
+        setNameValidation({
+          isChecking: false,
+          isValid: false,
+          message: err.error || 'Unable to validate workspace name'
+        });
+      }
+    }
+  }, []);
+
+  // Debounce the validation
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      if (formData.name && formData.name.length >= 2) {
+        checkWorkspaceNameAvailability(formData.name);
+      } else {
+        // Reset validation for short names
+        setNameValidation({ isChecking: false, isValid: true, message: null });
+      }
+    }, 500);
+
+    return () => clearTimeout(timeoutId);
+  }, [formData.name, checkWorkspaceNameAvailability]);
 
   const handleFieldChange = (field: keyof WorkspaceFormData) => (
     event: React.ChangeEvent<HTMLInputElement>
@@ -129,11 +192,19 @@ const CreateWorkspaceDialog: React.FC<CreateWorkspaceDialogProps> = ({
         .replace(/[^a-z0-9\s-]/g, '')
         .replace(/\s+/g, '-')
         .replace(/^-+|-+$/g, '');
-      
+
+      // Reset validation when name changes
+      setNameValidation({ isChecking: false, isValid: true, message: null });
+
       setFormData(prev => ({
         ...prev,
         name: generatedName
       }));
+    }
+
+    // Reset validation when name field is directly edited
+    if (field === 'name') {
+      setNameValidation({ isChecking: false, isValid: true, message: null });
     }
   };
 
@@ -282,7 +353,7 @@ const CreateWorkspaceDialog: React.FC<CreateWorkspaceDialogProps> = ({
 
   const validateStep = (step: number): boolean => {
     setError(null);
-    
+
     switch (step) {
       case 0: // Workspace details
         if (!formData.displayName.trim()) {
@@ -303,6 +374,20 @@ const CreateWorkspaceDialog: React.FC<CreateWorkspaceDialogProps> = ({
         }
         if (formData.description.length > 500) {
           setError('Description cannot exceed 500 characters');
+          return false;
+        }
+        // Check workspace name availability
+        if (nameValidation.isChecking) {
+          setError('Please wait while we verify the workspace name...');
+          return false;
+        }
+        if (!nameValidation.isValid) {
+          setError(nameValidation.message || 'Workspace name is not available');
+          return false;
+        }
+        // For names that haven't been validated yet, require validation before proceeding
+        if (formData.name.length >= 2 && nameValidation.message === null && !nameValidation.isChecking) {
+          setError('Workspace name validation is required. Please wait a moment and try again.');
           return false;
         }
         return true;
@@ -384,9 +469,19 @@ const CreateWorkspaceDialog: React.FC<CreateWorkspaceDialogProps> = ({
         throw new Error(response.error || 'Failed to create workspace');
       }
     } catch (err: any) {
-      const errorMessage = err.error || err.message || 'Failed to create workspace';
-      setError(errorMessage);
-      showError(errorMessage);
+      let errorMessage = err.error || err.message || 'Failed to create workspace';
+      let detailedMessage = '';
+
+      // Check if this is a detailed error response with workspace name conflict info
+      if (err.details?.message) {
+        detailedMessage = err.details.message;
+      } else if (err.details?.existingWorkspace) {
+        const existing = err.details.existingWorkspace;
+        detailedMessage = `A workspace with the name '${formData.name}' was created by ${existing.createdBy} on ${existing.createdAt}. Please choose a different workspace name.`;
+      }
+
+      setError(detailedMessage || errorMessage);
+      showError(detailedMessage || errorMessage);
     } finally {
       setLoading(false);
     }
@@ -436,6 +531,7 @@ const CreateWorkspaceDialog: React.FC<CreateWorkspaceDialogProps> = ({
     });
     setError(null);
     setActiveStep(0);
+    setNameValidation({ isChecking: false, isValid: true, message: null });
     onClose();
   };
 
@@ -491,7 +587,21 @@ const CreateWorkspaceDialog: React.FC<CreateWorkspaceDialogProps> = ({
                   onChange={handleFieldChange('name')}
                   fullWidth
                   required
-                  helperText="Auto-generated from display name. Must be lowercase alphanumeric with hyphens."
+                  error={!nameValidation.isValid && !nameValidation.isChecking}
+                  helperText={
+                    nameValidation.isChecking
+                      ? "Checking availability..."
+                      : nameValidation.message
+                      ? nameValidation.message
+                      : "Auto-generated from display name. Must be lowercase alphanumeric with hyphens."
+                  }
+                  InputProps={{
+                    endAdornment: nameValidation.isChecking ? (
+                      <InputAdornment position="end">
+                        <CircularProgress size={20} />
+                      </InputAdornment>
+                    ) : null
+                  }}
                 />
 
                 <TextField
@@ -870,9 +980,9 @@ const CreateWorkspaceDialog: React.FC<CreateWorkspaceDialogProps> = ({
             <Button
               variant="contained"
               onClick={handleNext}
-              disabled={loading}
+              disabled={loading || (activeStep === 0 && (nameValidation.isChecking || !nameValidation.isValid))}
             >
-              Next
+              {activeStep === 0 && nameValidation.isChecking ? 'Validating...' : 'Next'}
             </Button>
           ) : (
             <Button 

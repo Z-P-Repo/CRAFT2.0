@@ -90,6 +90,80 @@ const validateWorkspaceId = [
     .withMessage('Invalid workspace ID format')
 ];
 
+// GET /api/workspaces/validate-name/:name - Check if workspace name is available
+router.get('/validate-name/:name', requireAuth, async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { name } = req.params;
+
+    if (!name || name.length < 2) {
+      return void res.status(400).json({
+        success: false,
+        error: 'Workspace name must be at least 2 characters'
+      });
+    }
+
+    // Check if workspace name already exists
+    const existingWorkspace = await Workspace.findOne({ name })
+      .populate({
+        path: 'metadata.createdBy',
+        select: 'name email'
+      });
+
+    if (existingWorkspace) {
+      // Get creator information for better error message
+      let createdByInfo = 'Unknown user';
+      if (existingWorkspace.metadata?.createdBy) {
+        const creator = existingWorkspace.metadata.createdBy as any;
+        if (creator.name && creator.email) {
+          createdByInfo = `${creator.name} (${creator.email})`;
+        } else if (creator.email) {
+          createdByInfo = creator.email;
+        } else if (creator.name) {
+          createdByInfo = creator.name;
+        }
+      }
+
+      const createdDate = existingWorkspace.createdAt
+        ? new Date(existingWorkspace.createdAt).toLocaleDateString('en-US', {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+          })
+        : 'Unknown date';
+
+      return void res.status(409).json({
+        success: false,
+        available: false,
+        error: `Workspace name '${name}' is already in use`,
+        details: {
+          existingWorkspace: {
+            displayName: existingWorkspace.displayName,
+            createdBy: createdByInfo,
+            createdAt: createdDate,
+            status: existingWorkspace.status
+          },
+          message: `Workspace name already used by ${createdByInfo} on ${createdDate}`
+        }
+      });
+    }
+
+    // Name is available
+    res.json({
+      success: true,
+      available: true,
+      message: 'Workspace name is available'
+    });
+  } catch (error) {
+    console.error('Error validating workspace name:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to validate workspace name'
+    });
+  }
+});
+
 // GET /api/workspaces - List workspaces user has access to
 router.get('/', requireAuth, async (req: Request, res: Response): Promise<void> => {
   try {
@@ -134,6 +208,14 @@ router.get('/', requireAuth, async (req: Request, res: Response): Promise<void> 
     const skip = (Number(page) - 1) * Number(limit);
     const workspaces = await Workspace.find(query)
       .populate('applicationsCount')
+      .populate({
+        path: 'metadata.createdBy',
+        select: 'name email'
+      })
+      .populate({
+        path: 'metadata.owner',
+        select: 'name email'
+      })
       .sort({ updatedAt: -1 })
       .skip(skip)
       .limit(Number(limit));
@@ -146,8 +228,8 @@ router.get('/', requireAuth, async (req: Request, res: Response): Promise<void> 
           active: true
         };
 
-        // Admin and basic users can only see applications they're assigned to
-        if (userRole === 'basic' || userRole === 'admin') {
+        // Only basic users are restricted to assigned applications, admin users see all apps in their assigned workspaces
+        if (userRole === 'basic') {
           const user = (req as any).user;
           const assignedApplications = user.assignedApplications || [];
 
@@ -220,11 +302,48 @@ router.post('/', requireAuth, requireAdminOrSuperAdmin, validateWorkspace, async
     const { name, displayName, description, settings, limits, applications = [], status = 'draft' } = req.body;
 
     // Check if workspace name already exists
-    const existingWorkspace = await Workspace.findOne({ name });
+    const existingWorkspace = await Workspace.findOne({ name })
+      .populate({
+        path: 'metadata.createdBy',
+        select: 'name email'
+      });
+
     if (existingWorkspace) {
+      // Get creator information for better error message
+      let createdByInfo = 'Unknown user';
+      if (existingWorkspace.metadata?.createdBy) {
+        const creator = existingWorkspace.metadata.createdBy as any;
+        if (creator.name && creator.email) {
+          createdByInfo = `${creator.name} (${creator.email})`;
+        } else if (creator.email) {
+          createdByInfo = creator.email;
+        } else if (creator.name) {
+          createdByInfo = creator.name;
+        }
+      }
+
+      const createdDate = existingWorkspace.createdAt
+        ? new Date(existingWorkspace.createdAt).toLocaleDateString('en-US', {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+          })
+        : 'Unknown date';
+
       return void res.status(409).json({
         success: false,
-        error: 'Workspace name already exists'
+        error: `Workspace name '${name}' is already in use`,
+        details: {
+          existingWorkspace: {
+            displayName: existingWorkspace.displayName,
+            createdBy: createdByInfo,
+            createdAt: createdDate,
+            status: existingWorkspace.status
+          },
+          message: `A workspace with the name '${name}' was created by ${createdByInfo} on ${createdDate}. Please choose a different workspace name.`
+        }
       });
     }
 
@@ -537,7 +656,16 @@ router.get('/:workspaceId', requireAuth, validateWorkspaceId, async (req: Reques
       }
     }
 
-    const workspace = await Workspace.findOne(query).populate('applicationsCount');
+    const workspace = await Workspace.findOne(query)
+      .populate('applicationsCount')
+      .populate({
+        path: 'metadata.createdBy',
+        select: 'name email'
+      })
+      .populate({
+        path: 'metadata.owner',
+        select: 'name email'
+      });
 
     if (!workspace) {
       return void res.status(404).json({
