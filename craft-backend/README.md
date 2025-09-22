@@ -2,7 +2,7 @@
 
 A robust, scalable Node.js backend API for the CRAFT (Attribute-Based Access Control) Permission System. Built with Express.js, TypeScript, MongoDB, and comprehensive security features.
 
-![Version](https://img.shields.io/badge/version-1.3.6-blue.svg)
+![Version](https://img.shields.io/badge/version-1.3.7-blue.svg)
 ![Node.js](https://img.shields.io/badge/Node.js-18+-green.svg)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.5-blue.svg)
 ![Express](https://img.shields.io/badge/Express-4.19-black.svg)
@@ -353,12 +353,24 @@ For support and questions:
 
 ---
 
-*Last updated: September 19, 2025*
+*Last updated: September 23, 2025*
 🤖 *Generated and maintained with [Claude Code](https://claude.ai/code)*
 
-## 🔄 Recent Updates (Version 1.3.6)
+## 🔄 Recent Updates (Version 1.3.7)
 
-### Workspace Visibility & User Assignment System (September 19, 2025)
+### Comprehensive Pagination & Global Validation (September 23, 2025)
+- **📄 Advanced Pagination Infrastructure**: Implemented comprehensive server-side pagination for workspaces with search, filtering, and sorting capabilities matching users page functionality
+- **🔍 Global Workspace Validation**: Enhanced workspace name validation system to check ALL workspaces across the entire database, preventing duplicate names regardless of user ownership
+- **📊 Enhanced Statistics Endpoints**: Added comprehensive pagination statistics including active/draft workspace counts and total applications with optimized MongoDB aggregation queries
+- **🛡️ Admin Access Control Resolution**: Fixed workspace hierarchy access control allowing admin users to properly view applications within their assigned workspaces
+- **⚡ Backend Performance Optimization**: Optimized MongoDB queries with proper indexing, lean queries, and efficient counting for improved API response times
+- **🔄 Pagination Response Enhancement**: Enhanced PaginationMeta interface with additional count fields and comprehensive statistics for frontend display
+- **🎯 Validation Endpoint**: Added dedicated `/validate-name/:name` endpoint for real-time workspace name validation with excludeId support for edit scenarios
+- **📱 API Consistency**: Standardized pagination patterns across users and workspaces endpoints with consistent response formats and error handling
+- **🚀 Query Optimization**: Implemented efficient MongoDB operations with Promise.all for parallel counting and improved database performance
+- **🔧 Access Control Logic**: Enhanced workspace access control with proper role-based filtering and assignment validation across all pagination endpoints
+
+### Version 1.3.6 - Workspace Visibility & User Assignment System (September 22, 2025)
 - **🏢 Automatic Workspace Assignment**: Admin-created workspaces are now automatically assigned to their creators, eliminating visibility issues
 - **👥 User Assignment Management**: Added comprehensive endpoints for managing workspace user assignments (assign/unassign/list users)
 - **🔧 Workspace Access Control**: Fixed workspace visibility logic to prevent admin-created workspaces from becoming orphaned or inaccessible
