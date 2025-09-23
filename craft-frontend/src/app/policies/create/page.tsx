@@ -711,22 +711,66 @@ export default function CreatePolicyPage() {
       const attribute = attributes.find(attr => attr.id === attributeId);
       if (!attribute) return;
 
-      const updatedEnumValues = [...(attribute.constraints.enumValues || []), newValueData];
-      
-      const updatedAttribute = {
-        ...attribute,
+      // Check for duplicate values (case-insensitive)
+      const existingValues = attribute.constraints.enumValues || [];
+      const trimmedNewValue = newValueData.trim();
+      const isDuplicate = existingValues.some(existingValue =>
+        existingValue.toString().toLowerCase() === trimmedNewValue.toLowerCase()
+      );
+
+      if (isDuplicate) {
+        snackbar.showError(`The value "${trimmedNewValue}" already exists for this attribute`);
+        return;
+      }
+
+      const updatedEnumValues = [...existingValues, trimmedNewValue];
+
+      // Only send the specific fields that need to be updated
+      const updatePayload = {
         constraints: {
           ...attribute.constraints,
           enumValues: updatedEnumValues
         }
       };
 
-      const response = await apiClient.put(`/attributes/${attributeId}`, updatedAttribute);
+      const response = await apiClient.put(`/attributes/${attributeId}`, updatePayload);
       if (response.success) {
+        // Immediately update the local attributes state
+        setAttributes(prevAttributes =>
+          prevAttributes.map(attr =>
+            attr.id === attributeId
+              ? {
+                  ...attr,
+                  constraints: {
+                    ...attr.constraints,
+                    enumValues: updatedEnumValues
+                  }
+                }
+              : attr
+          )
+        );
+
+        // Also update selectedAttributes if this attribute is in the selection
+        setSelectedAttributes(prevSelectedAttributes =>
+          prevSelectedAttributes.map(attr =>
+            attr.id === attributeId
+              ? {
+                  ...attr,
+                  constraints: {
+                    ...attr.constraints,
+                    enumValues: updatedEnumValues
+                  }
+                }
+              : attr
+          )
+        );
+
         snackbar.showSuccess('Value added successfully');
-        await fetchDropdownData();
         setShowCreateValue(null);
         setNewValueData('');
+
+        // Optionally refresh from API in background
+        fetchDropdownData().catch(console.error);
       } else {
         snackbar.handleApiResponse(response, undefined, 'Failed to create value');
       }
@@ -3008,6 +3052,111 @@ export default function CreatePolicyPage() {
               color="error"
             >
               Yes, Cancel
+            </Button>
+          </DialogActions>
+        </Dialog>
+
+        {/* Create New Value Dialog */}
+        <Dialog
+          open={!!showCreateValue}
+          onClose={() => setShowCreateValue(null)}
+          maxWidth="sm"
+          fullWidth
+          PaperProps={{
+            sx: {
+              borderRadius: 2,
+              boxShadow: '0 8px 32px rgba(0,0,0,0.1)'
+            }
+          }}
+        >
+          <DialogTitle sx={{
+            fontWeight: 600,
+            fontSize: '1.25rem',
+            px: 3,
+            pt: 3,
+            pb: 1,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between'
+          }}>
+            Add New Attribute Value
+            <IconButton
+              onClick={() => {
+                setShowCreateValue(null);
+                setNewValueData('');
+              }}
+              sx={{
+                color: 'grey.500',
+                '&:hover': { bgcolor: 'grey.100' }
+              }}
+            >
+              <CloseIcon />
+            </IconButton>
+          </DialogTitle>
+          <DialogContent sx={{ px: 3, pt: 2, pb: 2 }}>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2.5, lineHeight: 1.5 }}>
+              {showCreateValue && (() => {
+                const attribute = attributes.find(attr => attr.id === showCreateValue);
+                return `Add a new value to the "${attribute?.displayName || 'selected'}" attribute. This value will be available for selection in policy conditions.`;
+              })()}
+            </Typography>
+            <TextField
+              autoFocus
+              fullWidth
+              label="New Value"
+              value={newValueData}
+              onChange={(e) => setNewValueData(e.target.value)}
+              placeholder="Enter the new value"
+              variant="outlined"
+              size="medium"
+              helperText="Enter a descriptive value that will be used in policy conditions"
+              sx={{
+                mt: 1,
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: 1.5
+                }
+              }}
+            />
+          </DialogContent>
+          <DialogActions sx={{
+            px: 3,
+            pb: 3,
+            pt: 1,
+            gap: 1.5
+          }}>
+            <Button
+              onClick={() => {
+                setShowCreateValue(null);
+                setNewValueData('');
+              }}
+              variant="outlined"
+              sx={{
+                borderColor: 'grey.300',
+                color: 'text.secondary',
+                '&:hover': {
+                  borderColor: 'grey.400',
+                  bgcolor: 'grey.50'
+                }
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={() => {
+                if (showCreateValue && newValueData.trim()) {
+                  handleCreateValue(showCreateValue);
+                }
+              }}
+              variant="contained"
+              disabled={!newValueData.trim()}
+              sx={{
+                bgcolor: 'primary.main',
+                '&:hover': {
+                  bgcolor: 'primary.dark'
+                }
+              }}
+            >
+              Add Value
             </Button>
           </DialogActions>
         </Dialog>

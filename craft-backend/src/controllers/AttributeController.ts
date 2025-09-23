@@ -6,6 +6,7 @@ import { PaginationHelper } from '@/utils/pagination';
 import { logger } from '@/utils/logger';
 import { Attribute, IAttribute } from '@/models/Attribute';
 import { Policy } from '@/models/Policy';
+import { Types } from 'mongoose';
 
 
 export class AttributeController {
@@ -108,6 +109,10 @@ export class AttributeController {
     const user = req.user;
     const userRole = user?.role;
 
+    if (!id) {
+      throw new ValidationError('Attribute ID is required');
+    }
+
     let attribute;
 
     // Apply workspace filtering for basic and admin users
@@ -116,8 +121,10 @@ export class AttributeController {
       if (assignedWorkspaces.length > 0) {
         const workspaceFilter = { workspaceId: { $in: assignedWorkspaces } };
 
-        // Try to find by MongoDB _id first, then by custom id field (with workspace filtering)
-        attribute = await Attribute.findOne({ _id: id, ...workspaceFilter }).lean();
+        // Try to find by MongoDB _id first (only if valid ObjectId), then by custom id field (with workspace filtering)
+        if (Types.ObjectId.isValid(id)) {
+          attribute = await Attribute.findOne({ _id: id, ...workspaceFilter }).lean();
+        }
         if (!attribute) {
           attribute = await Attribute.findOne({ id, ...workspaceFilter }).lean();
         }
@@ -127,7 +134,9 @@ export class AttributeController {
       }
     } else {
       // Super admin users - no workspace filtering
-      attribute = await Attribute.findById(id).lean();
+      if (Types.ObjectId.isValid(id)) {
+        attribute = await Attribute.findById(id).lean();
+      }
       if (!attribute) {
         attribute = await Attribute.findOne({ id }).lean();
       }
@@ -251,8 +260,15 @@ export class AttributeController {
     const { id } = req.params;
     const updates = req.body;
 
-    // Validate attribute exists - try MongoDB _id first, then custom id
-    let existingAttribute = await Attribute.findById(id);
+    if (!id) {
+      throw new ValidationError('Attribute ID is required');
+    }
+
+    // Validate attribute exists - try MongoDB _id first (only if valid ObjectId), then custom id
+    let existingAttribute = null;
+    if (Types.ObjectId.isValid(id)) {
+      existingAttribute = await Attribute.findById(id);
+    }
     if (!existingAttribute) {
       existingAttribute = await Attribute.findOne({ id });
     }
@@ -306,8 +322,15 @@ export class AttributeController {
   static deleteAttribute = asyncHandler(async (req: AuthRequest, res: Response): Promise<any> => {
     const { id } = req.params;
 
-    // Try to find by MongoDB _id first, then by custom id field
-    let attribute = await Attribute.findById(id);
+    if (!id) {
+      throw new ValidationError('Attribute ID is required');
+    }
+
+    // Try to find by MongoDB _id first (only if valid ObjectId), then by custom id field
+    let attribute = null;
+    if (Types.ObjectId.isValid(id)) {
+      attribute = await Attribute.findById(id);
+    }
     if (!attribute) {
       attribute = await Attribute.findOne({ id });
     }
