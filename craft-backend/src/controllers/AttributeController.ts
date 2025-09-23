@@ -283,7 +283,7 @@ export class AttributeController {
     delete updates.createdAt;
 
     // Validate constraints if being updated
-    if (updates.constraints && updates.dataType) {
+    if (updates.constraints) {
       const constraintValidation = AttributeController.validateConstraints(
         updates.dataType || existingAttribute.dataType,
         updates.constraints
@@ -298,6 +298,11 @@ export class AttributeController {
       updates.metadata = existingAttribute.metadata;
     }
     updates.metadata.lastModifiedBy = req.user?._id || 'anonymous';
+
+    // Debug logging for attribute value updates
+    if (updates.constraints && updates.constraints.enumValues) {
+      console.log(`Updating attribute ${existingAttribute.displayName} (${existingAttribute.id}) with new enumValues:`, updates.constraints.enumValues);
+    }
 
     const attribute = await Attribute.findByIdAndUpdate(
       existingAttribute._id,

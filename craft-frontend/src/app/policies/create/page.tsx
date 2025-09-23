@@ -1,4 +1,5 @@
 'use client';
+// Professional modal design uniformity - matching Attributes page
 
 import React, { useState, useEffect, useCallback } from 'react';
 import {
@@ -218,6 +219,8 @@ export default function CreatePolicyPage() {
   const [booleanValues, setBooleanValues] = useState<string[]>([]);
   const [numberValues, setNumberValues] = useState<string[]>([]);
   const [stringValues, setStringValues] = useState<string[]>([]);
+  const [arrayValues, setArrayValues] = useState<string[]>([]);
+  const [objectValues, setObjectValues] = useState<string[]>([]);
   const [dateValues, setDateValues] = useState<string[]>([]);
   const [dateInputType, setDateInputType] = useState<'single' | 'range' | 'period'>('single');
   const [selectedDays, setSelectedDays] = useState<string[]>([]);
@@ -413,6 +416,8 @@ export default function CreatePolicyPage() {
     setBooleanValues([]);
     setNumberValues([]);
     setStringValues([]);
+    setArrayValues([]);
+    setObjectValues([]);
     setDateValues([]);
     setDateInputType('single');
     setSelectedDays([]);
@@ -434,6 +439,8 @@ export default function CreatePolicyPage() {
     setBooleanValues([]);
     setNumberValues([]);
     setStringValues([]);
+    setArrayValues([]);
+    setObjectValues([]);
     setDateValues([]);
     setDateInputType('single');
     setSelectedDays([]);
@@ -455,6 +462,8 @@ export default function CreatePolicyPage() {
     setBooleanValues([]);
     setNumberValues([]);
     setStringValues([]);
+    setArrayValues([]);
+    setObjectValues([]);
     setDateValues([]);
     setDateInputType('single');
     setSelectedDays([]);
@@ -564,6 +573,8 @@ export default function CreatePolicyPage() {
     setBooleanValues([]);
     setNumberValues([]);
     setStringValues([]);
+    setArrayValues([]);
+    setObjectValues([]);
     setDateValues([]);
     setDateInputType('single');
     setSelectedDays([]);
@@ -609,6 +620,32 @@ export default function CreatePolicyPage() {
     setPermittedValues(newValues.join(', '));
   };
 
+  const handleArrayValuesRemove = (index: number) => {
+    const newValues = arrayValues.filter((_, i) => i !== index);
+    setArrayValues(newValues);
+    setParsedValues(newValues);
+    setPermittedValues(JSON.stringify(newValues, null, 2));
+  };
+
+  const handleObjectValuesRemove = (index: number) => {
+    const newValues = objectValues.filter((_, i) => i !== index);
+    setObjectValues(newValues);
+    // For objects, we'll need to reconstruct the object without the removed key
+    try {
+      const currentObj = JSON.parse(permittedValues);
+      const keys = Object.keys(currentObj);
+      if (keys[index]) {
+        delete currentObj[keys[index]];
+        setParsedValues([currentObj]);
+        setPermittedValues(JSON.stringify(currentObj, null, 2));
+      }
+    } catch (error) {
+      // If JSON is invalid, just remove from array
+      setParsedValues(newValues);
+      setPermittedValues('{}');
+    }
+  };
+
   const handleFlexibleDateAdd = (dateString: string, type: string = 'single') => {
     if (dateString && !dateValues.includes(dateString)) {
       const newValues = [...dateValues, dateString];
@@ -644,12 +681,16 @@ export default function CreatePolicyPage() {
       console.log('String Values:', stringValues);
       console.log('Number Values:', numberValues);
       console.log('Boolean Values:', booleanValues);
+      console.log('Array Values:', arrayValues);
+      console.log('Object Values:', objectValues);
       console.log('Parsed Values:', parsedValues);
       
       const finalEnumValues = parsedValues.length > 0 ? parsedValues : (
         selectedDataType === 'string' ? stringValues.filter(v => v.trim() !== '') :
         selectedDataType === 'number' ? numberValues.map(v => parseFloat(v)).filter(v => !isNaN(v)) :
         selectedDataType === 'boolean' ? booleanValues.map(v => v === 'true') :
+        selectedDataType === 'array' ? arrayValues.filter(v => v.trim() !== '') :
+        selectedDataType === 'object' ? objectValues.filter(v => v.trim() !== '') :
         []
       );
       
@@ -2951,15 +2992,222 @@ export default function CreatePolicyPage() {
                     </Box>
                   )}
 
-                  {/* Simplified input for other data types */}
-                  {(selectedDataType === 'array' || selectedDataType === 'object') && (
-                    <TextField
-                      fullWidth
-                      size="small"
-                      placeholder={`Enter ${selectedDataType} values (comma-separated)`}
-                      value={permittedValues}
-                      onChange={(e) => setPermittedValues(e.target.value)}
-                    />
+                  {/* Array Values - Professional Design Matching Attributes Page */}
+                  {selectedDataType === 'array' && (
+                    <Box>
+                      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
+                        <Typography variant="body2" sx={{ fontWeight: 500, color: 'text.primary' }}>
+                          Array Values
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          {arrayValues.length} value{arrayValues.length !== 1 ? 's' : ''}
+                        </Typography>
+                      </Box>
+
+                      {/* Compact Values Display */}
+                      {arrayValues.length > 0 && (
+                        <Paper
+                          variant="outlined"
+                          sx={{
+                            p: 2,
+                            mb: 2,
+                            maxHeight: '200px',
+                            overflow: 'auto',
+                            bgcolor: 'grey.50',
+                            border: '1px solid',
+                            borderColor: 'grey.200'
+                          }}
+                        >
+                          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                            {arrayValues.map((value, index) => {
+                              const displayValue = String(value);
+                              const truncatedValue = displayValue.length > 30 ? displayValue.substring(0, 30) + '...' : displayValue;
+
+                              return (
+                                <Chip
+                                  key={index}
+                                  label={truncatedValue}
+                                  size="small"
+                                  color="primary"
+                                  variant="filled"
+                                  onDelete={() => handleArrayValuesRemove(index)}
+                                  sx={{
+                                    maxWidth: '200px',
+                                    fontSize: '0.75rem',
+                                    '& .MuiChip-label': {
+                                      fontFamily: 'Monaco, "Lucida Console", monospace'
+                                    }
+                                  }}
+                                />
+                              );
+                            })}
+                          </Box>
+                          {arrayValues.some(value => String(value).length > 30) && (
+                            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
+                              * Some values are truncated. Full values are preserved when saving.
+                            </Typography>
+                          )}
+                        </Paper>
+                      )}
+
+                      {/* Professional JSON Input Interface */}
+                      <TextField
+                        fullWidth
+                        label="Array Values (JSON)"
+                        value={permittedValues}
+                        onChange={(e) => {
+                          setPermittedValues(e.target.value);
+                          try {
+                            const parsed = JSON.parse(e.target.value);
+                            if (Array.isArray(parsed)) {
+                              setArrayValues(parsed.map(v => String(v)));
+                              setParsedValues(parsed);
+                            }
+                          } catch (error) {
+                            // Invalid JSON, keep current state
+                          }
+                        }}
+                        placeholder='["item1", "item2", "item3"]'
+                        helperText={
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 1 }}>
+                            <Box
+                              sx={{
+                                width: 8,
+                                height: 8,
+                                borderRadius: '50%',
+                                bgcolor: permittedValues && arrayValues.length === 0 ? 'error.main' :
+                                        arrayValues.length > 0 ? 'success.main' : 'grey.400'
+                              }}
+                            />
+                            <Typography variant="caption">
+                              {permittedValues && arrayValues.length === 0 ?
+                                'Invalid JSON format' :
+                                arrayValues.length > 0 ?
+                                  `Valid JSON - ${arrayValues.length} value${arrayValues.length !== 1 ? 's' : ''} ready` :
+                                  'Enter valid array JSON'
+                              }
+                            </Typography>
+                          </Box>
+                        }
+                        multiline
+                        rows={3}
+                        InputProps={{
+                          sx: {
+                            fontFamily: 'Monaco, "Lucida Console", monospace',
+                            fontSize: '0.85rem'
+                          }
+                        }}
+                      />
+                    </Box>
+                  )}
+
+                  {/* Object Values - Professional Design Matching Attributes Page */}
+                  {selectedDataType === 'object' && (
+                    <Box>
+                      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
+                        <Typography variant="body2" sx={{ fontWeight: 500, color: 'text.primary' }}>
+                          Object Values
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          {objectValues.length} value{objectValues.length !== 1 ? 's' : ''}
+                        </Typography>
+                      </Box>
+
+                      {/* Compact Values Display */}
+                      {objectValues.length > 0 && (
+                        <Paper
+                          variant="outlined"
+                          sx={{
+                            p: 2,
+                            mb: 2,
+                            maxHeight: '200px',
+                            overflow: 'auto',
+                            bgcolor: 'grey.50',
+                            border: '1px solid',
+                            borderColor: 'grey.200'
+                          }}
+                        >
+                          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                            {objectValues.map((value, index) => {
+                              const displayValue = String(value);
+                              const truncatedValue = displayValue.length > 30 ? displayValue.substring(0, 30) + '...' : displayValue;
+
+                              return (
+                                <Chip
+                                  key={index}
+                                  label={truncatedValue}
+                                  size="small"
+                                  color="primary"
+                                  variant="filled"
+                                  onDelete={() => handleObjectValuesRemove(index)}
+                                  sx={{
+                                    maxWidth: '200px',
+                                    fontSize: '0.75rem',
+                                    '& .MuiChip-label': {
+                                      fontFamily: 'Monaco, "Lucida Console", monospace'
+                                    }
+                                  }}
+                                />
+                              );
+                            })}
+                          </Box>
+                          {objectValues.some(value => String(value).length > 30) && (
+                            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
+                              * Some values are truncated. Full values are preserved when saving.
+                            </Typography>
+                          )}
+                        </Paper>
+                      )}
+
+                      {/* Professional JSON Input Interface */}
+                      <TextField
+                        fullWidth
+                        label="Object Values (JSON)"
+                        value={permittedValues}
+                        onChange={(e) => {
+                          setPermittedValues(e.target.value);
+                          try {
+                            const parsed = JSON.parse(e.target.value);
+                            if (typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)) {
+                              setObjectValues(Object.keys(parsed).map(k => String(k)));
+                              setParsedValues([parsed]);
+                            }
+                          } catch (error) {
+                            // Invalid JSON, keep current state
+                          }
+                        }}
+                        placeholder='{"key": "value", "name": "example"}'
+                        helperText={
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 1 }}>
+                            <Box
+                              sx={{
+                                width: 8,
+                                height: 8,
+                                borderRadius: '50%',
+                                bgcolor: permittedValues && objectValues.length === 0 ? 'error.main' :
+                                        objectValues.length > 0 ? 'success.main' : 'grey.400'
+                              }}
+                            />
+                            <Typography variant="caption">
+                              {permittedValues && objectValues.length === 0 ?
+                                'Invalid JSON format' :
+                                objectValues.length > 0 ?
+                                  `Valid JSON - ${objectValues.length} value${objectValues.length !== 1 ? 's' : ''} ready` :
+                                  'Enter valid object JSON'
+                              }
+                            </Typography>
+                          </Box>
+                        }
+                        multiline
+                        rows={3}
+                        InputProps={{
+                          sx: {
+                            fontFamily: 'Monaco, "Lucida Console", monospace',
+                            fontSize: '0.85rem'
+                          }
+                        }}
+                      />
+                    </Box>
                   )}
                 </Box>
               )}
