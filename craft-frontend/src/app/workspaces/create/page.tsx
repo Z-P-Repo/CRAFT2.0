@@ -53,6 +53,7 @@ import { useSnackbar } from '@/contexts/SnackbarContext';
 import { useWorkspace } from '@/contexts/WorkspaceContext';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import { apiClient } from '@/lib/api';
+import ProtectedRoute from '@/components/auth/ProtectedRoute';
 
 interface ApplicationFormData {
   name: string;
@@ -844,8 +845,9 @@ export default function CreateWorkspacePage() {
   };
 
   return (
-    <DashboardLayout>
-      {/* Header */}
+    <ProtectedRoute>
+      <DashboardLayout>
+        {/* Header */}
       <Paper elevation={0} sx={{ p: 3, mb: 3, border: '1px solid', borderColor: 'grey.200' }}>
         <Box sx={{ mb: 1 }}>
           <Breadcrumbs aria-label="breadcrumb" sx={{ mb: 2 }}>
@@ -1010,6 +1012,7 @@ export default function CreateWorkspacePage() {
           </Button>
         </DialogActions>
       </Dialog>
-    </DashboardLayout>
+      </DashboardLayout>
+    </ProtectedRoute>
   );
 }

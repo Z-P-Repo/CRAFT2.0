@@ -74,6 +74,7 @@ import { useWorkspace } from '@/contexts/WorkspaceContext';
 import { canManage, canEdit, canDelete, canCreate } from '@/utils/permissions';
 import { useApiSnackbar } from '@/contexts/SnackbarContext';
 import RoleProtection from '@/components/auth/RoleProtection';
+import ProtectedRoute from '@/components/auth/ProtectedRoute';
 
 interface ActionObject {
   _id: string;
@@ -533,8 +534,9 @@ export default function ActionsPage() {
   };
 
   return (
-    <RoleProtection allowedRoles={['basic', 'admin', 'super_admin']}>
-      <DashboardLayout>
+    <ProtectedRoute>
+      <RoleProtection allowedRoles={['basic', 'admin', 'super_admin']}>
+        <DashboardLayout>
       {(!currentWorkspace || !currentApplication || !currentEnvironment) && (
         <Alert severity="info" sx={{ mb: 3 }}>
           <AlertTitle>Workspace, Application, and Environment Required</AlertTitle>
@@ -1337,7 +1339,8 @@ export default function ActionsPage() {
         bulkMode={true}
         additionalInfo="This will permanently remove all selected actions and their associated configurations."
       />
-      </DashboardLayout>
-    </RoleProtection>
+        </DashboardLayout>
+      </RoleProtection>
+    </ProtectedRoute>
   );
 }

@@ -36,7 +36,16 @@ When user prompts "deploy", prepare the application for production deployment:
 - Frontend: `/craft-frontend` (Next.js 15.4.6, TypeScript 5.5, Material-UI v7, Azure AD MSAL, Jest 29 Testing)
 - Backend: `/craft-backend` (Node.js 18+, Express 4.19, TypeScript 5.5, MongoDB 7.0+, Azure AD SSO, Advanced Rate Limiting)
 
-## Latest Features (v1.3.6)
+## Latest Features (v1.3.7)
+- **Comprehensive Pagination System**: Advanced server-side pagination for workspaces page with search, filtering, and sorting capabilities
+- **Global Workspace Validation**: Enhanced workspace name validation checking ALL workspaces system-wide to prevent duplicates
+- **Admin Access Control Fix**: Resolved workspace hierarchy access issues allowing admin users to view applications properly
+- **Pagination Performance Enhancement**: Fixed double pagination conflicts and restored missing API calls in users page
+- **Real-time Validation UI**: Implemented instant workspace name validation with Material-UI error styling and feedback
+- **Filter/Sort Uniformity**: Implemented identical Toolbar-based filter and sort system in workspaces page matching users page with popover menus
+- **UI Refinement**: Removed Clear button from workspaces filter section for cleaner interface while maintaining full functionality
+
+## Previous Features (v1.3.6)
 - **Workspace Visibility Fix**: Automatic assignment of admin-created workspaces to their creators, preventing access issues
 - **User Assignment Management**: New endpoints for assigning/unassigning users to workspaces with comprehensive validation
 - **Workspace Access Control**: Enhanced workspace visibility logic with proper role-based access restrictions

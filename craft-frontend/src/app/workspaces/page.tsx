@@ -39,7 +39,12 @@ import {
   InputAdornment,
   Select,
   FormControl,
-  InputLabel
+  InputLabel,
+  Toolbar,
+  Popover,
+  List,
+  ListItemButton,
+  Checkbox
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -60,13 +65,18 @@ import {
   Schedule as ScheduleIcon,
   FiberManualRecord as DotIcon,
   Search as SearchIcon,
-  Clear as ClearIcon
+  Clear as ClearIcon,
+  FilterList as FilterIcon,
+  Sort as SortIcon,
+  ArrowUpward as ArrowUpIcon,
+  ArrowDownward as ArrowDownIcon
 } from '@mui/icons-material';
 import { useSnackbar } from '@/contexts/SnackbarContext';
 import { useWorkspace } from '@/contexts/WorkspaceContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { canCreate, canManage } from '@/utils/permissions';
 import DashboardLayout from '@/components/layout/DashboardLayout';
+import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import { useRouter } from 'next/navigation';
 import { apiClient } from '@/lib/api';
 
@@ -154,6 +164,14 @@ export default function WorkspacesPage() {
   // Search and filter state
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState<string[]>([]);
+  const [sortBy, setSortBy] = useState<keyof IWorkspaceData>('name');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+
+  // Filter and sort menu states
+  const [filterAnchorEl, setFilterAnchorEl] = useState<HTMLElement | null>(null);
+  const [sortAnchorEl, setSortAnchorEl] = useState<HTMLElement | null>(null);
+  const filterOpen = Boolean(filterAnchorEl);
+  const sortOpen = Boolean(sortAnchorEl);
 
   // Statistics state
   const [activeCount, setActiveCount] = useState(0);
@@ -173,6 +191,8 @@ export default function WorkspacesPage() {
       const params: any = {
         page: page + 1, // Backend uses 1-based pagination
         limit: rowsPerPage,
+        sortBy: sortBy,
+        sortOrder: sortOrder,
       };
 
       if (searchTerm.trim()) {
@@ -203,7 +223,7 @@ export default function WorkspacesPage() {
     } finally {
       setLoading(false);
     }
-  }, [page, rowsPerPage, searchTerm, filterStatus]);
+  }, [page, rowsPerPage, searchTerm, filterStatus, sortBy, sortOrder]);
 
   useEffect(() => {
     const timeoutId = setTimeout(() => {
@@ -213,7 +233,7 @@ export default function WorkspacesPage() {
     return () => clearTimeout(timeoutId);
     // ESLint disable to prevent infinite loop - fetchWorkspaces causes circular dependency
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page, rowsPerPage, searchTerm, filterStatus]);
+  }, [page, rowsPerPage, searchTerm, filterStatus, sortBy, sortOrder]);
 
   const handleMenuOpen = (event: React.MouseEvent<HTMLElement>, workspace: IWorkspaceData) => {
     event.stopPropagation();
@@ -307,7 +327,25 @@ export default function WorkspacesPage() {
   const handleClearFilters = () => {
     setSearchTerm('');
     setFilterStatus([]);
+    setSortBy('displayName');
+    setSortOrder('asc');
     setPage(0);
+  };
+
+  const handleFilterClick = (event: React.MouseEvent<HTMLElement>) => {
+    setFilterAnchorEl(event.currentTarget);
+  };
+
+  const handleFilterClose = () => {
+    setFilterAnchorEl(null);
+  };
+
+  const handleSortClick = (event: React.MouseEvent<HTMLElement>) => {
+    setSortAnchorEl(event.currentTarget);
+  };
+
+  const handleSortClose = () => {
+    setSortAnchorEl(null);
   };
 
 
@@ -352,7 +390,8 @@ export default function WorkspacesPage() {
   };
 
   return (
-    <DashboardLayout>
+    <ProtectedRoute>
+      <DashboardLayout>
       <Box>
         {error && (
           <Alert severity="error" sx={{ mb: 3 }}>
@@ -422,14 +461,16 @@ export default function WorkspacesPage() {
         </Paper>
 
         {/* Search and Filter Controls */}
-        <Paper elevation={0} sx={{ p: 2, mb: 3, border: '1px solid', borderColor: 'grey.200' }}>
-          <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap' }}>
+        <Paper elevation={0} sx={{ border: '1px solid', borderColor: 'grey.200', mb: 3 }}>
+          <Toolbar sx={{ px: 2, py: 1 }}>
+            {/* Search Bar */}
             <TextField
               placeholder="Search workspaces..."
               value={searchTerm}
               onChange={handleSearchChange}
               variant="outlined"
               size="small"
+              sx={{ minWidth: 300, mr: 2 }}
               InputProps={{
                 startAdornment: (
                   <InputAdornment position="start">
@@ -437,34 +478,24 @@ export default function WorkspacesPage() {
                   </InputAdornment>
                 )
               }}
-              sx={{ minWidth: 300 }}
             />
 
-            <FormControl size="small" sx={{ minWidth: 150 }}>
-              <InputLabel>Status</InputLabel>
-              <Select
-                multiple
-                value={filterStatus}
-                onChange={handleStatusFilterChange}
-                label="Status"
-              >
-                <MenuItem value="active">Active</MenuItem>
-                <MenuItem value="draft">Draft</MenuItem>
-                <MenuItem value="inactive">Inactive</MenuItem>
-                <MenuItem value="suspended">Suspended</MenuItem>
-              </Select>
-            </FormControl>
+            <Box sx={{ flexGrow: 1 }} />
 
-            {(searchTerm || filterStatus.length > 0) && (
-              <Button
-                variant="outlined"
-                startIcon={<ClearIcon />}
-                onClick={handleClearFilters}
-              >
-                Clear Filters
-              </Button>
-            )}
-          </Box>
+            {/* Actions */}
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Tooltip title="Filter">
+                <IconButton onClick={handleFilterClick}>
+                  <FilterIcon />
+                </IconButton>
+              </Tooltip>
+              <Tooltip title="Sort">
+                <IconButton onClick={handleSortClick}>
+                  <SortIcon />
+                </IconButton>
+              </Tooltip>
+            </Box>
+          </Toolbar>
         </Paper>
 
         {/* Workspaces List */}
@@ -837,7 +868,112 @@ export default function WorkspacesPage() {
           </DialogActions>
         </Dialog>
 
+        {/* Filter Popover */}
+        <Popover
+          open={filterOpen}
+          anchorEl={filterAnchorEl}
+          onClose={handleFilterClose}
+          anchorOrigin={{
+            vertical: 'bottom',
+            horizontal: 'left',
+          }}
+        >
+          <Box sx={{ p: 2, minWidth: 200 }}>
+            <Typography variant="subtitle2" sx={{ mb: 2, fontWeight: 600 }}>
+              Filter Workspaces
+            </Typography>
+
+            <Typography variant="body2" sx={{ mb: 1, fontWeight: 500 }}>
+              Status
+            </Typography>
+            {['active', 'draft', 'inactive', 'suspended'].map((status) => (
+              <Box key={status} sx={{ display: 'flex', alignItems: 'center', mb: 0.5 }}>
+                <Checkbox
+                  size="small"
+                  checked={filterStatus.includes(status)}
+                  onChange={(e) => {
+                    if (e.target.checked) {
+                      setFilterStatus([...filterStatus, status]);
+                    } else {
+                      setFilterStatus(filterStatus.filter(s => s !== status));
+                    }
+                    setPage(0);
+                  }}
+                />
+                <Typography variant="body2">
+                  {status.charAt(0).toUpperCase() + status.slice(1)}
+                </Typography>
+              </Box>
+            ))}
+          </Box>
+        </Popover>
+
+        {/* Sort Popover */}
+        <Popover
+          open={sortOpen}
+          anchorEl={sortAnchorEl}
+          onClose={handleSortClose}
+          anchorOrigin={{
+            vertical: 'bottom',
+            horizontal: 'left',
+          }}
+        >
+          <Box sx={{ p: 2, minWidth: 180 }}>
+            <Typography variant="subtitle2" sx={{ mb: 2, fontWeight: 600 }}>
+              Sort Workspaces
+            </Typography>
+
+            <List dense>
+              <ListItemButton
+                onClick={() => {
+                  setSortBy('displayName');
+                  setSortOrder('asc');
+                  handleSortClose();
+                }}
+                selected={sortBy === 'displayName' && sortOrder === 'asc'}
+              >
+                <ListItemText primary="Name (A-Z)" />
+                {sortBy === 'displayName' && sortOrder === 'asc' && <ArrowUpIcon fontSize="small" />}
+              </ListItemButton>
+              <ListItemButton
+                onClick={() => {
+                  setSortBy('displayName');
+                  setSortOrder('desc');
+                  handleSortClose();
+                }}
+                selected={sortBy === 'displayName' && sortOrder === 'desc'}
+              >
+                <ListItemText primary="Name (Z-A)" />
+                {sortBy === 'displayName' && sortOrder === 'desc' && <ArrowDownIcon fontSize="small" />}
+              </ListItemButton>
+              <ListItemButton
+                onClick={() => {
+                  setSortBy('createdAt');
+                  setSortOrder('desc');
+                  handleSortClose();
+                }}
+                selected={sortBy === 'createdAt' && sortOrder === 'desc'}
+              >
+                <ListItemText primary="Newest First" />
+                {sortBy === 'createdAt' && sortOrder === 'desc' && <ArrowDownIcon fontSize="small" />}
+              </ListItemButton>
+              <ListItemButton
+                onClick={() => {
+                  setSortBy('createdAt');
+                  setSortOrder('asc');
+                  handleSortClose();
+                }}
+                selected={sortBy === 'createdAt' && sortOrder === 'asc'}
+              >
+                <ListItemText primary="Oldest First" />
+                {sortBy === 'createdAt' && sortOrder === 'asc' && <ArrowUpIcon fontSize="small" />}
+              </ListItemButton>
+            </List>
+          </Box>
+        </Popover>
+
       </Box>
-    </DashboardLayout>
+      </DashboardLayout>
+    </ProtectedRoute>
   );
 }

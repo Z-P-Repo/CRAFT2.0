@@ -89,7 +89,11 @@ CRAFT2.0/
 │   └── docs/               # Backend documentation
 ├── craft-frontend/         # Next.js frontend
 │   ├── src/
-│   │   ├── app/            # App router pages (including Settings page)
+│   │   ├── app/            # App router pages (including Settings, Workspaces, and all ABAC pages)
+│   │   │   ├── workspaces/ # Workspace management pages with CRUD operations
+│   │   │   ├── policies/   # Policy management with 5-step creation wizard
+│   │   │   ├── activity/   # Activity monitoring and audit logs
+│   │   │   └── auth/       # Azure AD authentication callback
 │   │   ├── components/     # Reusable components (including WorkspaceSwitcher)
 │   │   ├── contexts/       # React contexts (WorkspaceContext, AuthContext)
 │   │   ├── lib/            # Utilities and API client
@@ -454,10 +458,31 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 **Built with ❤️ using Next.js, Node.js, and MongoDB**
 
-*Last updated: September 19, 2025*
+*Last updated: September 23, 2025*
 🤖 *Generated and maintained with [Claude Code](https://claude.ai/code)*
 
 ## ⭐ Latest Updates
+
+### Version 1.3.7 - Comprehensive Pagination & Filter/Sort Uniformity (September 23, 2025)
+- **📄 Advanced Pagination System**: Implemented comprehensive server-side pagination for workspaces page matching users page functionality with search, filtering, and sorting capabilities
+- **🔍 Global Workspace Validation**: Enhanced workspace name validation to check ALL workspaces system-wide, preventing duplicate names regardless of creator or ownership
+- **🛡️ Admin Access Control Fix**: Resolved workspace hierarchy access issues allowing admin users to properly view applications within their assigned workspaces
+- **⚡ Pagination Performance**: Fixed double pagination issues in users page by eliminating client-side filtering conflicts with server-side pagination
+- **🔧 API Restoration**: Restored missing useEffect in users page that was accidentally removed, ensuring proper data loading and user list population
+- **📊 Enhanced Statistics**: Added comprehensive pagination statistics including active/draft counts and total applications across both users and workspaces pages
+- **🎯 Real-time Validation**: Implemented instant workspace name validation with red border error styling and proper Material-UI helperText integration
+- **🔄 Backend Optimization**: Enhanced backend pagination endpoints with global statistics, proper filtering, and workspace access control validation
+- **📱 UI Consistency**: Standardized pagination controls, search functionality, and filter components across users and workspaces management pages
+- **🚀 Performance Improvements**: Optimized MongoDB queries with proper indexing and efficient counting for improved page load times
+- **🎨 Filter/Sort Uniformity**: Implemented identical Toolbar-based filter and sort system in workspaces page matching users page with popover menus and comprehensive sort options
+- **🧹 UI Refinement**: Removed Clear button from workspaces filter section for cleaner interface while maintaining full filter/sort functionality
+
+### Version 1.3.6 - Workspace Visibility & User Assignment Fix (September 22, 2025)
+- **🏢 Automatic Workspace Assignment**: Admin-created workspaces now automatically assign creators to their assignedWorkspaces, preventing access issues
+- **👥 User Assignment Management**: Added comprehensive endpoints for managing workspace user assignments with validation and bulk operations
+- **🔧 Workspace Access Control**: Enhanced workspace visibility logic ensuring admin users can access their created workspaces immediately
+- **🛡️ Role-Based Assignment**: Proper validation for workspace user management with admin/super_admin access restrictions
+- **📊 User Assignment Queries**: New endpoints to retrieve and manage users assigned to specific workspaces with detailed user information
 
 ### Version 1.3.5 - UI/UX Polish & System Reliability (September 19, 2025)
 - **🎨 Workspace Access Badge Enhancement**: Redesigned User Management workspace access badges with elegant gradient styling, compact multi-workspace display, and informative tooltips

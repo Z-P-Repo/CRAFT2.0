@@ -70,6 +70,7 @@ import {
   ArrowDownward as ArrowDownIcon,
 } from '@mui/icons-material';
 import DashboardLayout from '@/components/layout/DashboardLayout';
+import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import DeleteConfirmationDialog from '@/components/common/DeleteConfirmationDialog';
 import SubjectCreationDialog from '@/components/subjects/SubjectCreationDialog';
 import { apiClient } from '@/lib/api';
@@ -469,8 +470,9 @@ export default function SubjectsPage() {
   const canCreateEntity = currentWorkspace && currentApplication && canCreate(currentUser);
 
   return (
-    <RoleProtection allowedRoles={['basic', 'admin', 'super_admin']}>
-      <DashboardLayout>
+    <ProtectedRoute>
+      <RoleProtection allowedRoles={['basic', 'admin', 'super_admin']}>
+        <DashboardLayout>
       {/* Workspace Selection Alert */}
       {(!currentWorkspace || !currentApplication) && (
         <Alert severity="info" sx={{ mb: 3 }}>
@@ -1165,7 +1167,8 @@ export default function SubjectsPage() {
           ))}
         </List>
       </Popover>
-      </DashboardLayout>
-    </RoleProtection>
+        </DashboardLayout>
+      </RoleProtection>
+    </ProtectedRoute>
   );
 }

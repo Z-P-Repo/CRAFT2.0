@@ -77,6 +77,7 @@ import {
 import { useRouter } from 'next/navigation';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import DeleteConfirmationDialog from '@/components/common/DeleteConfirmationDialog';
+import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import { apiClient } from '@/lib/api';
 import { User, ApiResponse } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
@@ -716,8 +717,9 @@ export default function UsersPage() {
   const canCreateEntity = currentWorkspace && currentApplication && canCreate(currentUser);
 
   return (
-    <RoleProtection allowedRoles={['admin', 'super_admin']}>
-      <DashboardLayout>
+    <ProtectedRoute>
+      <RoleProtection allowedRoles={['admin', 'super_admin']}>
+        <DashboardLayout>
       {(!currentWorkspace || !currentApplication) && (
         <Alert severity="info" sx={{ mb: 3 }}>
           <AlertTitle>Workspace and Application Required</AlertTitle>
@@ -1907,7 +1909,8 @@ export default function UsersPage() {
           </List>
         </Box>
       </Popover>
-      </DashboardLayout>
-    </RoleProtection>
+        </DashboardLayout>
+      </RoleProtection>
+    </ProtectedRoute>
   );
 }

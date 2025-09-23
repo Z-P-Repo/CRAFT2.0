@@ -36,6 +36,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { useSnackbar } from '@/contexts/SnackbarContext';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import { apiClient } from '@/lib/api';
+import ProtectedRoute from '@/components/auth/ProtectedRoute';
 
 interface IWorkspaceSettings {
   _id: string;
@@ -192,8 +193,9 @@ export default function WorkspaceSettingsPage() {
   }
 
   return (
-    <DashboardLayout>
-      <Box>
+    <ProtectedRoute>
+      <DashboardLayout>
+        <Box>
         {/* Breadcrumbs */}
         <Breadcrumbs sx={{ mb: 2 }}>
           <Link
@@ -365,7 +367,8 @@ export default function WorkspaceSettingsPage() {
             </Button>
           </DialogActions>
         </Dialog>
-      </Box>
-    </DashboardLayout>
+        </Box>
+      </DashboardLayout>
+    </ProtectedRoute>
   );
 }

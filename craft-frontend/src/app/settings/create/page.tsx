@@ -43,6 +43,7 @@ import { useSnackbar } from '@/contexts/SnackbarContext';
 import { useRouter } from 'next/navigation';
 import apiClient from '@/lib/api';
 import DashboardLayout from '@/components/layout/DashboardLayout';
+import ProtectedRoute from '@/components/auth/ProtectedRoute';
 
 const steps = ['Workspace Details', 'Applications & Projects', 'Environments', 'Review & Create'];
 
@@ -694,8 +695,9 @@ export default function CreateWorkspacePage() {
   };
 
   return (
-    <DashboardLayout>
-      {/* Header */}
+    <ProtectedRoute>
+      <DashboardLayout>
+        {/* Header */}
       <Paper elevation={0} sx={{ p: 3, mb: 3, border: '1px solid', borderColor: 'grey.200' }}>
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
           <Box sx={{ display: 'flex', alignItems: 'center' }}>
@@ -816,6 +818,7 @@ export default function CreateWorkspacePage() {
           </Box>
         </Box>
       </Paper>
-    </DashboardLayout>
+      </DashboardLayout>
+    </ProtectedRoute>
   );
 }

@@ -40,6 +40,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { useSnackbar } from '@/contexts/SnackbarContext';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import { apiClient } from '@/lib/api';
+import ProtectedRoute from '@/components/auth/ProtectedRoute';
 
 interface IWorkspaceDetail {
   _id: string;
@@ -124,8 +125,9 @@ export default function WorkspaceDetailPage() {
   }
 
   return (
-    <DashboardLayout>
-      {/* Compact Header */}
+    <ProtectedRoute>
+      <DashboardLayout>
+        {/* Compact Header */}
       <Paper elevation={0} sx={{ p: 2, mb: 2, border: '1px solid', borderColor: 'grey.200' }}>
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
@@ -410,6 +412,7 @@ export default function WorkspaceDetailPage() {
           </Card>
         </Grid>
       </Grid>
-    </DashboardLayout>
+      </DashboardLayout>
+    </ProtectedRoute>
   );
 }

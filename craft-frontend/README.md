@@ -2,7 +2,7 @@
 
 A modern, responsive React-based dashboard for managing the CRAFT (Attribute-Based Access Control) Permission System. Built with Next.js 15, TypeScript, and Material-UI with a professional collapsible sidebar layout.
 
-![Version](https://img.shields.io/badge/version-1.3.5-blue.svg)
+![Version](https://img.shields.io/badge/version-1.3.7-blue.svg)
 ![Next.js](https://img.shields.io/badge/Next.js-15.4.6-black.svg)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.5-blue.svg)
 ![Material-UI](https://img.shields.io/badge/Material--UI-7.3-blue.svg)
@@ -124,6 +124,7 @@ src/
 │   ├── policies/       # Policy management pages
 │   │   ├── create/     # Policy creation wizard
 │   │   ├── [id]/       # Policy view/edit pages
+│   │   │   └── edit/   # Policy editing page
 │   │   └── page.tsx    # Main policies listing
 │   ├── subjects/       # Subject management
 │   ├── actions/        # Actions management
@@ -131,6 +132,15 @@ src/
 │   ├── attributes/     # Attributes management
 │   ├── activity/       # Activity monitoring and audit logs
 │   ├── settings/       # Workspace settings and setup
+│   │   └── create/     # Workspace creation wizard
+│   ├── workspaces/     # Workspace management
+│   │   ├── create/     # Workspace creation page
+│   │   └── [workspaceId]/ # Individual workspace pages
+│   │       ├── edit/   # Workspace editing
+│   │       └── settings/ # Workspace-specific settings
+│   ├── auth/           # Authentication callback
+│   │   └── callback/   # Azure AD callback page
+│   ├── tester/         # Policy evaluation testing
 │   ├── layout.tsx      # Root layout with dashboard
 │   └── page.tsx        # Home page
 ├── components/         # Reusable UI components
@@ -179,9 +189,18 @@ src/
   - **Policy View** (`/policies/[id]`): Dedicated policy viewing page (all users)
   - **Policy Edit** (`/policies/[id]/edit`): Dedicated policy editing page (Admin/Super Admin only)
 - **Attributes** (`/attributes`): Multi-category attribute system with policy count tooltips and auto-refresh (view-only for Basic users)
+- **Workspaces** (`/workspaces`): Comprehensive workspace management with pagination, search, and filtering (Admin/Super Admin for CUD operations)
+  - **Workspace Creation** (`/workspaces/create`): Step-by-step workspace creation wizard (Admin/Super Admin only)
+  - **Workspace View** (`/workspaces/[workspaceId]`): Individual workspace details and management (assigned users)
+  - **Workspace Edit** (`/workspaces/[workspaceId]/edit`): Workspace editing interface (Admin/Super Admin only)
+  - **Workspace Settings** (`/workspaces/[workspaceId]/settings`): Workspace-specific configuration (Admin/Super Admin only)
 - **Settings** (`/settings`): Unified workspace settings and setup wizard with step-by-step guidance (Admin/Super Admin only)
+  - **Settings Creation** (`/settings/create`): Alternative workspace creation flow with templates (Admin/Super Admin only)
 - **Activity** (`/activity`): Comprehensive activity monitoring with real-time audit logs, advanced filtering, and detailed activity views (all users)
 - **Tester** (`/tester`): Policy evaluation testing (all users)
+
+### Authentication Callback
+- **Auth Callback** (`/auth/callback`): Azure AD authentication callback handler for SSO integration
 
 ## 🎨 UI Components
 
@@ -412,12 +431,30 @@ await trackUser('updated', 'user-456', 'John Doe');
 
 ---
 
-*Last updated: September 19, 2025*
+*Last updated: September 23, 2025*
 🤖 *Generated and maintained with [Claude Code](https://claude.ai/code)*
 
-## 🔄 Recent Updates (Version 1.3.5)
+## 🔄 Recent Updates (Version 1.3.7)
 
-### UI/UX Polish & System Reliability (September 19, 2025)
+### Advanced Pagination & Filter/Sort Uniformity (September 23, 2025)
+- **📄 Comprehensive Pagination Implementation**: Added complete server-side pagination to workspaces page matching users page functionality with search, filtering, and sorting capabilities
+- **🔍 Real-time Workspace Validation**: Implemented instant workspace name validation checking ALL workspaces system-wide with red border error styling and Material-UI helperText integration
+- **⚡ Pagination Performance Fix**: Resolved double pagination issue in users page by removing client-side filtering conflicts with server-side pagination
+- **🔧 API Call Restoration**: Fixed missing useEffect in users page that was accidentally removed, ensuring proper data loading and user list population
+- **📊 Enhanced Statistics Display**: Added comprehensive pagination statistics including active/draft counts and total applications with proper state management
+- **🎯 Validation Error Handling**: Enhanced validation error display with proper Material-UI TextField error states and user-friendly messaging
+- **📱 UI Consistency**: Standardized pagination controls, search functionality, and filter components across users and workspaces management pages
+- **🔄 State Management Enhancement**: Improved pagination state handling with proper debouncing, loading states, and error recovery mechanisms
+- **🚀 Performance Optimization**: Optimized API calls with intelligent request batching and proper dependency management for faster page loads
+- **💼 User Experience**: Enhanced workspace management with consistent pagination patterns and improved data loading feedback
+- **🎨 Filter/Sort Uniformity**: Implemented identical Toolbar-based filter and sort system in workspaces page with popover menus, checkbox filtering, and comprehensive sort options
+- **🧹 UI Refinement**: Removed Clear button from workspaces filter section for cleaner interface while maintaining full filter/sort functionality through popover controls
+
+### Version 1.3.6 - Workspace Visibility & User Assignment Enhancement (September 22, 2025)
+- **🏢 Workspace Access Resolution**: Fixed workspace hierarchy display issues ensuring admin users can properly view applications within assigned workspaces
+- **👥 User Assignment Integration**: Enhanced workspace user assignment system with proper validation and access control throughout the UI
+
+### Version 1.3.5 - UI/UX Polish & System Reliability (September 19, 2025)
 - **🎨 Workspace Access Badge Enhancement**: Redesigned User Management workspace access badges with elegant gradient styling, compact multi-workspace display, and interactive tooltips for improved user experience
 - **🏷️ Badge Compactness**: Implemented single workspace display with "+N more" counters to prevent table row height issues when users have multiple workspace assignments
 - **💡 Interactive Tooltips**: Added comprehensive hover tooltips showing all workspace names when users have multiple workspace assignments with rich formatting and detailed workspace information

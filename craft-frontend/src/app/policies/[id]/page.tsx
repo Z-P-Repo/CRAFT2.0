@@ -43,6 +43,7 @@ import {
 import { useRouter, useParams } from 'next/navigation';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import { apiClient } from '@/lib/api';
+import ProtectedRoute from '@/components/auth/ProtectedRoute';
 
 interface Policy {
   _id: string;
@@ -411,8 +412,9 @@ export default function PolicyViewPage() {
   }
 
   return (
-    <DashboardLayout>
-      {/* Header */}
+    <ProtectedRoute>
+      <DashboardLayout>
+        {/* Header */}
       <Paper elevation={0} sx={{ p: 3, mb: 3, border: '1px solid', borderColor: 'grey.200' }}>
         <Box sx={{ mb: 1 }}>
           <Breadcrumbs aria-label="breadcrumb" sx={{ mb: 2 }}>
@@ -812,6 +814,7 @@ export default function PolicyViewPage() {
             </Grid>
           </Box>
         </Card>
-    </DashboardLayout>
+      </DashboardLayout>
+    </ProtectedRoute>
   );
 }

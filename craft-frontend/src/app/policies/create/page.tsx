@@ -61,6 +61,7 @@ import SubjectCreationDialog from '@/components/subjects/SubjectCreationDialog';
 import ActionCreationDialog from '@/components/actions/ActionCreationDialog';
 import ResourceCreationDialog from '@/components/resources/ResourceCreationDialog';
 import RoleProtection from '@/components/auth/RoleProtection';
+import ProtectedRoute from '@/components/auth/ProtectedRoute';
 
 interface Subject {
   _id: string;
@@ -2135,8 +2136,9 @@ export default function CreatePolicyPage() {
   };
 
   return (
-    <RoleProtection allowedRoles={['admin', 'super_admin']}>
-      <DashboardLayout>
+    <ProtectedRoute>
+      <RoleProtection allowedRoles={['admin', 'super_admin']}>
+        <DashboardLayout>
       {/* Header */}
       <Paper elevation={0} sx={{ p: 3, mb: 3, border: '1px solid', borderColor: 'grey.200' }}>
         <Box sx={{ mb: 1 }}>
@@ -2735,7 +2737,8 @@ export default function CreatePolicyPage() {
           </DialogActions>
         </Dialog>
 
-      </DashboardLayout>
-    </RoleProtection>
+        </DashboardLayout>
+      </RoleProtection>
+    </ProtectedRoute>
   );
 }

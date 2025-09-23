@@ -33,6 +33,7 @@ import {
 import { useAuth } from '@/contexts/AuthContext';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import RoleProtection from '@/components/auth/RoleProtection';
+import ProtectedRoute from '@/components/auth/ProtectedRoute';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -82,8 +83,9 @@ export default function SettingsPage() {
   };
 
   return (
-    <RoleProtection allowedRoles={['admin', 'super_admin']}>
-      <DashboardLayout>
+    <ProtectedRoute>
+      <RoleProtection allowedRoles={['admin', 'super_admin']}>
+        <DashboardLayout>
       <Box sx={{ p: 3 }}>
         {/* Header */}
         <Box sx={{ mb: 3 }}>
@@ -317,7 +319,8 @@ export default function SettingsPage() {
           </TabPanel>
         </Paper>
       </Box>
-      </DashboardLayout>
-    </RoleProtection>
+        </DashboardLayout>
+      </RoleProtection>
+    </ProtectedRoute>
   );
 }

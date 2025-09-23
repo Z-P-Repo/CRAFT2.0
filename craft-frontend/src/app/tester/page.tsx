@@ -48,6 +48,7 @@ import {
 } from '@mui/icons-material';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import RoleProtection from '@/components/auth/RoleProtection';
+import ProtectedRoute from '@/components/auth/ProtectedRoute';
 
 interface TestResult {
   id: string;
@@ -150,8 +151,9 @@ export default function PolicyTesterPage() {
   ];
 
   return (
-    <RoleProtection allowedRoles={['admin', 'super_admin']}>
-      <DashboardLayout>
+    <ProtectedRoute>
+      <RoleProtection allowedRoles={['admin', 'super_admin']}>
+        <DashboardLayout>
       {/* Header */}
       <Paper elevation={1} sx={{ p: 3, mb: 4 }}>
         <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
@@ -460,7 +462,8 @@ export default function PolicyTesterPage() {
           </CardContent>
         </Card>
       )}
-      </DashboardLayout>
-    </RoleProtection>
+        </DashboardLayout>
+      </RoleProtection>
+    </ProtectedRoute>
   );
 }

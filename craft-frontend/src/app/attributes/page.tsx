@@ -79,6 +79,7 @@ import { useWorkspace } from '@/contexts/WorkspaceContext';
 import { useApiSnackbar } from '@/contexts/SnackbarContext';
 import { canManage, canEdit, canDelete, canCreate } from '@/utils/permissions';
 import RoleProtection from '@/components/auth/RoleProtection';
+import ProtectedRoute from '@/components/auth/ProtectedRoute';
 
 interface Attribute {
   _id: string;
@@ -927,8 +928,9 @@ export default function AttributesPage() {
   const paginatedAttributes = attributes;
 
   return (
-    <RoleProtection allowedRoles={['basic', 'admin', 'super_admin']}>
-      <DashboardLayout>
+    <ProtectedRoute>
+      <RoleProtection allowedRoles={['basic', 'admin', 'super_admin']}>
+        <DashboardLayout>
       {(!currentWorkspace || !currentApplication || !currentEnvironment) && (
         <Alert severity="info" sx={{ mb: 3 }}>
           <AlertTitle>Workspace, Application, and Environment Required</AlertTitle>
@@ -2763,7 +2765,8 @@ export default function AttributesPage() {
       />
 
 
-      </DashboardLayout>
-    </RoleProtection>
+        </DashboardLayout>
+      </RoleProtection>
+    </ProtectedRoute>
   );
 }
