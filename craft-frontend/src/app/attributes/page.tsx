@@ -163,6 +163,7 @@ export default function AttributesPage() {
   const [stringValues, setStringValues] = useState<string[]>([]);
   const [dateValues, setDateValues] = useState<string[]>([]);
   const [dateInputType, setDateInputType] = useState<'single' | 'range' | 'period'>('single');
+  const [selectedDays, setSelectedDays] = useState<string[]>([]);
   const [description, setDescription] = useState('');
   
   // Conditional selections for attribute scope
@@ -362,6 +363,7 @@ export default function AttributesPage() {
     setStringValues([]);
     setDateValues([]);
     setDateInputType('single');
+    setSelectedDays([]);
     // Reset scope-related states
     setSelectedSubjectsForAttribute([]);
     setSelectedResourcesForAttribute([]);
@@ -2237,26 +2239,42 @@ export default function AttributesPage() {
                               InputLabelProps={{ shrink: true }}
                               inputRef={(input) => input?.setAttribute('data-to-time', '')}
                             />
-                            <TextField
-                              label="Days (Optional)"
-                              placeholder="Mon, Wed, Fri"
-                              size="small"
-                              inputRef={(input) => input?.setAttribute('data-days', '')}
-                            />
+                            <FormControl size="small" sx={{ minWidth: 120 }}>
+                              <InputLabel>Days (Optional)</InputLabel>
+                              <Select
+                                multiple
+                                value={selectedDays}
+                                onChange={(e) => setSelectedDays(typeof e.target.value === 'string' ? e.target.value.split(',') : e.target.value)}
+                                label="Days (Optional)"
+                                renderValue={(selected) => (
+                                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                                    {selected.map((value) => (
+                                      <Chip key={value} label={value} size="small" />
+                                    ))}
+                                  </Box>
+                                )}
+                              >
+                                {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'].map((day) => (
+                                  <MenuItem key={day} value={day}>
+                                    <Checkbox checked={selectedDays.indexOf(day) > -1} />
+                                    <ListItemText primary={day} />
+                                  </MenuItem>
+                                ))}
+                              </Select>
+                            </FormControl>
                             <Button
                               variant="contained"
                               size="small"
                               onClick={() => {
                                 const fromTimeInput = document.querySelector('[data-from-time]') as HTMLInputElement;
                                 const toTimeInput = document.querySelector('[data-to-time]') as HTMLInputElement;
-                                const daysInput = document.querySelector('[data-days]') as HTMLInputElement;
                                 if (fromTimeInput?.value && toTimeInput?.value) {
-                                  const daysStr = daysInput?.value ? ` on ${daysInput.value}` : ' (Daily)';
+                                  const daysStr = selectedDays.length > 0 ? ` on ${selectedDays.join(', ')}` : ' (Daily)';
                                   const label = `${fromTimeInput.value} - ${toTimeInput.value}${daysStr}`;
                                   handleFlexibleDateAdd(label);
                                   fromTimeInput.value = '';
                                   toTimeInput.value = '';
-                                  if (daysInput) daysInput.value = '';
+                                  setSelectedDays([]);
                                 }
                               }}
                             >

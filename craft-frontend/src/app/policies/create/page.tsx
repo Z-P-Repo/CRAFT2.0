@@ -36,6 +36,7 @@ import {
   DialogContent,
   DialogActions,
   Checkbox,
+  ListItemText,
 } from '@mui/material';
 import {
   Security as SecurityIcon,
@@ -219,6 +220,7 @@ export default function CreatePolicyPage() {
   const [stringValues, setStringValues] = useState<string[]>([]);
   const [dateValues, setDateValues] = useState<string[]>([]);
   const [dateInputType, setDateInputType] = useState<'single' | 'range' | 'period'>('single');
+  const [selectedDays, setSelectedDays] = useState<string[]>([]);
   const [attributeDescription, setAttributeDescription] = useState('');
   const [isAttributeUsedInPolicies, setIsAttributeUsedInPolicies] = useState(false);
   // Conditional selections for attribute scope
@@ -413,6 +415,28 @@ export default function CreatePolicyPage() {
     setStringValues([]);
     setDateValues([]);
     setDateInputType('single');
+    setSelectedDays([]);
+    setExistingValues([]);
+    setIsAttributeUsedInPolicies(false);
+    setOpen(true);
+  };
+
+  // Resource attribute creation handler (pre-selects resource category)
+  const handleCreateResourceAttribute = async () => {
+    setSelectedAttribute(null);
+    setAttributeDisplayName('');
+    setAttributeDisplayNameError('');
+    setSelectedCategories(['resource']); // Pre-select resource category
+    setSelectedDataType('');
+    setAttributeDescription('');
+    setPermittedValues('');
+    setParsedValues([]);
+    setBooleanValues([]);
+    setNumberValues([]);
+    setStringValues([]);
+    setDateValues([]);
+    setDateInputType('single');
+    setSelectedDays([]);
     setExistingValues([]);
     setIsAttributeUsedInPolicies(false);
     setOpen(true);
@@ -433,6 +457,7 @@ export default function CreatePolicyPage() {
     setStringValues([]);
     setDateValues([]);
     setDateInputType('single');
+    setSelectedDays([]);
     setExistingValues([]);
     setIsAttributeUsedInPolicies(false);
     // Reset new scope-related states
@@ -541,6 +566,7 @@ export default function CreatePolicyPage() {
     setStringValues([]);
     setDateValues([]);
     setDateInputType('single');
+    setSelectedDays([]);
   };
 
   const handleBooleanValuesChange = (values: string[]) => {
@@ -580,6 +606,22 @@ export default function CreatePolicyPage() {
     const newValues = numberValues.filter((_, i) => i !== index);
     setNumberValues(newValues);
     setParsedValues(newValues.map(v => parseFloat(v)));
+    setPermittedValues(newValues.join(', '));
+  };
+
+  const handleFlexibleDateAdd = (dateString: string, type: string = 'single') => {
+    if (dateString && !dateValues.includes(dateString)) {
+      const newValues = [...dateValues, dateString];
+      setDateValues(newValues);
+      setParsedValues(newValues);
+      setPermittedValues(newValues.join(', '));
+    }
+  };
+
+  const handleDateValuesRemove = (index: number) => {
+    const newValues = dateValues.filter((_, i) => i !== index);
+    setDateValues(newValues);
+    setParsedValues(newValues);
     setPermittedValues(newValues.join(', '));
   };
 
@@ -1562,10 +1604,21 @@ export default function CreatePolicyPage() {
                   <Grid size={{ xs: 12, md: 7 }}>
                     {selectedResources.length > 0 ? (
                       <Box>
-                        <Typography variant="h6" sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
-                          <AttributeIcon color="primary" />
-                          Resource Attribute Conditions
-                        </Typography>
+                        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
+                          <Typography variant="h6" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <AttributeIcon color="primary" />
+                            Resource Attribute Conditions
+                          </Typography>
+                          <Button
+                            size="small"
+                            variant="outlined"
+                            startIcon={<AddIcon />}
+                            onClick={handleCreateResourceAttribute}
+                            sx={{ fontSize: '0.75rem' }}
+                          >
+                            Create New Resource Attribute
+                          </Button>
+                        </Box>
 
                         <Box sx={{ mb: 3 }}>
                           <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
@@ -2632,8 +2685,230 @@ export default function CreatePolicyPage() {
                     </Box>
                   )}
 
+                  {/* Date Values */}
+                  {selectedDataType === 'date' && (
+                    <Box>
+                      <Typography variant="body2" sx={{ mb: 2, fontWeight: 500 }}>
+                        Add Permitted Date/Time Values
+                      </Typography>
+
+                      <Box sx={{ mb: 2 }}>
+                        <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: 'block' }}>
+                          Choose input type:
+                        </Typography>
+                        <Box sx={{ display: 'flex', gap: 1 }}>
+                          {[
+                            { key: 'single', label: 'Single Date/Time', desc: 'Specific date and time' },
+                            { key: 'range', label: 'Date Range', desc: 'From date to date' },
+                            { key: 'period', label: 'Time Period', desc: 'Daily time period' }
+                          ].map((option) => (
+                            <Button
+                              key={option.key}
+                              variant={dateInputType === option.key ? 'contained' : 'outlined'}
+                              size="small"
+                              onClick={() => setDateInputType(option.key as 'single' | 'range' | 'period')}
+                              sx={{
+                                textTransform: 'none',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                alignItems: 'center',
+                                py: 1,
+                                minWidth: '100px'
+                              }}
+                            >
+                              <Typography variant="caption" sx={{ fontWeight: 600 }}>
+                                {option.label}
+                              </Typography>
+                              <Typography variant="caption" sx={{ fontSize: '0.65rem', opacity: 0.8 }}>
+                                {option.desc}
+                              </Typography>
+                            </Button>
+                          ))}
+                        </Box>
+                      </Box>
+
+                      <Box sx={{ mb: 2 }}>
+                        {dateInputType === 'single' && (
+                          <Box>
+                            <Box sx={{ display: 'flex', gap: 1, mb: 1 }}>
+                              <TextField
+                                type="date"
+                                size="small"
+                                sx={{ flex: 1 }}
+                                inputProps={{ 'data-single-date': true }}
+                              />
+                              <TextField
+                                type="time"
+                                size="small"
+                                sx={{ flex: 1 }}
+                                inputProps={{ 'data-single-time': true }}
+                              />
+                              <Button
+                                variant="contained"
+                                size="small"
+                                onClick={() => {
+                                  const dateInput = document.querySelector('[data-single-date]') as HTMLInputElement;
+                                  const timeInput = document.querySelector('[data-single-time]') as HTMLInputElement;
+                                  if (dateInput?.value) {
+                                    let dateTimeString = `${dateInput.value}${timeInput?.value ? `T${timeInput.value}:00` : 'T00:00:00'}`;
+                                    const label = timeInput?.value
+                                      ? `${dateInput.value} ${timeInput.value}`
+                                      : `${dateInput.value} (All day)`;
+                                    handleFlexibleDateAdd(label);
+                                    dateInput.value = '';
+                                    if (timeInput) timeInput.value = '';
+                                  }
+                                }}
+                              >
+                                Add
+                              </Button>
+                            </Box>
+                            <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
+                              Add specific date and optional time
+                            </Typography>
+                          </Box>
+                        )}
+
+                        {dateInputType === 'range' && (
+                          <Box>
+                            <Box sx={{ display: 'flex', gap: 1, mb: 1 }}>
+                              <TextField
+                                type="date"
+                                size="small"
+                                placeholder="From"
+                                sx={{ flex: 1 }}
+                                inputProps={{ 'data-from-date': true }}
+                              />
+                              <TextField
+                                type="date"
+                                size="small"
+                                placeholder="To"
+                                sx={{ flex: 1 }}
+                                inputProps={{ 'data-to-date': true }}
+                              />
+                              <TextField
+                                type="time"
+                                size="small"
+                                placeholder="Time (optional)"
+                                sx={{ flex: 1 }}
+                                inputProps={{ 'data-range-time': true }}
+                              />
+                              <Button
+                                variant="contained"
+                                size="small"
+                                onClick={() => {
+                                  const fromInput = document.querySelector('[data-from-date]') as HTMLInputElement;
+                                  const toInput = document.querySelector('[data-to-date]') as HTMLInputElement;
+                                  const timeInput = document.querySelector('[data-range-time]') as HTMLInputElement;
+                                  if (fromInput?.value && toInput?.value) {
+                                    const timeStr = timeInput?.value ? ` at ${timeInput.value}` : ' (All day)';
+                                    const label = `${fromInput.value} to ${toInput.value}${timeStr}`;
+                                    handleFlexibleDateAdd(label);
+                                    fromInput.value = '';
+                                    toInput.value = '';
+                                    if (timeInput) timeInput.value = '';
+                                  }
+                                }}
+                              >
+                                Add Range
+                              </Button>
+                            </Box>
+                            <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
+                              Add date range with optional time
+                            </Typography>
+                          </Box>
+                        )}
+
+                        {dateInputType === 'period' && (
+                          <Box>
+                            <Box sx={{ display: 'flex', gap: 1, mb: 1 }}>
+                              <TextField
+                                type="time"
+                                size="small"
+                                placeholder="From Time"
+                                sx={{ flex: 1 }}
+                                inputProps={{ 'data-from-time': true }}
+                              />
+                              <TextField
+                                type="time"
+                                size="small"
+                                placeholder="To Time"
+                                sx={{ flex: 1 }}
+                                inputProps={{ 'data-to-time': true }}
+                              />
+                              <FormControl size="small" sx={{ minWidth: 120 }}>
+                                <InputLabel>Days (Optional)</InputLabel>
+                                <Select
+                                  multiple
+                                  value={selectedDays}
+                                  onChange={(e) => setSelectedDays(typeof e.target.value === 'string' ? e.target.value.split(',') : e.target.value)}
+                                  label="Days (Optional)"
+                                  renderValue={(selected) => (
+                                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                                      {selected.map((value) => (
+                                        <Chip key={value} label={value} size="small" />
+                                      ))}
+                                    </Box>
+                                  )}
+                                >
+                                  {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'].map((day) => (
+                                    <MenuItem key={day} value={day}>
+                                      <Checkbox checked={selectedDays.indexOf(day) > -1} />
+                                      <ListItemText primary={day} />
+                                    </MenuItem>
+                                  ))}
+                                </Select>
+                              </FormControl>
+                              <Button
+                                variant="contained"
+                                size="small"
+                                onClick={() => {
+                                  const fromTimeInput = document.querySelector('[data-from-time]') as HTMLInputElement;
+                                  const toTimeInput = document.querySelector('[data-to-time]') as HTMLInputElement;
+                                  if (fromTimeInput?.value && toTimeInput?.value) {
+                                    const daysStr = selectedDays.length > 0 ? ` on ${selectedDays.join(', ')}` : ' (Daily)';
+                                    const label = `${fromTimeInput.value} - ${toTimeInput.value}${daysStr}`;
+                                    handleFlexibleDateAdd(label);
+                                    fromTimeInput.value = '';
+                                    toTimeInput.value = '';
+                                    setSelectedDays([]);
+                                  }
+                                }}
+                              >
+                                Add Period
+                              </Button>
+                            </Box>
+                            <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
+                              Add recurring time periods (e.g., business hours, lunch break)
+                            </Typography>
+                          </Box>
+                        )}
+                      </Box>
+
+                      {/* Selected Values */}
+                      {dateValues.length > 0 && (
+                        <Box>
+                          <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: 'block' }}>
+                            Selected date/time values:
+                          </Typography>
+                          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                            {dateValues.map((value, index) => (
+                              <Chip
+                                key={index}
+                                label={value}
+                                size="small"
+                                color="info"
+                                onDelete={() => handleDateValuesRemove(index)}
+                              />
+                            ))}
+                          </Box>
+                        </Box>
+                      )}
+                    </Box>
+                  )}
+
                   {/* Simplified input for other data types */}
-                  {(selectedDataType === 'date' || selectedDataType === 'array' || selectedDataType === 'object') && (
+                  {(selectedDataType === 'array' || selectedDataType === 'object') && (
                     <TextField
                       fullWidth
                       size="small"

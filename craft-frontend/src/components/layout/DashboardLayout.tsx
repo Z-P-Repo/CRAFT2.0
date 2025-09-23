@@ -27,7 +27,7 @@ import {
   Security as SecurityIcon,
   People as PeopleIcon,
   Folder as FolderIcon,
-  PlayArrow as ActionIcon,
+  FlashOn as ActionIcon,
   Settings as AttributeIcon,
   BugReport as TesterIcon,
   AccountCircle,

@@ -11,10 +11,20 @@ import {
   Box,
   IconButton,
   CircularProgress,
-  Typography
+  Typography,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  Chip,
+  Checkbox,
+  ListItemText,
+  Divider
 } from '@mui/material';
 import {
-  Close as CloseIcon
+  Close as CloseIcon,
+  Add as AddIcon,
+  Settings as SettingsIcon
 } from '@mui/icons-material';
 import { useWorkspace } from '@/contexts/WorkspaceContext';
 import { apiClient } from '@/lib/api';
@@ -43,7 +53,19 @@ export default function ResourceCreationDialog({
   const [isCreating, setIsCreating] = useState(false);
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
 
-  // Populate form when editing
+  // Attribute management states
+  const [attributes, setAttributes] = useState<any[]>([]);
+  const [attributeModalOpen, setAttributeModalOpen] = useState(false);
+  const [selectedAttributeForAttribute, setSelectedAttributeForAttribute] = useState<any>(null);
+  const [attributeDisplayName, setAttributeDisplayName] = useState('');
+  const [attributeDisplayNameError, setAttributeDisplayNameError] = useState('');
+  const [selectedAttributeCategories, setSelectedAttributeCategories] = useState<string[]>(['resource']);
+  const [selectedAttributeDataType, setSelectedAttributeDataType] = useState('');
+  const [attributeDescription, setAttributeDescription] = useState('');
+  const [attributePermittedValues, setAttributePermittedValues] = useState('');
+  const [isCreatingAttribute, setIsCreatingAttribute] = useState(false);
+
+  // Populate form when editing and load attributes
   React.useEffect(() => {
     if (editingResource && open) {
       setDisplayName(editingResource.displayName || '');
@@ -55,7 +77,27 @@ export default function ResourceCreationDialog({
       setDescription('');
       setDisplayNameError('');
     }
+
+    // Load attributes when dialog opens
+    if (open) {
+      loadAttributes();
+    }
   }, [editingResource, open]);
+
+  const loadAttributes = async () => {
+    try {
+      const response = await apiClient.get('/attributes');
+      if (response.success) {
+        // Filter for resource category attributes
+        const resourceAttributes = response.data.filter((attr: any) =>
+          attr.categories.includes('resource')
+        );
+        setAttributes(resourceAttributes);
+      }
+    } catch (error) {
+      console.error('Error loading attributes:', error);
+    }
+  };
 
   const handleClose = () => {
     if (isCreating) return; // Prevent closing during creation
@@ -92,6 +134,75 @@ export default function ResourceCreationDialog({
       setDisplayNameError('Name must be at least 2 characters long.');
     } else {
       setDisplayNameError('');
+    }
+  };
+
+  // Attribute modal handlers
+  const handleOpenAttributeModal = () => {
+    setAttributeModalOpen(true);
+  };
+
+  const handleCloseAttributeModal = () => {
+    setAttributeModalOpen(false);
+    setSelectedAttributeForAttribute(null);
+    setAttributeDisplayName('');
+    setAttributeDisplayNameError('');
+    setSelectedAttributeCategories(['resource']);
+    setSelectedAttributeDataType('');
+    setAttributeDescription('');
+    setAttributePermittedValues('');
+  };
+
+  const handleAttributeDisplayNameChange = (value: string) => {
+    setAttributeDisplayName(value);
+    if (value.trim().length < 2) {
+      setAttributeDisplayNameError('Name must be at least 2 characters long.');
+    } else {
+      setAttributeDisplayNameError('');
+    }
+  };
+
+  const handleCreateAttribute = async () => {
+    if (!attributeDisplayName.trim() || attributeDisplayNameError) {
+      return;
+    }
+
+    setIsCreatingAttribute(true);
+
+    const attributeData = {
+      name: attributeDisplayName.toLowerCase().replace(/\s+/g, '_'),
+      displayName: attributeDisplayName.trim(),
+      description: attributeDescription?.trim() || '',
+      categories: selectedAttributeCategories,
+      dataType: selectedAttributeDataType,
+      isRequired: false,
+      isMultiValue: false,
+      defaultValue: null,
+      validationRules: attributePermittedValues ? { permittedValues: attributePermittedValues.split(',').map(v => v.trim()) } : {},
+      metadata: {
+        createdBy: 'User',
+        owner: 'User',
+        isSystem: false,
+        isCustom: true,
+        version: '1.0.0'
+      }
+    };
+
+    try {
+      const response = await apiClient.post('/attributes', attributeData);
+      if (response.success) {
+        // Add new attribute to the list
+        setAttributes(prev => [...prev, response.data]);
+        snackbar.showSuccess('Attribute created successfully!');
+        handleCloseAttributeModal();
+      } else {
+        snackbar.showError(response.error || 'Failed to create attribute');
+      }
+    } catch (error: any) {
+      console.error('Error creating attribute:', error);
+      snackbar.handleApiError(error, 'Failed to create attribute');
+    } finally {
+      setIsCreatingAttribute(false);
     }
   };
 
@@ -240,6 +351,45 @@ export default function ResourceCreationDialog({
             rows={3}
             disabled={isCreating}
           />
+
+          <Divider sx={{ my: 1 }} />
+
+          {/* Attributes Section */}
+          <Box>
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
+              <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
+                Resource Attributes
+              </Typography>
+              <Button
+                size="small"
+                startIcon={<AddIcon />}
+                onClick={handleOpenAttributeModal}
+                disabled={isCreating}
+                variant="outlined"
+                sx={{ fontSize: '0.75rem' }}
+              >
+                Create Attribute
+              </Button>
+            </Box>
+
+            {attributes.length > 0 ? (
+              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                {attributes.map((attr) => (
+                  <Chip
+                    key={attr._id || attr.id}
+                    label={attr.displayName}
+                    size="small"
+                    variant="outlined"
+                    icon={<SettingsIcon />}
+                  />
+                ))}
+              </Box>
+            ) : (
+              <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
+                No resource attributes available. Create one above.
+              </Typography>
+            )}
+          </Box>
         </Box>
       </DialogContent>
 
@@ -298,6 +448,132 @@ export default function ResourceCreationDialog({
           </Button>
           <Button onClick={handleCancelConfirm} variant="contained" color="error">
             Yes, Cancel
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Attribute Creation Modal */}
+      <Dialog
+        open={attributeModalOpen}
+        onClose={handleCloseAttributeModal}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: 2,
+            boxShadow: '0 8px 32px rgba(0,0,0,0.1)'
+          }
+        }}
+      >
+        <DialogTitle sx={{
+          fontWeight: 600,
+          fontSize: '1.25rem',
+          px: 3,
+          pt: 3,
+          pb: 1,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between'
+        }}>
+          Create New Attribute
+          <IconButton
+            onClick={handleCloseAttributeModal}
+            disabled={isCreatingAttribute}
+            sx={{
+              color: 'grey.500',
+              '&:hover': { bgcolor: 'grey.100' }
+            }}
+          >
+            <CloseIcon />
+          </IconButton>
+        </DialogTitle>
+
+        <DialogContent sx={{ px: 3, pt: 2, pb: 2 }}>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5, mt: 1 }}>
+            <TextField
+              fullWidth
+              label="Attribute Name"
+              value={attributeDisplayName}
+              onChange={(e) => handleAttributeDisplayNameChange(e.target.value)}
+              placeholder="e.g., File Type, Security Level, Department"
+              required
+              disabled={isCreatingAttribute}
+              error={!!attributeDisplayNameError}
+              helperText={attributeDisplayNameError || 'Enter the attribute name'}
+            />
+
+            <TextField
+              fullWidth
+              label="Description"
+              value={attributeDescription}
+              onChange={(e) => setAttributeDescription(e.target.value)}
+              placeholder="Brief description of the attribute"
+              multiline
+              rows={2}
+              disabled={isCreatingAttribute}
+            />
+
+            <FormControl fullWidth disabled={isCreatingAttribute}>
+              <InputLabel>Data Type</InputLabel>
+              <Select
+                value={selectedAttributeDataType}
+                onChange={(e) => setSelectedAttributeDataType(e.target.value)}
+                label="Data Type"
+              >
+                <MenuItem value="string">String</MenuItem>
+                <MenuItem value="number">Number</MenuItem>
+                <MenuItem value="boolean">Boolean</MenuItem>
+                <MenuItem value="date">Date</MenuItem>
+                <MenuItem value="array">Array</MenuItem>
+              </Select>
+            </FormControl>
+
+            <TextField
+              fullWidth
+              label="Permitted Values (Optional)"
+              value={attributePermittedValues}
+              onChange={(e) => setAttributePermittedValues(e.target.value)}
+              placeholder="value1, value2, value3"
+              disabled={isCreatingAttribute}
+              helperText="Comma-separated list of allowed values"
+            />
+          </Box>
+        </DialogContent>
+
+        <DialogActions sx={{
+          px: 3,
+          pb: 3,
+          pt: 1,
+          gap: 1.5
+        }}>
+          <Button
+            onClick={handleCloseAttributeModal}
+            variant="outlined"
+            disabled={isCreatingAttribute}
+            sx={{
+              borderColor: 'grey.300',
+              color: 'text.secondary',
+              '&:hover': {
+                borderColor: 'grey.400',
+                bgcolor: 'grey.50'
+              }
+            }}
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={handleCreateAttribute}
+            variant="contained"
+            disabled={!attributeDisplayName.trim() || !!attributeDisplayNameError || !selectedAttributeDataType || isCreatingAttribute}
+            startIcon={isCreatingAttribute ? <CircularProgress size={20} /> : null}
+            sx={{
+              bgcolor: 'primary.main',
+              '&:hover': {
+                bgcolor: 'primary.dark'
+              }
+            }}
+          >
+            {isCreatingAttribute ? 'Creating...' : 'Create Attribute'}
           </Button>
         </DialogActions>
       </Dialog>

@@ -44,7 +44,7 @@ import {
   AlertTitle,
 } from '@mui/material';
 import {
-  PlayArrow as ActionIcon,
+  FlashOn as ActionIcon,
   Add as AddIcon,
   Edit as EditIcon,
   Delete as DeleteIcon,

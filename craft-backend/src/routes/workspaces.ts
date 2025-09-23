@@ -271,7 +271,7 @@ router.get('/validate-name/:name', requireAuth, async (req: Request, res: Respon
 // GET /api/workspaces - List workspaces user has access to
 router.get('/', requireAuth, async (req: Request, res: Response): Promise<void> => {
   try {
-    const { page = 1, limit = 10, search, status = 'all', validateOnly = 'false' } = req.query;
+    const { page = 1, limit = 10, search, status = 'all', validateOnly = 'false', sortBy = 'updatedAt', sortOrder = 'desc' } = req.query;
     const userId = (req as any).user._id.toString();
     const userRole = (req as any).user.role;
 
@@ -322,6 +322,13 @@ router.get('/', requireAuth, async (req: Request, res: Response): Promise<void> 
     }
 
     const skip = (Number(page) - 1) * Number(limit);
+
+    // Build sort object
+    const sort: any = {};
+    const sortField = String(sortBy);
+    const sortDirection = sortOrder === 'asc' ? 1 : -1;
+    sort[sortField] = sortDirection;
+
     const workspaces = await Workspace.find(query)
       .populate('applicationsCount')
       .populate({
@@ -332,7 +339,7 @@ router.get('/', requireAuth, async (req: Request, res: Response): Promise<void> 
         path: 'metadata.owner',
         select: 'name email'
       })
-      .sort({ updatedAt: -1 })
+      .sort(sort)
       .skip(skip)
       .limit(Number(limit));
 
