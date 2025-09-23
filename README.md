@@ -105,17 +105,17 @@ CRAFT2.0/
 ## ✨ Features
 
 ### 🔐 Authentication & Authorization
-- **Multi-provider Authentication**: Local accounts and Azure AD Single Sign-On (SSO)
-- **JWT-based authentication** with refresh tokens
-- **Azure AD SSO Integration**: OAuth 2.0/OpenID Connect with automatic user provisioning
-- **Three-tier role-based access control** (Super Admin, Admin, Basic)
-- **User registration** with automatic Basic role assignment  
-- **Role management** with hierarchical permissions (only Admin/Super Admin can change roles)
-- **Basic users** have view-only access to all system entities
-- **Admin/Super Admin** have full CRUD access to all entities
-- **Secure password hashing** with bcrypt
-- **Token validation** and automatic refresh
-- **Hybrid authentication** supporting both local and Azure AD users
+- **Dual Authentication Methods**: Local email/password with bcrypt + Azure AD SSO with Microsoft MSAL integration
+- **Advanced JWT System**: Access tokens with automatic refresh, secure session management, persistent storage
+- **Azure AD SSO Integration**: Complete OAuth 2.0/OpenID Connect with automatic user provisioning and role mapping
+- **Three-tier RBAC System**:
+  - **Super Admin**: Full cross-workspace system access and global administration
+  - **Admin**: Workspace-scoped administration with user management within assigned workspaces
+  - **Basic**: View-only access to assigned workspaces and ABAC entities
+- **Workspace-Based Access Control**: Users assigned to specific workspaces with granular permission management
+- **Advanced Security**: Secure password hashing, token expiration management, session validation, security headers
+- **Cross-Environment User Linking**: Global user IDs with environment-specific assignments
+- **Role Inheritance**: Hierarchical permission system with override capabilities
 
 ### 📊 Dashboard
 - Modern, responsive dashboard with Material-UI
@@ -123,21 +123,51 @@ CRAFT2.0/
 - Real-time statistics and analytics
 - Mobile-friendly responsive design
 
-### 🏢 Hierarchical Workspace Architecture
-- **Workspace Management**: Multi-tenant architecture supporting multiple organizations with full workspace context management
-- **Application Management**: Organize projects and services within workspaces with seamless application switching
-- **Environment Management**: Manage deployment stages (development, testing, staging, production) with environment-specific configurations
-- **Unified Settings**: Single-page setup wizard for creating complete workspace hierarchies with step-by-step guidance
-- **Workspace Switching**: Dynamic workspace and application selection with comprehensive context awareness and real-time updates
-- **Context Providers**: Comprehensive React context system for workspace state management integrated with authentication flow
+### 🏢 Advanced Hierarchical Workspace System
+- **Three-Level Architecture**: Workspace → Applications → Environments with complete organizational hierarchy
+- **Workspace Features**:
+  - Settings management (default environments, domains, SSO, branding)
+  - Resource limits (applications, users, policies, storage, API calls)
+  - Plan management (Free, Professional, Enterprise) with billing integration
+  - Access control (owner/admin roles, workspace-specific assignments)
+- **Application Types**: Web, API, Mobile, Desktop, Service, Microservice with environment containers
+- **Environment Types**: Development, Testing, Staging, Production, Preview, Hotfix with auto-generation
+- **Template System**: Pre-configured workspace templates for quick setup (Web App, Microservices, Simple API)
+- **Auto-Generation**: Intelligent environment name generation from display names with consistency validation
+- **Unified Settings Wizard**: Single-page setup with enhanced stepper UI and step-by-step guidance
+- **Dynamic Context Management**: Real-time workspace switching with authentication-aware state management
 
-### 🏗️ ABAC Components
-- **Policies**: Define access control rules with enhanced 5-step wizard and separated resource attribute selection (view-only access for Basic users)
-- **Subjects**: Manage users, groups, roles with comprehensive attributes and real-time policy count tracking (view-only access for Basic users)
-- **Resources**: Protected resources and assets with attribute support and policy dependency visualization (view-only access for Basic users)
-- **Actions**: Operations that can be performed with categorization and policy usage tracking (view-only access for Basic users)
-- **Attributes**: Contextual information with conditional scope selection for subjects/resources, multi-select dropdowns, and category filtering (view-only access for Basic users)
-- **Users**: Complete user management with three-tier role system and role change restrictions
+### 🏗️ Comprehensive ABAC System
+- **Advanced Policy Engine**:
+  - 5-step creation wizard (Details → Subjects → Actions → Resources → Conditions)
+  - Policy lifecycle management (Draft → Active → Inactive)
+  - Complex conditions with multiple operators (equals, contains, greater_than, less_than, in, not_in)
+  - Policy inheritance across workspace hierarchy with version control
+  - Batch operations and bulk policy management
+- **Subject Management**:
+  - User management with email, department, manager hierarchy
+  - Group-based organization with nested membership
+  - Role-based permissions with inheritance
+  - Cross-environment user linking with global user IDs
+  - Real-time subject creation during policy workflow
+- **Resource Management**:
+  - Multiple resource types (file, document, api, database, service, folder, application)
+  - URI-based resource identification with hierarchical structure
+  - Permission matrix (read, write, delete, execute, admin)
+  - Classification levels (public, internal, confidential, restricted)
+  - Parent-child relationships with inheritance
+- **Action System**:
+  - Categorized operations (read, write, execute, delete, admin)
+  - Risk level classification (low, medium, high, critical)
+  - HTTP method and endpoint mapping for API actions
+  - System and custom action definitions
+- **Advanced Attributes**:
+  - Multi-category support (Subject/Resource) with scope management
+  - Data types (string, number, boolean, date, array, object)
+  - Validation (email, URL, phone) with custom validators
+  - Constraints (length, ranges, regex, enum values)
+  - Scope inheritance (environment, application, workspace-level)
+  - Real-time attribute value management with duplicate prevention
 
 ### 📋 Policy Management
 - **Enhanced Step-by-step Creation**: 5-step wizard for policy creation with separated Action & Resource selection
@@ -163,15 +193,42 @@ CRAFT2.0/
 - Debug policy decisions
 - Simulate different contexts
 
-### 🔧 Technical Stack
-- **Frontend**: Next.js 15.4.6, React 19, Material-UI v7, TypeScript 5.5
-- **Backend**: Node.js 18+, Express 4.19, MongoDB 7.0+, Mongoose 8.5, TypeScript 5.5
-- **Authentication**: JWT, bcrypt, Azure AD SSO with MSAL, comprehensive context integration
-- **Testing**: Jest 29, React Testing Library 16 with comprehensive test coverage including performance tests
-- **Performance**: Advanced search debouncing (300ms), request deduplication, API call optimization, intelligent request batching
-- **Security**: Enhanced rate limiting, request throttling, 429 error handling with exponential backoff
-- **Architecture**: Hierarchical workspace system with multi-tenant support and comprehensive context management
-- **Documentation**: Comprehensive markdown docs with automated maintenance
+### 🔧 Advanced Technical Stack
+
+#### **Frontend Architecture**
+- **Framework**: Next.js 15.4.6 with React 19.0.0 and App Router
+- **Language**: TypeScript 5.5.4 with strict type checking
+- **UI Library**: Material-UI v7.3.1 with Emotion styling engine
+- **State Management**: Zustand 5.0.2 with React Context for global state
+- **HTTP Client**: Axios 1.7.7 with automatic retry and intelligent error handling
+- **Form Management**: React Hook Form 7.53.2 with Yup validation schemas
+- **Data Fetching**: TanStack React Query 5.59.16 for server state management
+- **Date Handling**: Date-fns 4.1.0 for comprehensive date manipulation
+
+#### **Backend Architecture**
+- **Runtime**: Node.js 18+ with Express.js 4.19.2 framework
+- **Language**: TypeScript 5.5.4 with strict compilation settings
+- **Database**: MongoDB 8.5.2 with Mongoose ODM for data modeling
+- **Authentication**: JWT with bcrypt password hashing and refresh token support
+- **Security**: Helmet for security headers, CORS configuration, advanced rate limiting
+- **Session Management**: Express-session with Redis support for scalability
+- **Dependency Injection**: Inversify 6.0.2 for IoC container management
+- **Validation**: Joi 17.13.3 and express-validator 7.1.0 for data validation
+
+#### **Performance & Security**
+- **API Optimization**: Request batching, deduplication, intelligent caching with Redis
+- **Search Performance**: 300ms debouncing across all search interfaces
+- **Rate Limiting**: Configurable limits with exponential backoff and 429 error handling
+- **Security Features**: XSS protection, SQL injection prevention, input sanitization
+- **Caching Strategy**: Multi-layer caching (browser, API, database) for optimal performance
+- **Bundle Optimization**: Tree shaking, dynamic imports, and code splitting
+
+#### **Testing & Quality**
+- **Frontend Testing**: Jest 29 + React Testing Library 16 with 95% coverage requirements
+- **Backend Testing**: Jest 29 with TypeScript support and in-memory MongoDB
+- **Quality Assurance**: ESLint strict rules, Prettier formatting, pre-commit hooks
+- **Visual Testing**: Storybook 8.4.7 for component documentation and testing
+- **Performance Testing**: API optimization tests and debouncing verification
 
 ## 🛠️ Development Workflow
 
@@ -463,16 +520,16 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## ⭐ Latest Updates
 
-### Version 1.3.8 - Enhanced Attribute Creation & UI Consistency (September 23, 2025)
-- **📅 Comprehensive Date Flow Integration**: Added complete date/time input system to policy creation modal with three input types (single, range, period) matching attributes page functionality
-- **🎯 Resource Attribute Creation**: New capability to create resource attributes directly from policy workflow with dedicated button and pre-selected resource category
-- **🎨 UI Button Standardization**: Unified date input button styling across attributes and policy creation pages with two-line layout showing labels and descriptions
-- **⚡ Actions Icon Enhancement**: Updated Actions page icon from PlayArrow to FlashOn for better visual clarity and user experience
-- **📊 Multi-Select Day Picker**: Enhanced attributes page with multi-select dropdown for day selection in time period configuration replacing simple text input
-- **🔧 Workspace Sorting Fix**: Implemented dynamic sort parameter handling in workspace API with proper sortBy and sortOrder support
-- **🛠️ Environment API Investigation**: Thoroughly investigated and confirmed proper functionality of environment API routes (no 404 issues found)
-- **📚 Documentation Updates**: Complete documentation refresh to version 1.3.8 with all latest features and improvements accurately reflected
-- **✅ Build System Validation**: Verified successful compilation of both frontend and backend projects with comprehensive TypeScript and ESLint validations
+### Version 1.3.9 - Professional Attribute Value Management & Enhanced User Experience (September 23, 2025)
+- **🎯 Professional Add Value Modal**: Complete redesign of "Add New Attribute Value" modal with modern styling, close button in top-right corner, and professional layout
+- **🔍 Duplicate Value Validation**: Implemented case-insensitive duplicate checking with user-friendly error messages preventing duplicate attribute values
+- **⚡ Real-Time Dropdown Updates**: Added immediate local state updates ensuring newly added values appear instantly in dropdown without API refresh delays
+- **🔧 Backend ObjectId Handling**: Fixed TypeScript compilation errors by adding proper ObjectId validation for custom string IDs vs MongoDB ObjectIds
+- **🛡️ Enhanced API Error Handling**: Resolved 400 errors in attribute API by improving ID parameter validation and null checking
+- **🎨 Consistent Icon Updates**: Standardized FlashOn icon usage across Actions navigation, page title, and policy creation dropdowns for visual consistency
+- **📊 State Management Enhancement**: Updated both attributes and selectedAttributes state arrays for complete UI consistency during value additions
+- **✨ Modal UX Improvements**: Added professional styling with rounded corners, shadows, helper text, and enhanced accessibility features
+- **🚀 Build System Validation**: Successfully validated both frontend and backend builds with all TypeScript errors resolved
 
 ### Version 1.3.7 - Comprehensive Pagination & Filter/Sort Uniformity (September 23, 2025)
 - **📄 Advanced Pagination System**: Implemented comprehensive server-side pagination for workspaces page matching users page functionality with search, filtering, and sorting capabilities

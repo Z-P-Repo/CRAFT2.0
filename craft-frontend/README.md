@@ -2,43 +2,67 @@
 
 A modern, responsive React-based dashboard for managing the CRAFT (Attribute-Based Access Control) Permission System. Built with Next.js 15, TypeScript, and Material-UI with a professional collapsible sidebar layout.
 
-![Version](https://img.shields.io/badge/version-1.3.8-blue.svg)
+![Version](https://img.shields.io/badge/version-1.3.9-blue.svg)
 ![Next.js](https://img.shields.io/badge/Next.js-15.4.6-black.svg)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.5-blue.svg)
 ![Material-UI](https://img.shields.io/badge/Material--UI-7.3-blue.svg)
 ![React](https://img.shields.io/badge/React-19.0-blue.svg)
 ![Jest](https://img.shields.io/badge/Jest-29-orange.svg)
+![Azure AD](https://img.shields.io/badge/Azure%20AD-MSAL-blue.svg)
+![Testing Library](https://img.shields.io/badge/Testing%20Library-16-red.svg)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
 
-## 🚀 Features
+## 🚀 Core Features
 
-- **📱 Responsive Dashboard Layout** with collapsible sidebar navigation
-- **🔐 JWT Authentication** with automatic token refresh and secure routing
-- **👥 User Registration** - Public registration with default Basic role assignment
-- **🛡️ User Management** - Complete user management system with three-tier role hierarchy (Super Admin, Admin, Basic)
-- **🔒 Role-Based Access Control** - Basic users have view-only access; Admin/Super Admin have full CRUD access
-- **📋 Policy Management** - Create, edit, and manage ABAC policies with enhanced 5-step wizard, separated Action & Resource selection, and dedicated view/edit pages (Admin/Super Admin only)
-- **👥 Subject Management** - Handle users, groups, and roles with detailed profiles (view-only for Basic users)
-- **📁 Resource Management** - Manage system resources, files, databases, and APIs (view-only for Basic users)
-- **⚡ Action Management** - Define and categorize system actions with risk levels (view-only for Basic users)
-- **🏷️ Attribute Management** - Enhanced multi-category ABAC attributes (Subject/Resource) with conditional scope selection, multi-select dropdowns, and category filtering (view-only for Basic users)
-- **📈 Policy Dependency Tracking** - Real-time policy count display with tooltips showing up to 5 policy names across all entity management pages
-- **⚡ Advanced Performance Optimization** - Multiple API call prevention, intelligent request batching, standardized 300ms search debouncing, comprehensive request deduplication, and 429 error handling with exponential backoff
-- **🛡️ Deletion Protection UI** - User-friendly error messages when attempting to delete entities referenced in active policies
-- **🗑️ Standardized Delete Modals** - Clean, professional delete confirmation dialogs with close icons, system item warnings, and consistent design across all modules (Subjects, Resources, Actions, Attributes, Users)
-- **📋 Activity Monitoring** - Comprehensive activity logging and audit trail system with real-time activity feed, advanced filtering, and detailed activity views
-- **🧪 Policy Tester** - Interactive policy evaluation and testing with detailed results
-- **🏢 Hierarchical Workspace Management** - Complete multi-tenant workspace system with Workspace → Applications → Environments hierarchy and authentication integration
-- **🏗️ Environment Management** - Intelligent environment name auto-generation, enhanced creation workflows, and improved validation with display name synchronization
-- **⚙️ Unified Settings Page** - Single-page setup wizard with enhanced stepper UI and step-by-step guidance for creating complete workspace hierarchies
-- **🎨 Enhanced Stepper UI** - Policy Creation-inspired stepper design with circular progress indicators, completion states, and Material-UI theming
-- **🔄 Workspace Context Management** - Comprehensive React context providers with authentication-aware workspace, application, and environment state management
-- **🌐 Dynamic Navigation** - Context-aware navigation with workspace/application switching capabilities and real-time updates
-- **🚀 Multiple API Call Optimization** - Intelligent request batching and deduplication preventing redundant server calls across all components
-- **⚡ Standardized Search Debouncing** - Consistent 300ms search debouncing implemented across all search interfaces for optimal performance
-- **🔄 Request Deduplication** - Advanced API client with smart caching mechanisms preventing duplicate network requests
-- **📊 Real-time Statistics** - Dashboard with live metrics and activity tracking
-- **🎨 Professional UI/UX** - Material-UI components with consistent theming
+### 🔐 Authentication & Security
+- **Azure AD SSO Integration** - Microsoft MSAL authentication with seamless enterprise login
+- **JWT Token Management** - Automatic token refresh, secure storage, and validation
+- **Role-Based Access Control** - Three-tier hierarchy (Super Admin, Admin, Basic) with granular permissions
+- **Protected Route System** - Comprehensive route protection with role-based access control
+- **Public User Registration** - Self-service registration with default Basic role assignment
+
+### 🏢 Multi-Tenant Architecture
+- **Hierarchical Workspace System** - Complete Workspace → Applications → Environments architecture
+- **Workspace Context Management** - React context providers with authentication-aware state management
+- **Dynamic Navigation** - Context-aware navigation with workspace/application switching capabilities
+- **Workspace Assignment System** - User-workspace assignment with proper access control
+- **Environment Auto-Generation** - Intelligent environment name generation with display name synchronization
+
+### 📋 ABAC Policy Management
+- **Enhanced 5-Step Policy Wizard** - Separated Action & Resource selection with professional stepper UI
+- **Policy Dependency Tracking** - Real-time policy count display with tooltips showing up to 5 policy names
+- **Interactive Policy Tester** - Comprehensive policy evaluation and testing with detailed results
+- **Policy View/Edit Pages** - Dedicated pages for policy viewing and editing with role-based access
+- **Attribute Value Management** - Professional modal for adding new attribute values with duplicate validation
+
+### 👥 Entity Management System
+- **Subject Management** - Handle users, groups, and roles with detailed profiles and policy tracking
+- **Resource Management** - Manage system resources, files, databases, and APIs with hierarchy support
+- **Action Management** - Define and categorize system actions with risk levels and policy dependencies
+- **Advanced Attribute System** - Multi-category ABAC attributes with conditional scope selection and category filtering
+- **User Management** - Complete user lifecycle with role changes and workspace assignments
+
+### ⚡ Performance & Optimization
+- **Intelligent API Optimization** - Request batching, deduplication, and caching mechanisms
+- **Standardized Search Debouncing** - Consistent 300ms debouncing across all search interfaces
+- **Rate Limiting Protection** - Built-in 429 error handling with exponential backoff
+- **Real-time Updates** - Live data synchronization with automatic refresh patterns
+- **Bundle Optimization** - Code splitting, tree shaking, and automatic optimizations
+
+### 📊 Monitoring & Analytics
+- **Comprehensive Activity System** - Real-time activity feed with 8 categories and 4 severity levels
+- **Advanced Filtering** - Filter by category, severity, type, actor, and date range
+- **Export Capabilities** - CSV and JSON export for compliance and reporting
+- **Dashboard Statistics** - Live metrics, charts, and activity tracking
+- **Audit Trail** - Complete system audit capabilities with detailed activity views
+
+### 🎨 Professional UI/UX
+- **Responsive Dashboard Layout** - Collapsible sidebar navigation with mobile support
+- **Material-UI v7 Components** - Professional design system with consistent theming
+- **Standardized Delete Modals** - Clean confirmation dialogs with system protection warnings
+- **Professional Modals** - Enhanced attribute value creation with top-right close buttons
+- **Deletion Protection UI** - User-friendly error messages for referenced entities
+- **Loading States** - Comprehensive loading indicators and progress feedback
 
 ## 📋 Prerequisites
 
@@ -77,7 +101,12 @@ NODE_ENV=development
 
 # Application Settings
 NEXT_PUBLIC_APP_NAME=CRAFT Permission System
-NEXT_PUBLIC_APP_VERSION=1.3.5
+NEXT_PUBLIC_APP_VERSION=1.3.9
+
+# Azure AD Configuration (Optional - for SSO)
+NEXT_PUBLIC_AZURE_CLIENT_ID=your-azure-client-id
+NEXT_PUBLIC_AZURE_TENANT_ID=your-azure-tenant-id
+NEXT_PUBLIC_AZURE_REDIRECT_URI=http://localhost:3002/auth/callback
 ```
 
 ## 🚀 Development
@@ -236,12 +265,17 @@ src/
 
 ### Available API Methods
 ```typescript
-// Authentication
+// Authentication & User Management
 apiClient.login(credentials)
 apiClient.register(userData)  // Creates Basic role user by default
 apiClient.logout()
 apiClient.getProfile()
 apiClient.validateToken()
+apiClient.refreshToken()
+
+// Azure AD SSO
+apiClient.getAzureToken()
+apiClient.validateAzureToken(token)
 
 // Activity Management
 apiClient.getActivities(params)
@@ -250,52 +284,120 @@ apiClient.createActivity(activity)
 apiClient.getActivityStats()
 apiClient.exportActivities(filters)
 
-// Generic CRUD
-apiClient.get(url, params)
-apiClient.post(url, data)
-apiClient.put(url, data)
-apiClient.patch(url, data)  // For role changes
-apiClient.delete(url)
+// ABAC Entity Management
+apiClient.getPolicies(params)
+apiClient.createPolicy(policy)
+apiClient.getSubjects(params)
+apiClient.createSubject(subject)
+apiClient.getResources(params)
+apiClient.createResource(resource)
+apiClient.getActions(params)
+apiClient.createAction(action)
+apiClient.getAttributes(params)
+apiClient.createAttribute(attribute)
+apiClient.updateAttributeValues(id, values)
+
+// Workspace Management
+apiClient.getWorkspaces(params)
+apiClient.createWorkspace(workspace)
+apiClient.getApplications(workspaceId)
+apiClient.createApplication(application)
+apiClient.getEnvironments(applicationId)
+apiClient.createEnvironment(environment)
+
+// User & Role Management
+apiClient.getUsers(params)
+apiClient.updateUserRole(userId, role)
+apiClient.assignUserToWorkspace(userId, workspaceId)
+apiClient.unassignUserFromWorkspace(userId, workspaceId)
+
+// Generic CRUD with Advanced Features
+apiClient.get(url, params)        // With intelligent caching
+apiClient.post(url, data)         // With request deduplication
+apiClient.put(url, data)          // With optimistic updates
+apiClient.patch(url, data)        // For partial updates
+apiClient.delete(url)             // With dependency checking
 ```
 
 ## 🧪 Testing
 
-### Test Setup
-- Jest configuration
-- React Testing Library
-- Component testing
-- Integration testing
-- Coverage reporting
+### Comprehensive Test Suite
+- **Jest 29** - Latest testing framework with enhanced performance
+- **React Testing Library 16** - Modern React component testing
+- **Performance Testing** - API optimization and debouncing verification
+- **Integration Testing** - Full user workflow testing
+- **Coverage Reporting** - Comprehensive test coverage analysis
+- **Mocking Strategies** - Advanced mocking for API calls and external services
+
+### Test Categories
+```typescript
+// Component Testing
+test('renders policy creation wizard', () => {
+  render(<PolicyCreationWizard />);
+  expect(screen.getByText('Create New Policy')).toBeInTheDocument();
+});
+
+// API Integration Testing
+test('handles attribute value creation', async () => {
+  const mockResponse = { success: true, data: newAttribute };
+  apiClient.post.mockResolvedValue(mockResponse);
+  // ... test implementation
+});
+
+// Performance Testing
+test('debounces search requests', async () => {
+  const searchInput = screen.getByRole('textbox', { name: /search/i });
+  userEvent.type(searchInput, 'test query');
+  await waitFor(() => {
+    expect(apiClient.get).toHaveBeenCalledTimes(1);
+  }, { timeout: 400 });
+});
+```
 
 ### Running Tests
 ```bash
 # Run all tests
 npm test
 
-# Watch mode
+# Watch mode for development
 npm run test:watch
 
-# Coverage report
+# Coverage report with detailed metrics
 npm run test:coverage
+
+# Performance and API optimization tests
+npm run test:performance
 ```
 
 ## 📖 Development Guidelines
 
-### Code Style
-- TypeScript strict mode
-- ESLint and Prettier configuration
-- Consistent naming conventions
-- Component organization
+### Code Style & Standards
+- **TypeScript Strict Mode** - Full type safety with strict compilation
+- **ESLint & Prettier** - Automated code formatting and linting
+- **Consistent Naming** - camelCase for variables, PascalCase for components
+- **Component Organization** - Logical folder structure with feature-based grouping
+- **Hook Patterns** - Custom hooks for reusable logic and state management
 
-### Best Practices
-- Use TypeScript interfaces for all API responses including policy count data
-- Implement error boundaries
-- Follow React best practices
-- Write meaningful tests including policy dependency scenarios
-- Use semantic HTML
-- Implement consistent auto-refresh patterns across entity pages
-- Use Material-UI Chip components for policy count display
-- Add tooltips for enhanced user experience
+### Architecture Best Practices
+- **Context Providers** - Centralized state management for authentication and workspace data
+- **API Client Patterns** - Intelligent request handling with caching and deduplication
+- **Error Boundaries** - Graceful error handling with user-friendly fallbacks
+- **Type Safety** - Complete TypeScript interfaces for all API responses and data structures
+- **Performance Optimization** - Debouncing, memoization, and intelligent re-rendering
+
+### UI/UX Standards
+- **Material-UI Consistency** - Standardized component usage across the application
+- **Accessibility** - WCAG 2.1 compliance with proper ARIA labels and keyboard navigation
+- **Responsive Design** - Mobile-first approach with breakpoint-specific layouts
+- **Loading States** - Comprehensive feedback for all async operations
+- **Error Handling** - User-friendly error messages with actionable guidance
+
+### Testing Standards
+- **Component Coverage** - Minimum 80% test coverage for all components
+- **Integration Tests** - End-to-end user workflow testing
+- **Performance Tests** - API optimization and debouncing verification
+- **Accessibility Tests** - Automated accessibility testing with jest-axe
+- **Mock Strategies** - Consistent mocking patterns for external dependencies
 
 ### Policy Dependency UI Patterns
 - **Policy Count Display**: Use `<Chip>` components with `color="primary"` for policy counts with accurate ID-based backend mapping
@@ -384,8 +486,9 @@ For support and questions:
 
 ## 🔗 Related Projects
 
-- [CRAFT Backend](../craft-backend/) - Express.js API server
-- [CRAFT Documentation](../docs/) - System documentation
+- [CRAFT Backend](../craft-backend/) - Express.js API server with MongoDB and Azure AD
+- [CRAFT Documentation](../docs/) - System documentation and API reference
+- [Azure AD Configuration](../docs/azure-setup.md) - Enterprise SSO setup guide
 
 ---
 
@@ -434,18 +537,18 @@ await trackUser('updated', 'user-456', 'John Doe');
 *Last updated: September 23, 2025*
 🤖 *Generated and maintained with [Claude Code](https://claude.ai/code)*
 
-## 🔄 Recent Updates (Version 1.3.8)
+## 🔄 Recent Updates (Version 1.3.9)
 
-### Enhanced Attribute Creation & UI Consistency (September 23, 2025)
-- **📅 Advanced Date Flow Integration**: Complete date/time input system implementation in policy creation modal with three input modes (single date/time, date range, time period) matching attributes page functionality
-- **🎯 Resource Attribute Creation Workflow**: New dedicated capability to create resource attributes directly from policy creation flow with pre-selected resource category and streamlined modal experience
-- **🎨 UI Button Standardization**: Unified date input button styling across all pages featuring two-line layout with labels and descriptions for enhanced user clarity and consistency
-- **⚡ Enhanced Visual Design**: Updated Actions page with FlashOn icon replacing PlayArrow for improved visual clarity and better representation of action concepts
-- **📊 Multi-Select Day Picker Enhancement**: Advanced day selection interface in attributes page featuring Material-UI multi-select dropdown with checkboxes replacing simple text input
-- **🔧 Component Architecture Improvements**: Enhanced component composition with better modal integration and consistent styling patterns across date input interfaces
-- **🛠️ API Integration Validation**: Comprehensive testing and validation of environment API functionality confirming proper route handling and error resolution
-- **📚 Comprehensive Documentation**: Complete documentation refresh with latest features, technical specifications, and user interface improvements accurately reflected
-- **✅ Build System Reliability**: Verified successful TypeScript compilation and ESLint validation across all enhanced components and new features
+### Professional Attribute Value Management & Enhanced User Experience (September 23, 2025)
+- **🎯 Professional Add Value Modal**: Complete redesign of "Add New Attribute Value" modal with modern styling, top-right close button, professional layout, and enhanced accessibility features
+- **🔍 Duplicate Value Validation**: Implemented comprehensive case-insensitive duplicate checking with user-friendly error messages preventing duplicate attribute values from being added
+- **⚡ Real-Time Dropdown Updates**: Added immediate local state synchronization ensuring newly added values appear instantly in dropdown menus without requiring API refresh or page reload
+- **🔧 Backend ObjectId Handling**: Fixed critical TypeScript compilation errors by implementing proper ObjectId validation for custom string IDs vs MongoDB ObjectIds in attribute controllers
+- **🛡️ Enhanced API Error Resolution**: Resolved 400 errors in attribute API through improved ID parameter validation, comprehensive null checking, and proper error handling
+- **🎨 Consistent Icon Standardization**: Updated FlashOn icon usage across Actions navigation menu, page titles, and policy creation dropdowns for visual consistency and better user experience
+- **📊 State Management Enhancement**: Enhanced state synchronization by updating both attributes and selectedAttributes state arrays ensuring complete UI consistency during value additions
+- **✨ Modal UX Improvements**: Added professional styling with rounded corners, subtle shadows, descriptive helper text, improved spacing, and Material-UI design best practices
+- **🚀 Build System Validation**: Successfully validated compilation of both frontend and backend projects with all TypeScript errors resolved and ESLint compliance verified
 
 ### Previous Updates (Version 1.3.7) - Advanced Pagination & Filter/Sort Uniformity (September 23, 2025)
 - **📄 Comprehensive Pagination Implementation**: Added complete server-side pagination to workspaces page matching users page functionality with search, filtering, and sorting capabilities

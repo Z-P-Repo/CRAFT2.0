@@ -33,18 +33,20 @@ When user prompts "deploy", prepare the application for production deployment:
 4. Ensure no build warnings or errors
 
 ## Project Structure
-- Frontend: `/craft-frontend` (Next.js 15.4.6, TypeScript 5.5, Material-UI v7, Azure AD MSAL, Jest 29 Testing)
-- Backend: `/craft-backend` (Node.js 18+, Express 4.19, TypeScript 5.5, MongoDB 7.0+, Azure AD SSO, Advanced Rate Limiting)
+- **Frontend**: `/craft-frontend` (Next.js 15.4.6, React 19, TypeScript 5.5.4, Material-UI v7.3.1, Azure AD MSAL, Jest 29, React Testing Library 16)
+- **Backend**: `/craft-backend` (Node.js 18+, Express 4.19.2, TypeScript 5.5.4, MongoDB 8.5.2, Mongoose ODM, Azure AD SSO, Advanced Rate Limiting, Redis Caching)
+- **Additional**: Zustand state management, TanStack React Query, Axios HTTP client, React Hook Form, Yup validation, Storybook, ESLint, Prettier
 
-## Latest Features (v1.3.8)
-- **Date Flow Enhancement**: Complete date/time input system integration in policy creation modal with unified styling matching attributes page
-- **Resource Attribute Creation**: New capability to create resource attributes directly from policy workflow with dedicated button and modal
-- **UI Component Standardization**: Unified date input button styling across all pages with two-line layout and consistent descriptions
-- **Icon Updates**: Enhanced Actions page with FlashOn icon replacing PlayArrow for improved visual clarity and user experience
-- **Multi-Select Day Picker**: Advanced day selection dropdown in attributes page for time period configuration with checkbox interface
-- **Workspace API Enhancement**: Dynamic sort parameter handling in workspace routes with proper sortBy and sortOrder support
-- **Environment API Validation**: Comprehensive investigation confirming proper functionality of environment routes (no issues found)
-- **Build System Verification**: Successful compilation validation for both frontend and backend with TypeScript and ESLint compliance
+## Latest Features (v1.3.9)
+- **Professional Add Value Modal**: Complete redesign of attribute value creation modal with modern styling, top-right close button, and enhanced user experience
+- **Duplicate Value Validation**: Case-insensitive duplicate checking with user-friendly error messages preventing duplicate attribute values from being added
+- **Real-Time State Updates**: Immediate local state synchronization ensuring newly added values appear instantly in dropdowns without API refresh delays
+- **Backend ObjectId Handling**: Fixed TypeScript compilation errors by implementing proper ObjectId validation for custom string IDs vs MongoDB ObjectIds
+- **Enhanced API Error Resolution**: Resolved 400 errors in attribute API through improved ID parameter validation and comprehensive null checking
+- **Icon Consistency**: Standardized FlashOn icon usage across Actions navigation, page titles, and policy creation dropdowns for visual uniformity
+- **State Management Enhancement**: Updated both attributes and selectedAttributes state arrays ensuring complete UI consistency during value additions
+- **Modal UX Improvements**: Professional styling with rounded corners, shadows, descriptive helper text, and enhanced accessibility features
+- **Build System Validation**: Successfully validated compilation of both frontend and backend projects with all TypeScript errors resolved
 
 ## Previous Features (v1.3.7)
 - **Comprehensive Pagination System**: Advanced server-side pagination for workspaces page with search, filtering, and sorting capabilities
