@@ -37,11 +37,14 @@ When user prompts "deploy", prepare the application for production deployment:
 - Backend: `/craft-backend` (Node.js 18+, Express 4.19, TypeScript 5.5, MongoDB 7.0+, Azure AD SSO, Advanced Rate Limiting)
 
 ## Latest Features (v1.3.8)
-- **Enhanced Security Integration**: Comprehensive ProtectedRoute component implementation across all authenticated pages ensuring robust access control
-- **Build System Validation**: Verified successful compilation of both frontend and backend projects with TypeScript and ESLint validations
-- **Documentation Updates**: Complete refresh of all README files with latest project information and version consistency
-- **Performance Optimization**: Continued enhancement of MongoDB queries and API performance for improved user experience
-- **Component Architecture**: Seamless integration of authentication security with existing workspace and ABAC functionality
+- **Date Flow Enhancement**: Complete date/time input system integration in policy creation modal with unified styling matching attributes page
+- **Resource Attribute Creation**: New capability to create resource attributes directly from policy workflow with dedicated button and modal
+- **UI Component Standardization**: Unified date input button styling across all pages with two-line layout and consistent descriptions
+- **Icon Updates**: Enhanced Actions page with FlashOn icon replacing PlayArrow for improved visual clarity and user experience
+- **Multi-Select Day Picker**: Advanced day selection dropdown in attributes page for time period configuration with checkbox interface
+- **Workspace API Enhancement**: Dynamic sort parameter handling in workspace routes with proper sortBy and sortOrder support
+- **Environment API Validation**: Comprehensive investigation confirming proper functionality of environment routes (no issues found)
+- **Build System Verification**: Successful compilation validation for both frontend and backend with TypeScript and ESLint compliance
 
 ## Previous Features (v1.3.7)
 - **Comprehensive Pagination System**: Advanced server-side pagination for workspaces page with search, filtering, and sorting capabilities

@@ -463,15 +463,16 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## ⭐ Latest Updates
 
-### Version 1.3.8 - Latest Enhancements & ProtectedRoute Integration (September 23, 2025)
-- **🔒 ProtectedRoute Implementation**: Enhanced security with comprehensive ProtectedRoute component integration across all authenticated pages ensuring proper access control
-- **📱 UI Component Enhancement**: Improved page structure and navigation consistency with standardized authentication flow and route protection
-- **🎨 Documentation Refinement**: Updated all README files with latest project information, features, and version consistency
-- **🔧 Build System Validation**: Verified successful compilation of both frontend and backend projects with all TypeScript and ESLint validations passing
-- **🚀 Performance Optimization**: Continued optimization of MongoDB queries and API performance for enhanced user experience
-- **📊 Component Integration**: Seamless integration of authentication checks with existing workspace and application management features
-- **🛡️ Security Enhancement**: Strengthened application security with proper route guards and authentication validation throughout the application
-- **📚 Documentation Consistency**: Maintained up-to-date documentation across all markdown files reflecting current system capabilities and features
+### Version 1.3.8 - Enhanced Attribute Creation & UI Consistency (September 23, 2025)
+- **📅 Comprehensive Date Flow Integration**: Added complete date/time input system to policy creation modal with three input types (single, range, period) matching attributes page functionality
+- **🎯 Resource Attribute Creation**: New capability to create resource attributes directly from policy workflow with dedicated button and pre-selected resource category
+- **🎨 UI Button Standardization**: Unified date input button styling across attributes and policy creation pages with two-line layout showing labels and descriptions
+- **⚡ Actions Icon Enhancement**: Updated Actions page icon from PlayArrow to FlashOn for better visual clarity and user experience
+- **📊 Multi-Select Day Picker**: Enhanced attributes page with multi-select dropdown for day selection in time period configuration replacing simple text input
+- **🔧 Workspace Sorting Fix**: Implemented dynamic sort parameter handling in workspace API with proper sortBy and sortOrder support
+- **🛠️ Environment API Investigation**: Thoroughly investigated and confirmed proper functionality of environment API routes (no 404 issues found)
+- **📚 Documentation Updates**: Complete documentation refresh to version 1.3.8 with all latest features and improvements accurately reflected
+- **✅ Build System Validation**: Verified successful compilation of both frontend and backend projects with comprehensive TypeScript and ESLint validations
 
 ### Version 1.3.7 - Comprehensive Pagination & Filter/Sort Uniformity (September 23, 2025)
 - **📄 Advanced Pagination System**: Implemented comprehensive server-side pagination for workspaces page matching users page functionality with search, filtering, and sorting capabilities

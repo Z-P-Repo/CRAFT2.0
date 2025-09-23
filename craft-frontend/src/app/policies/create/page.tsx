@@ -42,7 +42,7 @@ import {
   Security as SecurityIcon,
   Description as DescriptionIcon,
   Person as PersonIcon,
-  PlayArrow as ActionIcon,
+  FlashOn as ActionIcon,
   Storage as ResourceIcon,
   Add as AddIcon,
   ArrowBack as ArrowBackIcon,
