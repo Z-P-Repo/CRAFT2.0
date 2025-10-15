@@ -37,7 +37,23 @@ When user prompts "deploy", prepare the application for production deployment:
 - **Backend**: `/craft-backend` (Node.js 18+, Express 4.19.2, TypeScript 5.5.4, MongoDB 8.5.2, Mongoose ODM, Azure AD SSO, Advanced Rate Limiting, Redis Caching)
 - **Additional**: Zustand state management, TanStack React Query, Axios HTTP client, React Hook Form, Yup validation, Storybook, ESLint, Prettier
 
-## Latest Features (v1.3.13)
+## Latest Features (v1.3.14)
+- **Comprehensive Dashboard Implementation**: Complete redesign of dashboard from static content to real-time data visualization
+- **Real-Time Statistics**: Live data fetching from 8 API endpoints in parallel (policies, subjects, actions, resources, additional resources, attributes, workspaces, users)
+- **Beautiful Gradient Cards**: 4 main statistics cards with stunning gradient backgrounds and hover animations for Policies, Subjects, Actions, and Resources
+- **Professional Welcome Header**: Personalized gradient header with user avatar, role badge, department chip, and refresh button
+- **Quick Actions Panel**: 4 action buttons with descriptions for Create Policy, Test Policy, Settings, and Activity Log
+- **Policy Status Overview**: Visual progress bars with color coding showing Active (green), Draft (yellow), and Inactive (red) policy distribution
+- **Recent Activity Feed**: Dynamic feed showing latest 5 policy activities with relative timestamps ("Just now", "5 minutes ago")
+- **Feature Highlights**: 4 informative cards showcasing ABAC Components, Workspace Hierarchy, Additional Resources, and Policy Testing
+- **Secondary Statistics Grid**: 4 additional stat cards for Attributes, Workspaces, Users, and Additional Resources with icon indicators
+- **Responsive Flexbox Layout**: Box-based responsive grid system replacing Material-UI Grid for better browser compatibility and performance
+- **Interactive Navigation**: All cards clickable with route navigation to respective pages for seamless user experience
+- **Material-UI v7 Compatibility**: Complete refactoring to use Box and flexbox instead of Grid2/Unstable_Grid2 for better stability
+- **Error Handling**: Comprehensive error handling with user-friendly snackbar notifications and loading states
+- **Build System Fix**: Resolved Material-UI Grid API compatibility issues ensuring clean production builds
+
+## Previous Features (v1.3.13)
 - **Policy Edit Flow Feature Parity**: Complete feature parity between policy creation and edit flows across all 6 steps
 - **Step 2 - Attribute Management**: Added inline attribute creation and value management in edit flow matching create flow functionality
 - **Step 2 - Autocomplete Selection**: Implemented attribute selection dropdown before displaying configuration cards for consistent UX

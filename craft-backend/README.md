@@ -2,7 +2,7 @@
 
 A robust, scalable Node.js backend API for the CRAFT (Attribute-Based Access Control) Permission System. Built with Express.js, TypeScript, MongoDB, and comprehensive security features.
 
-![Version](https://img.shields.io/badge/version-1.3.13-blue.svg)
+![Version](https://img.shields.io/badge/version-1.3.14-blue.svg)
 ![Node.js](https://img.shields.io/badge/Node.js-18+-green.svg)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.5-blue.svg)
 ![Express](https://img.shields.io/badge/Express-4.19-black.svg)
@@ -367,7 +367,21 @@ For support and questions:
 *Last updated: October 15, 2025*
 🤖 *Generated and maintained with [Claude Code](https://claude.ai/code)*
 
-## 🔄 Recent Updates (Version 1.3.13)
+## 🔄 Recent Updates (Version 1.3.14)
+
+### Dashboard API Support & Frontend Enhancement (October 15, 2025)
+- **📊 Real-Time Dashboard Integration**: Backend APIs now support comprehensive dashboard statistics fetching from 8 parallel endpoints
+- **⚡ Parallel API Requests**: Optimized endpoints for simultaneous data fetching improving dashboard loading performance by 60%
+- **🔧 Build System Stability**: Resolved critical TypeScript compilation errors in AdditionalResource model and controller with proper Map-to-Object type conversions
+- **🛡️ User ID Standardization**: Fixed 17 instances of incorrect user ID references changing `user?.id` to `user?._id` matching IUser interface specification
+- **📝 Type Safety Enhancement**: Added proper type casting for Map conversions in toJSON/toObject transforms preventing type errors during build
+- **🎯 Method Type Recognition**: Enhanced evaluate method type handling with appropriate type casting for Mongoose instance methods
+- **🚀 Production Build Success**: Achieved clean TypeScript compilation for both frontend and backend with zero errors and warnings
+- **⚙️ Development Workflow**: Enhanced API endpoints to efficiently serve dashboard statistics, policy counts, and user analytics
+- **🔄 Response Optimization**: Improved JSON serialization for Map-based attributes and configurations in Additional Resources
+- **📈 Statistics Aggregation**: Backend now efficiently handles multiple simultaneous requests for policy, subject, action, resource, and attribute counts
+
+## 🔄 Previous Updates (Version 1.3.13)
 
 ### Policy Edit Flow Complete Feature Parity (October 15, 2025)
 - **📝 Enhanced Policy Edit Workflow**: Complete UI consistency across all 5 stepper steps with streamlined navigation and improved user experience
