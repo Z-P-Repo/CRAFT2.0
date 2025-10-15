@@ -84,6 +84,8 @@ export class PolicyController {
     const user = req.user;
     const userRole = user?.role;
 
+    logger.info(`[PolicyController.getPolicyById] Request params:`, { id, userRole });
+
     // Build query with workspace filtering for basic and admin users
     const query: any = { id };
 
@@ -97,11 +99,15 @@ export class PolicyController {
       }
     }
 
+    logger.info(`[PolicyController.getPolicyById] Query:`, query);
+
     const policy = await Policy.findOne(query).lean();
 
     if (!policy) {
       throw new NotFoundError('Policy not found');
     }
+
+    logger.info(`[PolicyController.getPolicyById] Found policy:`, policy.id);
 
     res.status(200).json({
       success: true,
@@ -121,6 +127,7 @@ export class PolicyController {
       subjects,
       resources,
       actions,
+      additionalResources,
       conditions,
       tags,
       workspaceId,
@@ -165,6 +172,7 @@ export class PolicyController {
       subjects: subjects || [],
       resources: resources || [],
       actions: actions || [],
+      additionalResources: additionalResources || [],
       conditions: conditions || [],
       // Required workspace hierarchy fields
       workspaceId,
@@ -195,6 +203,9 @@ export class PolicyController {
   static updatePolicy = asyncHandler(async (req: AuthRequest, res: Response): Promise<any> => {
     const { id } = req.params;
     const updates = req.body;
+
+    logger.info(`[PolicyController.updatePolicy] Request params:`, { id });
+    logger.info(`[PolicyController.updatePolicy] Update data keys:`, Object.keys(updates));
 
     // Remove non-updatable fields
     delete updates.id;

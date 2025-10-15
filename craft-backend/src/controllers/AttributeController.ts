@@ -589,49 +589,79 @@ export class AttributeController {
     // Get attributes to be deleted
     const attributesToDelete = await Attribute.find({ id: { $in: attributeIds } });
 
-    // Prevent deletion of system attributes
+    // Separate system attributes (cannot delete)
     const systemAttributes = attributesToDelete.filter(attr => attr.metadata.isSystem);
-    if (systemAttributes.length > 0) {
-      const systemAttrNames = systemAttributes.map(attr => attr.displayName).join(', ');
-      throw new ValidationError(`Cannot delete system attributes: ${systemAttrNames}`);
-    }
 
-    // Check if any attributes are used in policies
-    const attributesInUse: { attribute: string; policies: string[] }[] = [];
-    for (const attribute of attributesToDelete) {
+    // Get non-system attributes
+    const nonSystemAttributes = attributesToDelete.filter(attr => !attr.metadata.isSystem);
+
+    // Check each non-system attribute for policy usage
+    const attributesInUse: { id: string; attribute: string; policyCount: number; policies: string[] }[] = [];
+    const attributesNotInUse: any[] = [];
+
+    for (const attribute of nonSystemAttributes) {
       const policiesUsingAttribute = await AttributeController.checkAttributeUsageInPolicies(attribute.name);
       if (policiesUsingAttribute.length > 0) {
         attributesInUse.push({
+          id: attribute.id,
           attribute: attribute.displayName,
-          policies: policiesUsingAttribute.map(p => p.name)
+          policyCount: policiesUsingAttribute.length,
+          policies: policiesUsingAttribute.map(p => p.name || p.displayName)
         });
+      } else {
+        attributesNotInUse.push(attribute);
       }
     }
 
-    if (attributesInUse.length > 0) {
-      const attributeCount = attributesInUse.length;
-      const totalPolicies = [...new Set(attributesInUse.flatMap(usage => usage.policies))].length;
-      
-      const errorMessages = attributesInUse.map(usage => {
-        const policyCount = usage.policies.length;
-        return `• "${usage.attribute}" is used in ${policyCount} ${policyCount === 1 ? 'policy' : 'policies'}: ${usage.policies.join(', ')}`;
-      });
-      
-      throw new ValidationError(
-        `Unable to delete ${attributeCount} ${attributeCount === 1 ? 'attribute' : 'attributes'} - ${attributeCount === 1 ? 'It is' : 'They are'} currently being used in ${totalPolicies} ${totalPolicies === 1 ? 'policy' : 'policies'}`
-      );
+    // Delete only attributes that are not in use
+    const idsToDelete = attributesNotInUse.map(attr => attr.id);
+    let deletedCount = 0;
+
+    if (idsToDelete.length > 0) {
+      const result = await Attribute.deleteMany({ id: { $in: idsToDelete } });
+      deletedCount = result.deletedCount;
+      logger.info(`Bulk delete performed on ${deletedCount} attributes by ${req.user?.email}`);
     }
 
-    const result = await Attribute.deleteMany({ id: { $in: attributeIds } });
+    // Prepare skipped attributes info
+    const skippedAttributes = [
+      ...systemAttributes.map(attr => ({
+        id: attr.id,
+        name: attr.displayName,
+        reason: 'System attribute',
+        policyCount: 0,
+        policies: []
+      })),
+      ...attributesInUse.map(usage => ({
+        id: usage.id,
+        name: usage.attribute,
+        reason: 'Currently used in policies',
+        policyCount: usage.policyCount,
+        policies: usage.policies
+      }))
+    ];
 
-    logger.info(`Bulk delete performed on ${result.deletedCount} attributes by ${req.user?.email}`);
+    // Build response message
+    let message = '';
+    if (deletedCount > 0 && skippedAttributes.length > 0) {
+      message = `${deletedCount} ${deletedCount === 1 ? 'attribute' : 'attributes'} deleted successfully. ${skippedAttributes.length} ${skippedAttributes.length === 1 ? 'attribute' : 'attributes'} skipped (used in policies or system attributes).`;
+    } else if (deletedCount > 0) {
+      message = `${deletedCount} ${deletedCount === 1 ? 'attribute' : 'attributes'} deleted successfully.`;
+    } else if (skippedAttributes.length > 0) {
+      message = `No attributes were deleted. ${skippedAttributes.length} ${skippedAttributes.length === 1 ? 'attribute' : 'attributes'} skipped (used in policies or system attributes).`;
+    } else {
+      message = 'No attributes found to delete.';
+    }
 
     res.status(200).json({
       success: true,
       data: {
-        deletedCount: result.deletedCount,
+        deletedCount,
+        skippedCount: skippedAttributes.length,
+        skippedAttributes: skippedAttributes.length > 0 ? skippedAttributes : undefined,
+        deleted: attributesNotInUse.map(attr => ({ id: attr.id, name: attr.displayName }))
       },
-      message: `${result.deletedCount} attributes deleted successfully`,
+      message,
     });
   });
 

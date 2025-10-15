@@ -4,8 +4,9 @@ import { ValidationError, NotFoundError } from '@/exceptions/AppError';
 import { asyncHandler } from '@/middleware/errorHandler';
 import { PaginationHelper } from '@/utils/pagination';
 import { logger } from '@/utils/logger';
-import { Resource, IResource } from '@/models/Resource';
+import { Resource, IResource, IResourceDependency } from '@/models/Resource';
 import { Policy } from '@/models/Policy';
+import ResourceDependencyService, { ResourceEvaluationContext } from '@/services/ResourceDependencyService';
 
 export class ResourceController {
   // Get all resources with pagination and filtering
@@ -599,46 +600,268 @@ export class ResourceController {
     // Get resources to be deleted
     const resourcesToDelete = await Resource.find({ id: { $in: resourceIds } });
 
-    // Prevent deletion of system resources
+    // Separate system resources (cannot delete)
     const systemResources = resourcesToDelete.filter(resource => resource.metadata.isSystem);
-    if (systemResources.length > 0) {
-      const systemResourceNames = systemResources.map(resource => resource.displayName).join(', ');
-      throw new ValidationError(`Cannot delete system resources: ${systemResourceNames}`);
-    }
 
-    // Check if any resources are used in policies
-    const resourcesInUse: { resource: string; policies: string[] }[] = [];
-    for (const resource of resourcesToDelete) {
+    // Get non-system resources
+    const nonSystemResources = resourcesToDelete.filter(resource => !resource.metadata.isSystem);
+
+    // Check each non-system resource for policy usage
+    const resourcesInUse: { id: string; resource: string; policyCount: number; policies: string[] }[] = [];
+    const resourcesNotInUse: any[] = [];
+
+    for (const resource of nonSystemResources) {
       console.log(`Checking bulk delete for resource: ${resource.displayName} (name: ${resource.name}, id: ${resource.id})`);
       const policiesUsingResource = await ResourceController.checkResourceUsageInPolicies(resource.id);
       console.log(`Found ${policiesUsingResource.length} policies using resource: ${resource.name}`);
       if (policiesUsingResource.length > 0) {
         resourcesInUse.push({
+          id: resource.id,
           resource: resource.displayName,
-          policies: policiesUsingResource.map(p => p.name)
+          policyCount: policiesUsingResource.length,
+          policies: policiesUsingResource.map(p => p.name || p.displayName)
         });
+      } else {
+        resourcesNotInUse.push(resource);
       }
     }
 
-    if (resourcesInUse.length > 0) {
-      const resourceCount = resourcesInUse.length;
-      const totalPolicies = [...new Set(resourcesInUse.flatMap(usage => usage.policies))].length;
-      
-      throw new ValidationError(
-        `Unable to delete ${resourceCount} ${resourceCount === 1 ? 'resource' : 'resources'} - ${resourceCount === 1 ? 'It is' : 'They are'} currently being used in ${totalPolicies} ${totalPolicies === 1 ? 'policy' : 'policies'}`
-      );
+    // Delete only resources that are not in use
+    const idsToDelete = resourcesNotInUse.map(resource => resource.id);
+    let deletedCount = 0;
+
+    if (idsToDelete.length > 0) {
+      const result = await Resource.deleteMany({ id: { $in: idsToDelete } });
+      deletedCount = result.deletedCount;
+      logger.info(`Bulk delete performed on ${deletedCount} resources by ${req.user?.email}`);
     }
 
-    const result = await Resource.deleteMany({ id: { $in: resourceIds } });
+    // Prepare skipped resources info
+    const skippedResources = [
+      ...systemResources.map(resource => ({
+        id: resource.id,
+        name: resource.displayName,
+        reason: 'System resource',
+        policyCount: 0,
+        policies: []
+      })),
+      ...resourcesInUse.map(usage => ({
+        id: usage.id,
+        name: usage.resource,
+        reason: 'Currently used in policies',
+        policyCount: usage.policyCount,
+        policies: usage.policies
+      }))
+    ];
 
-    logger.info(`Bulk delete performed on ${result.deletedCount} resources by ${req.user?.email}`);
+    // Build response message
+    let message = '';
+    if (deletedCount > 0 && skippedResources.length > 0) {
+      message = `${deletedCount} ${deletedCount === 1 ? 'resource' : 'resources'} deleted successfully. ${skippedResources.length} ${skippedResources.length === 1 ? 'resource' : 'resources'} skipped (used in policies or system resources).`;
+    } else if (deletedCount > 0) {
+      message = `${deletedCount} ${deletedCount === 1 ? 'resource' : 'resources'} deleted successfully.`;
+    } else if (skippedResources.length > 0) {
+      message = `No resources were deleted. ${skippedResources.length} ${skippedResources.length === 1 ? 'resource' : 'resources'} skipped (used in policies or system resources).`;
+    } else {
+      message = 'No resources found to delete.';
+    }
 
     res.status(200).json({
       success: true,
       data: {
-        deletedCount: result.deletedCount,
+        deletedCount,
+        skippedCount: skippedResources.length,
+        skippedResources: skippedResources.length > 0 ? skippedResources : undefined,
+        deleted: resourcesNotInUse.map(resource => ({ id: resource.id, name: resource.displayName }))
       },
-      message: `${result.deletedCount} resources deleted successfully`,
+      message,
+    });
+  });
+
+  // Resource Dependency Management Endpoints
+
+  // Evaluate resource access based on dependencies
+  static evaluateResourceAccess = asyncHandler(async (req: AuthRequest, res: Response): Promise<any> => {
+    const { resourceId } = req.params;
+    const { userId, environmentId, applicationId, workspaceId } = req.body;
+
+    if (!resourceId || !environmentId) {
+      throw new ValidationError('Resource ID and Environment ID are required');
+    }
+
+    const context: ResourceEvaluationContext = {
+      userId: userId || req.user?._id || 'anonymous',
+      userAttributes: new Map(Object.entries(req.body.userAttributes || {})),
+      requestTime: new Date(),
+      environmentId,
+      applicationId: applicationId || '',
+      workspaceId: workspaceId || ''
+    };
+
+    const result = await ResourceDependencyService.evaluateResourceAccess(resourceId, context);
+
+    res.status(200).json({
+      success: true,
+      data: result,
+    });
+  });
+
+  // Get accessible resources for a user
+  static getAccessibleResources = asyncHandler(async (req: AuthRequest, res: Response): Promise<any> => {
+    const { environmentId, applicationId, workspaceId } = req.query;
+
+    if (!environmentId) {
+      throw new ValidationError('Environment ID is required');
+    }
+
+    const context: ResourceEvaluationContext = {
+      userId: req.user?._id || 'anonymous',
+      userAttributes: new Map(Object.entries(req.body.userAttributes || {})),
+      requestTime: new Date(),
+      environmentId: environmentId as string,
+      applicationId: applicationId as string || '',
+      workspaceId: workspaceId as string || ''
+    };
+
+    const results = await ResourceDependencyService.getAccessibleResources(context);
+
+    res.status(200).json({
+      success: true,
+      data: results,
+    });
+  });
+
+  // Update resource dependencies
+  static updateResourceDependencies = asyncHandler(async (req: AuthRequest, res: Response): Promise<any> => {
+    const { resourceId } = req.params;
+    const { dependencies, environmentId, applicationId, workspaceId } = req.body;
+
+    if (!resourceId || !dependencies || !environmentId) {
+      throw new ValidationError('Resource ID, dependencies, and Environment ID are required');
+    }
+
+    // Validate the resource exists
+    const resource = await Resource.findOne({
+      id: resourceId,
+      environmentId,
+      active: true
+    });
+
+    if (!resource) {
+      throw new NotFoundError('Resource not found');
+    }
+
+    // Validate dependencies
+    const validationErrors = await ResourceDependencyService.validateDependencies(dependencies, environmentId);
+    if (validationErrors.length > 0) {
+      throw new ValidationError(`Dependency validation failed: ${validationErrors.join(', ')}`);
+    }
+
+    const context: ResourceEvaluationContext = {
+      userId: req.user?._id || 'anonymous',
+      userAttributes: new Map(),
+      requestTime: new Date(),
+      environmentId,
+      applicationId: applicationId || '',
+      workspaceId: workspaceId || ''
+    };
+
+    const success = await ResourceDependencyService.updateResourceDependencies(resourceId, dependencies, context);
+
+    if (!success) {
+      throw new ValidationError('Failed to update resource dependencies');
+    }
+
+    logger.info(`Resource dependencies updated: ${resourceId} by ${req.user?.email}`);
+
+    res.status(200).json({
+      success: true,
+      message: 'Resource dependencies updated successfully',
+    });
+  });
+
+  // Get resource dependency graph
+  static getResourceDependencyGraph = asyncHandler(async (req: AuthRequest, res: Response): Promise<any> => {
+    const { environmentId } = req.query;
+
+    if (!environmentId) {
+      throw new ValidationError('Environment ID is required');
+    }
+
+    const graph = await ResourceDependencyService.getResourceDependencyGraph(environmentId as string);
+
+    res.status(200).json({
+      success: true,
+      data: graph,
+    });
+  });
+
+  // Validate resource dependencies
+  static validateResourceDependencies = asyncHandler(async (req: AuthRequest, res: Response): Promise<any> => {
+    const { dependencies, environmentId } = req.body;
+
+    if (!dependencies || !environmentId) {
+      throw new ValidationError('Dependencies and Environment ID are required');
+    }
+
+    const validationErrors = await ResourceDependencyService.validateDependencies(dependencies, environmentId);
+
+    res.status(200).json({
+      success: true,
+      data: {
+        isValid: validationErrors.length === 0,
+        errors: validationErrors
+      },
+    });
+  });
+
+  // Get resource dependencies for a specific resource
+  static getResourceDependencies = asyncHandler(async (req: AuthRequest, res: Response): Promise<any> => {
+    const { resourceId } = req.params;
+    const { environmentId } = req.query;
+
+    if (!resourceId || !environmentId) {
+      throw new ValidationError('Resource ID and Environment ID are required');
+    }
+
+    const resource = await Resource.findOne({
+      id: resourceId,
+      environmentId,
+      active: true
+    }).select('id name displayName conditions relationships');
+
+    if (!resource) {
+      throw new NotFoundError('Resource not found');
+    }
+
+    // Get dependency details
+    const dependencyDetails = [];
+    if (resource.conditions?.dependsOn) {
+      for (const depId of resource.conditions.dependsOn) {
+        const depResource = await Resource.findOne({
+          id: depId,
+          environmentId,
+          active: true
+        }).select('id name displayName type attributes');
+
+        if (depResource) {
+          dependencyDetails.push(depResource);
+        }
+      }
+    }
+
+    res.status(200).json({
+      success: true,
+      data: {
+        resource: {
+          id: resource.id,
+          name: resource.name,
+          displayName: resource.displayName,
+          conditions: resource.conditions,
+          relationships: resource.relationships
+        },
+        dependencies: dependencyDetails
+      },
     });
   });
 

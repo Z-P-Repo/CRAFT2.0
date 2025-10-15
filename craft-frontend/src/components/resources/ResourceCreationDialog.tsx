@@ -19,16 +19,31 @@ import {
   Chip,
   Checkbox,
   ListItemText,
-  Divider
+  Divider,
+  Autocomplete,
+  Grid,
+  Alert,
+  Paper
 } from '@mui/material';
 import {
   Close as CloseIcon,
   Add as AddIcon,
-  Settings as SettingsIcon
+  Settings as SettingsIcon,
+  Delete as DeleteIcon
 } from '@mui/icons-material';
 import { useWorkspace } from '@/contexts/WorkspaceContext';
 import { apiClient } from '@/lib/api';
 import { useApiSnackbar } from '@/contexts/SnackbarContext';
+
+// Operator options for additional resource attributes
+const OPERATOR_OPTIONS = [
+  { value: 'equals', label: 'Equals' },
+  { value: 'contains', label: 'Contains' },
+  { value: 'in', label: 'In' },
+  { value: 'not_equals', label: 'Not Equals' },
+  { value: 'not_contains', label: 'Not Contains' },
+  { value: 'not_in', label: 'Not In' }
+];
 
 export interface ResourceCreationDialogProps {
   open: boolean;
@@ -38,9 +53,9 @@ export interface ResourceCreationDialogProps {
   editingResource?: any;
 }
 
-export default function ResourceCreationDialog({ 
-  open, 
-  onClose, 
+export default function ResourceCreationDialog({
+  open,
+  onClose,
   onResourceCreated,
   onResourceUpdated,
   editingResource
@@ -50,6 +65,8 @@ export default function ResourceCreationDialog({
   const [displayName, setDisplayName] = useState('');
   const [displayNameError, setDisplayNameError] = useState('');
   const [description, setDescription] = useState('');
+  const [resourceType, setResourceType] = useState('');
+  const [dataType, setDataType] = useState('');
   const [isCreating, setIsCreating] = useState(false);
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
 
@@ -65,16 +82,28 @@ export default function ResourceCreationDialog({
   const [attributePermittedValues, setAttributePermittedValues] = useState('');
   const [isCreatingAttribute, setIsCreatingAttribute] = useState(false);
 
+  // Additional resource attributes (with operators and values)
+  const [resourceAttributes, setResourceAttributes] = useState<any[]>([]);
+  const [showAddAttributeDialog, setShowAddAttributeDialog] = useState(false);
+  const [selectedAttribute, setSelectedAttribute] = useState<any>(null);
+  const [selectedOperator, setSelectedOperator] = useState('');
+  const [attributeValue, setAttributeValue] = useState<string>('');
+  const [attributeValues, setAttributeValues] = useState<string[]>([]);
+
   // Populate form when editing and load attributes
   React.useEffect(() => {
     if (editingResource && open) {
       setDisplayName(editingResource.displayName || '');
       setDescription(editingResource.description || '');
+      setResourceType(editingResource.type || '');
+      setDataType(editingResource.dataType || '');
       setDisplayNameError('');
     } else if (!editingResource && open) {
       // Reset form for new resource
       setDisplayName('');
       setDescription('');
+      setResourceType('');
+      setDataType('');
       setDisplayNameError('');
     }
 
@@ -103,7 +132,7 @@ export default function ResourceCreationDialog({
     if (isCreating) return; // Prevent closing during creation
     
     // Check if form has data and show confirmation
-    if (displayName.trim() || description.trim()) {
+    if (displayName.trim() || description.trim() || resourceType.trim() || dataType.trim()) {
       setCancelDialogOpen(true);
       return;
     }
@@ -111,6 +140,8 @@ export default function ResourceCreationDialog({
     // No data, close directly
     setDisplayName('');
     setDescription('');
+    setResourceType('');
+    setDataType('');
     setDisplayNameError('');
     onClose();
   };
@@ -120,6 +151,8 @@ export default function ResourceCreationDialog({
     setCancelDialogOpen(false);
     setDisplayName('');
     setDescription('');
+    setResourceType('');
+    setDataType('');
     setDisplayNameError('');
     onClose();
   };
@@ -206,6 +239,54 @@ export default function ResourceCreationDialog({
     }
   };
 
+  // Additional resource attribute handlers
+  const handleAddResourceAttribute = () => {
+    setShowAddAttributeDialog(true);
+    setSelectedAttribute(null);
+    setSelectedOperator('');
+    setAttributeValue('');
+    setAttributeValues([]);
+  };
+
+  const handleCloseAddAttributeDialog = () => {
+    setShowAddAttributeDialog(false);
+    setSelectedAttribute(null);
+    setSelectedOperator('');
+    setAttributeValue('');
+    setAttributeValues([]);
+  };
+
+  const handleAddAttribute = () => {
+    if (!selectedAttribute || !selectedOperator) return;
+
+    const value = selectedOperator === 'in' || selectedOperator === 'not_in'
+      ? attributeValues
+      : attributeValue;
+
+    if (!value || (Array.isArray(value) && value.length === 0)) return;
+
+    const newAttribute = {
+      name: selectedAttribute.name,
+      displayName: selectedAttribute.displayName,
+      operator: selectedOperator,
+      value: value
+    };
+
+    setResourceAttributes(prev => [...prev, newAttribute]);
+    handleCloseAddAttributeDialog();
+  };
+
+  const handleRemoveResourceAttribute = (index: number) => {
+    setResourceAttributes(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const handleOperatorChange = (operator: string) => {
+    setSelectedOperator(operator);
+    // Reset values when operator changes
+    setAttributeValue('');
+    setAttributeValues([]);
+  };
+
   const handleSubmit = async () => {
     if (!displayName.trim() || displayNameError) {
       return;
@@ -228,14 +309,21 @@ export default function ResourceCreationDialog({
       name: displayName.toLowerCase().replace(/\s+/g, ''),
       displayName: displayName.trim(),
       description: description?.trim() || '',
-      type: 'file',
+      type: resourceType || 'file',
+      dataType: dataType || 'string',
       uri: `/${displayName.toLowerCase().replace(/\s+/g, '')}`,
       active: true,
       // Required workspace context for backend validation
       workspaceId: currentWorkspace._id,
       applicationId: currentApplication._id,
       environmentId: currentEnvironment._id,
-      attributes: new Map(),
+      attributes: resourceAttributes.reduce((map, attr) => {
+        map[attr.name] = {
+          operator: attr.operator,
+          value: attr.value
+        };
+        return map;
+      }, {} as any),
       children: [],
       permissions: {
         read: true,
@@ -275,6 +363,8 @@ export default function ResourceCreationDialog({
         // Reset form and close dialog
         setDisplayName('');
         setDescription('');
+        setResourceType('');
+        setDataType('');
         setDisplayNameError('');
         onClose();
       } else {
@@ -340,7 +430,24 @@ export default function ResourceCreationDialog({
             error={!!displayNameError}
             helperText={displayNameError || 'Enter the resource name'}
           />
-          
+
+          <FormControl fullWidth disabled={isCreating}>
+            <InputLabel>Resource Type</InputLabel>
+            <Select
+              value={resourceType}
+              onChange={(e) => setResourceType(e.target.value)}
+              label="Resource Type"
+            >
+              <MenuItem value="file">File</MenuItem>
+              <MenuItem value="document">Document</MenuItem>
+              <MenuItem value="folder">Folder</MenuItem>
+              <MenuItem value="database">Database</MenuItem>
+              <MenuItem value="api">API</MenuItem>
+              <MenuItem value="service">Service</MenuItem>
+              <MenuItem value="application">Application</MenuItem>
+            </Select>
+          </FormControl>
+
           <TextField
             fullWidth
             label="Description"
@@ -352,6 +459,22 @@ export default function ResourceCreationDialog({
             disabled={isCreating}
           />
 
+          <FormControl fullWidth disabled={isCreating}>
+            <InputLabel>Data Type</InputLabel>
+            <Select
+              value={dataType}
+              onChange={(e) => setDataType(e.target.value)}
+              label="Data Type"
+            >
+              <MenuItem value="string">String</MenuItem>
+              <MenuItem value="number">Number</MenuItem>
+              <MenuItem value="boolean">Boolean</MenuItem>
+              <MenuItem value="date">Date</MenuItem>
+              <MenuItem value="array">Array</MenuItem>
+              <MenuItem value="object">Object</MenuItem>
+            </Select>
+          </FormControl>
+
           <Divider sx={{ my: 1 }} />
 
           {/* Attributes Section */}
@@ -360,33 +483,84 @@ export default function ResourceCreationDialog({
               <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
                 Resource Attributes
               </Typography>
-              <Button
-                size="small"
-                startIcon={<AddIcon />}
-                onClick={handleOpenAttributeModal}
-                disabled={isCreating}
-                variant="outlined"
-                sx={{ fontSize: '0.75rem' }}
-              >
-                Create Attribute
-              </Button>
+              <Box sx={{ display: 'flex', gap: 1 }}>
+                <Button
+                  size="small"
+                  startIcon={<AddIcon />}
+                  onClick={handleAddResourceAttribute}
+                  disabled={isCreating || attributes.length === 0}
+                  variant="outlined"
+                  sx={{ fontSize: '0.75rem' }}
+                >
+                  Add Attribute
+                </Button>
+                <Button
+                  size="small"
+                  startIcon={<AddIcon />}
+                  onClick={handleOpenAttributeModal}
+                  disabled={isCreating}
+                  variant="outlined"
+                  sx={{ fontSize: '0.75rem' }}
+                >
+                  Create Attribute
+                </Button>
+              </Box>
             </Box>
 
+            {/* Added Attributes with Values */}
+            {resourceAttributes.length > 0 && (
+              <Box sx={{ mb: 2 }}>
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 1, fontWeight: 500 }}>
+                  Added Attributes:
+                </Typography>
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                  {resourceAttributes.map((attr, index) => (
+                    <Paper key={index} sx={{ p: 2, bgcolor: 'grey.50', border: '1px solid', borderColor: 'grey.200' }}>
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <Box>
+                          <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                            {attr.displayName}
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary">
+                            {OPERATOR_OPTIONS.find(op => op.value === attr.operator)?.label}: {' '}
+                            {Array.isArray(attr.value) ? attr.value.join(', ') : attr.value}
+                          </Typography>
+                        </Box>
+                        <IconButton
+                          size="small"
+                          onClick={() => handleRemoveResourceAttribute(index)}
+                          sx={{ color: 'error.main' }}
+                        >
+                          <DeleteIcon />
+                        </IconButton>
+                      </Box>
+                    </Paper>
+                  ))}
+                </Box>
+              </Box>
+            )}
+
+            {/* Available Attributes */}
             {attributes.length > 0 ? (
-              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-                {attributes.map((attr) => (
-                  <Chip
-                    key={attr._id || attr.id}
-                    label={attr.displayName}
-                    size="small"
-                    variant="outlined"
-                    icon={<SettingsIcon />}
-                  />
-                ))}
+              <Box>
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 1, fontWeight: 500 }}>
+                  Available Attributes:
+                </Typography>
+                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                  {attributes.map((attr) => (
+                    <Chip
+                      key={attr._id || attr.id}
+                      label={attr.displayName}
+                      size="small"
+                      variant="outlined"
+                      icon={<SettingsIcon />}
+                    />
+                  ))}
+                </Box>
               </Box>
             ) : (
               <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
-                No resource attributes available. Create one above.
+                No resource attributes available. Create one to get started.
               </Typography>
             )}
           </Box>
@@ -574,6 +748,167 @@ export default function ResourceCreationDialog({
             }}
           >
             {isCreatingAttribute ? 'Creating...' : 'Create Attribute'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Add Attribute Dialog */}
+      <Dialog
+        open={showAddAttributeDialog}
+        onClose={handleCloseAddAttributeDialog}
+        maxWidth="md"
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: 2,
+            boxShadow: '0 8px 32px rgba(0,0,0,0.1)'
+          }
+        }}
+      >
+        <DialogTitle sx={{
+          fontWeight: 600,
+          fontSize: '1.25rem',
+          px: 3,
+          pt: 3,
+          pb: 1,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between'
+        }}>
+          Add Attribute Value
+          <IconButton
+            onClick={handleCloseAddAttributeDialog}
+            sx={{
+              color: 'grey.500',
+              '&:hover': { bgcolor: 'grey.100' }
+            }}
+          >
+            <CloseIcon />
+          </IconButton>
+        </DialogTitle>
+
+        <DialogContent sx={{ px: 3, pt: 2, pb: 2 }}>
+          <Alert severity="info" sx={{ mb: 3 }}>
+            <Typography variant="body2">
+              Configure an attribute condition for this additional resource. This will be evaluated when the policy is checked.
+            </Typography>
+          </Alert>
+
+          <Grid container spacing={3}>
+            <Grid size={{ xs: 12, md: 4 }}>
+              <FormControl fullWidth>
+                <Autocomplete
+                  options={attributes}
+                  getOptionLabel={(option) => option.displayName || option.name}
+                  value={selectedAttribute}
+                  onChange={(_, newValue) => setSelectedAttribute(newValue)}
+                  renderInput={(params) => (
+                    <TextField
+                      {...params}
+                      label="Select Attribute"
+                      placeholder="Choose an attribute"
+                    />
+                  )}
+                />
+              </FormControl>
+            </Grid>
+
+            <Grid size={{ xs: 12, md: 3 }}>
+              <FormControl fullWidth>
+                <InputLabel>Operator</InputLabel>
+                <Select
+                  value={selectedOperator}
+                  onChange={(e) => handleOperatorChange(e.target.value)}
+                  label="Operator"
+                  disabled={!selectedAttribute}
+                >
+                  {OPERATOR_OPTIONS.map((option) => (
+                    <MenuItem key={option.value} value={option.value}>
+                      {option.label}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Grid>
+
+            <Grid size={{ xs: 12, md: 5 }}>
+              {selectedOperator === 'in' || selectedOperator === 'not_in' ? (
+                <Autocomplete
+                  multiple
+                  freeSolo
+                  options={[]}
+                  value={attributeValues}
+                  onChange={(_, newValues) => setAttributeValues(newValues)}
+                  renderInput={(params) => (
+                    <TextField
+                      {...params}
+                      label="Values"
+                      placeholder="Type and press Enter to add values"
+                      helperText="Enter multiple values separated by Enter"
+                    />
+                  )}
+                  renderTags={(value, getTagProps) =>
+                    value.map((option, index) => {
+                      const { key, ...tagProps } = getTagProps({ index });
+                      return (
+                        <Chip
+                          key={key}
+                          {...tagProps}
+                          label={option}
+                          size="small"
+                        />
+                      );
+                    })
+                  }
+                />
+              ) : (
+                <TextField
+                  fullWidth
+                  label="Value"
+                  value={attributeValue}
+                  onChange={(e) => setAttributeValue(e.target.value)}
+                  placeholder="Enter attribute value"
+                  disabled={!selectedOperator}
+                />
+              )}
+            </Grid>
+          </Grid>
+        </DialogContent>
+
+        <DialogActions sx={{
+          px: 3,
+          pb: 3,
+          pt: 1,
+          gap: 1.5
+        }}>
+          <Button
+            onClick={handleCloseAddAttributeDialog}
+            variant="outlined"
+            sx={{
+              borderColor: 'grey.300',
+              color: 'text.secondary',
+              '&:hover': {
+                borderColor: 'grey.400',
+                bgcolor: 'grey.50'
+              }
+            }}
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={handleAddAttribute}
+            variant="contained"
+            disabled={!selectedAttribute || !selectedOperator ||
+              (selectedOperator === 'in' || selectedOperator === 'not_in' ?
+                attributeValues.length === 0 : !attributeValue.trim())}
+            sx={{
+              bgcolor: 'primary.main',
+              '&:hover': {
+                bgcolor: 'primary.dark'
+              }
+            }}
+          >
+            Add Attribute
           </Button>
         </DialogActions>
       </Dialog>

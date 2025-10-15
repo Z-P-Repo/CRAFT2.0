@@ -423,11 +423,110 @@ class ApiClient {
       data: { filters },
     });
   }
+
+  // Additional Resources API methods
+  async getAdditionalResources(params?: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    type?: string;
+    active?: boolean;
+    priority?: string;
+    category?: string;
+    tags?: string;
+    owner?: string;
+    isSystem?: boolean;
+    workspaceId?: string;
+    applicationId?: string;
+    environmentId?: string;
+    sortBy?: string;
+    sortOrder?: 'asc' | 'desc';
+  }): Promise<ApiResponse<any[]>> {
+    return this.request({
+      method: 'GET',
+      url: '/additional-resources',
+      params,
+    });
+  }
+
+  async getAdditionalResource(id: string): Promise<ApiResponse<any>> {
+    return this.request({
+      method: 'GET',
+      url: `/additional-resources/${id}`,
+    });
+  }
+
+  async createAdditionalResource(data: any): Promise<ApiResponse<any>> {
+    return this.request({
+      method: 'POST',
+      url: '/additional-resources',
+      data,
+    });
+  }
+
+  async updateAdditionalResource(id: string, data: any): Promise<ApiResponse<any>> {
+    return this.request({
+      method: 'PUT',
+      url: `/additional-resources/${id}`,
+      data,
+    });
+  }
+
+  async deleteAdditionalResource(id: string): Promise<ApiResponse<any>> {
+    return this.request({
+      method: 'DELETE',
+      url: `/additional-resources/${id}`,
+    });
+  }
+
+  async bulkDeleteAdditionalResources(ids: string[]): Promise<ApiResponse<any>> {
+    return this.request({
+      method: 'DELETE',
+      url: '/additional-resources/bulk/delete',
+      data: { ids },
+    });
+  }
+
+  async getAdditionalResourcesByType(type: string, params?: {
+    environmentId?: string;
+  }): Promise<ApiResponse<any[]>> {
+    return this.request({
+      method: 'GET',
+      url: `/additional-resources/type/${type}`,
+      params,
+    });
+  }
+
+  async evaluateAdditionalResource(id: string, context?: any): Promise<ApiResponse<any>> {
+    return this.request({
+      method: 'POST',
+      url: `/additional-resources/${id}/evaluate`,
+      data: { context },
+    });
+  }
+
+  async getAdditionalResourceStats(params?: {
+    workspaceId?: string;
+    applicationId?: string;
+    environmentId?: string;
+  }): Promise<ApiResponse<{
+    total: number;
+    active: number;
+    inactive: number;
+    byType: Record<string, number>;
+    byPriority: Record<string, number>;
+  }>> {
+    return this.request({
+      method: 'GET',
+      url: '/additional-resources/stats',
+      params,
+    });
+  }
 }
 
 // Create API client instance
 const apiConfig: ApiClientConfig = {
-  baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1',
+  baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3005/api/v1',
   timeout: 30000,
   withCredentials: false,
 };

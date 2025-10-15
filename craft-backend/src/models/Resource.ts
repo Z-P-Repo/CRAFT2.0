@@ -1,5 +1,34 @@
 import { Schema, model, Document } from 'mongoose';
 
+// Resource state condition interface for complex policies
+export interface IResourceState {
+  resourceId: string;
+  attributeName: string;
+  operator: 'equals' | 'in' | 'contains' | 'not_equals' | 'not_in' | 'greater_than' | 'less_than';
+  expectedValue: any;
+}
+
+// Resource dependency interface for additional resources
+export interface IResourceDependency {
+  dependsOn: string[]; // Resource IDs this resource depends on
+  requiredStates: IResourceState[]; // Required states of dependent resources
+  logicalOperator: 'AND' | 'OR'; // How to combine multiple conditions
+  enabled: boolean; // Whether this dependency is active
+}
+
+// Resource relationship interface for hierarchical structures
+export interface IResourceRelationship {
+  parent?: string; // Parent resource ID
+  children: string[]; // Child resource IDs
+  type: 'hierarchical' | 'dependency' | 'additional' | 'compositional';
+  strength: 'weak' | 'strong'; // Weak = optional, Strong = required
+  metadata?: {
+    description?: string;
+    createdBy: string;
+    createdAt: Date;
+  };
+}
+
 export interface IResource extends Document {
   _id: string;
   id: string;
@@ -11,7 +40,11 @@ export interface IResource extends Document {
   attributes: Map<string, any>;
   parentId?: string;
   children: string[];
-  
+
+  // Complex Policy Support
+  conditions?: IResourceDependency; // Conditional access rules
+  relationships?: IResourceRelationship; // Resource relationships and hierarchy
+
   // Hierarchy Context
   workspaceId: string; // Reference to Workspace
   applicationId: string; // Reference to Application
@@ -40,6 +73,90 @@ export interface IResource extends Document {
   createdAt: Date;
   updatedAt: Date;
 }
+
+// Sub-schemas for complex policy support
+const ResourceStateSchema = new Schema<IResourceState>({
+  resourceId: {
+    type: String,
+    required: true,
+    trim: true,
+  },
+  attributeName: {
+    type: String,
+    required: true,
+    trim: true,
+  },
+  operator: {
+    type: String,
+    enum: {
+      values: ['equals', 'in', 'contains', 'not_equals', 'not_in', 'greater_than', 'less_than'],
+      message: 'Operator must be one of: equals, in, contains, not_equals, not_in, greater_than, less_than',
+    },
+    required: true,
+  },
+  expectedValue: {
+    type: Schema.Types.Mixed,
+    required: true,
+  },
+}, { _id: false });
+
+const ResourceDependencySchema = new Schema<IResourceDependency>({
+  dependsOn: [{
+    type: String,
+    trim: true,
+  }],
+  requiredStates: [ResourceStateSchema],
+  logicalOperator: {
+    type: String,
+    enum: {
+      values: ['AND', 'OR'],
+      message: 'Logical operator must be AND or OR',
+    },
+    default: 'AND',
+  },
+  enabled: {
+    type: Boolean,
+    default: true,
+  },
+}, { _id: false });
+
+const ResourceRelationshipSchema = new Schema<IResourceRelationship>({
+  parent: {
+    type: String,
+    trim: true,
+  },
+  children: [{
+    type: String,
+    trim: true,
+  }],
+  type: {
+    type: String,
+    enum: {
+      values: ['hierarchical', 'dependency', 'additional', 'compositional'],
+      message: 'Relationship type must be one of: hierarchical, dependency, additional, compositional',
+    },
+    default: 'hierarchical',
+  },
+  strength: {
+    type: String,
+    enum: {
+      values: ['weak', 'strong'],
+      message: 'Relationship strength must be weak or strong',
+    },
+    default: 'weak',
+  },
+  metadata: {
+    description: String,
+    createdBy: {
+      type: String,
+      required: true,
+    },
+    createdAt: {
+      type: Date,
+      default: Date.now,
+    },
+  },
+}, { _id: false });
 
 const ResourceSchema = new Schema<IResource>({
   // Hierarchy Context Fields
@@ -108,6 +225,17 @@ const ResourceSchema = new Schema<IResource>({
   children: [{
     type: String,
   }],
+
+  // Complex Policy Support Fields
+  conditions: {
+    type: ResourceDependencySchema,
+    required: false,
+  },
+  relationships: {
+    type: ResourceRelationshipSchema,
+    required: false,
+  },
+
   permissions: {
     read: { type: Boolean, default: true },
     write: { type: Boolean, default: false },
@@ -175,6 +303,13 @@ ResourceSchema.index({ environmentId: 1, 'metadata.tags': 1 });
 ResourceSchema.index({ environmentId: 1, parentId: 1, active: 1 });
 ResourceSchema.index({ environmentId: 1, type: 1, active: 1 }); // Common type-based queries
 ResourceSchema.index({ environmentId: 1, uri: 1 }, { sparse: true }); // URI lookups within environment
+
+// Complex Policy Support Indexes
+ResourceSchema.index({ environmentId: 1, 'conditions.dependsOn': 1 }, { sparse: true }); // Resource dependency queries
+ResourceSchema.index({ environmentId: 1, 'relationships.parent': 1 }, { sparse: true }); // Parent-child relationship queries
+ResourceSchema.index({ environmentId: 1, 'relationships.children': 1 }, { sparse: true }); // Child lookup queries
+ResourceSchema.index({ environmentId: 1, 'relationships.type': 1 }, { sparse: true }); // Relationship type queries
+ResourceSchema.index({ environmentId: 1, 'conditions.enabled': 1, active: 1 }, { sparse: true }); // Active additional resources
 
 // Pre-save middleware to generate id if not provided
 ResourceSchema.pre('save', function(next) {

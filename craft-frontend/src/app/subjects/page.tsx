@@ -267,10 +267,10 @@ export default function SubjectsPage() {
   
   const handleBulkDeleteConfirm = async () => {
     if (selectedSubjects.length === 0) return;
-    
+
     setIsSubmitting(true);
     setBulkDeleteOpen(false);
-    
+
     try {
       // Use the bulk delete API endpoint with request method
       const response = await apiClient.request({
@@ -280,40 +280,57 @@ export default function SubjectsPage() {
           subjectIds: selectedSubjects
         }
       });
-      
+
       if (response.success) {
-        // Update local state by filtering out deleted subjects
-        setSubjects(prev => prev.filter(subj => !selectedSubjects.includes(subj.id)));
-        setTotal(prev => prev - selectedSubjects.length);
-        
+        const { deletedCount, skippedCount, skippedSubjects, deleted } = response.data;
+
+        // Update local state by filtering out only the deleted subjects
+        const deletedIds = deleted?.map((subject: any) => subject.id) || [];
+        setSubjects(prev => prev.filter(subj => !deletedIds.includes(subj.id)));
+        setTotal(prev => prev - deletedCount);
+
         // Clear selection
         setSelectedSubjects([]);
-        
-        // Show success message
-        snackbar.showSuccess(`${selectedSubjects.length} subject${selectedSubjects.length === 1 ? '' : 's'} deleted successfully`);
-        
+
+        // Show appropriate message based on results
+        if (deletedCount > 0 && skippedCount > 0) {
+          // Some deleted, some skipped
+          const skippedDetails = skippedSubjects
+            ?.map((subject: any) => {
+              if (subject.policyCount > 0) {
+                return `"${subject.name}" (used in ${subject.policyCount} ${subject.policyCount === 1 ? 'policy' : 'policies'})`;
+              }
+              return `"${subject.name}" (${subject.reason})`;
+            })
+            .join(', ');
+
+          snackbar.showWarning(
+            `${deletedCount} ${deletedCount === 1 ? 'subject' : 'subjects'} deleted successfully. ${skippedCount} ${skippedCount === 1 ? 'subject was' : 'subjects were'} skipped: ${skippedDetails}`
+          );
+        } else if (deletedCount > 0) {
+          // All deleted
+          snackbar.showSuccess(`${deletedCount} ${deletedCount === 1 ? 'subject' : 'subjects'} deleted successfully`);
+        } else if (skippedCount > 0) {
+          // None deleted, all skipped
+          const skippedDetails = skippedSubjects
+            ?.map((subject: any) => {
+              if (subject.policyCount > 0) {
+                return `"${subject.name}" (used in ${subject.policyCount} ${subject.policyCount === 1 ? 'policy' : 'policies'})`;
+              }
+              return `"${subject.name}" (${subject.reason})`;
+            })
+            .join(', ');
+
+          snackbar.showWarning(
+            `No subjects were deleted. ${skippedCount} ${skippedCount === 1 ? 'subject was' : 'subjects were'} skipped: ${skippedDetails}`
+          );
+        }
       } else {
         throw new Error(response.error || 'Failed to delete subjects');
       }
     } catch (error: any) {
       console.error('Failed to delete subjects:', error);
-      
-      // Extract error message from API response
-      const errorMessage = error?.error || error?.message || 'Unknown error';
-      
-      // Handle specific error cases
-      if (errorMessage.includes('Unable to delete') && errorMessage.includes('currently being used in')) {
-        snackbar.showError(errorMessage);
-      } else if (!error.message?.includes('not found') && error.code !== 'NOT_FOUND') {
-        snackbar.showError('Failed to delete some subjects. Please try again.');
-      }
-      
-      // Update local state instead of refetching
-      setSubjects(prev => prev.filter(subject => !selectedSubjects.includes(subject.id)));
-      setTotal(prev => Math.max(0, prev - selectedSubjects.length));
-      
-      // Clear selection regardless of error
-      setSelectedSubjects([]);
+      snackbar.handleApiError(error, 'Failed to delete subjects');
     } finally {
       setIsSubmitting(false);
     }

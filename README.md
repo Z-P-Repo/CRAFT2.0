@@ -263,24 +263,24 @@ REFRESH_TOKEN_SECRET=your-refresh-token-secret
 REFRESH_TOKEN_EXPIRES_IN=7d
 
 # Server Configuration
-PORT=3005
+PORT=3001
 NODE_ENV=development
 
 # CORS Configuration
-FRONTEND_URL=http://localhost:3002
+FRONTEND_URL=http://localhost:3000
 
 # Azure AD SSO (optional)
 AZURE_AD_CLIENT_ID=your-azure-ad-client-id
 AZURE_AD_CLIENT_SECRET=your-azure-ad-client-secret
 AZURE_AD_TENANT_ID=your-azure-ad-tenant-id
 AZURE_AD_AUTHORITY=https://login.microsoftonline.com/your-tenant-id
-AZURE_AD_REDIRECT_URI=http://localhost:3002/auth/callback
+AZURE_AD_REDIRECT_URI=http://localhost:3000/auth/callback
 ```
 
 #### Frontend (.env.local)
 ```env
 # API Configuration
-NEXT_PUBLIC_API_URL=http://localhost:3005/api/v1
+NEXT_PUBLIC_API_URL=http://localhost:3001/api/v1
 
 # App Configuration
 NEXT_PUBLIC_APP_NAME=CRAFT 2.0
@@ -326,14 +326,14 @@ NEXT_PUBLIC_AZURE_AD_AUTHORITY=https://login.microsoftonline.com/your-tenant-id
    cd craft-backend
    npm run dev
    ```
-   Backend will run on http://localhost:3005
+   Backend will run on http://localhost:3001
 
 3. **Start the frontend**:
    ```bash
    cd craft-frontend
    npm run dev
    ```
-   Frontend will run on http://localhost:3002
+   Frontend will run on http://localhost:3000
 
 ### Production Build
 
@@ -341,7 +341,7 @@ NEXT_PUBLIC_AZURE_AD_AUTHORITY=https://login.microsoftonline.com/your-tenant-id
 # Backend
 cd craft-backend
 npm run build
-PORT=3005 npm start
+PORT=3001 npm start
 
 # Frontend
 cd craft-frontend
@@ -444,11 +444,11 @@ git push origin main
 
 1. **Port already in use**:
    ```bash
-   # Kill process on port 3005 (backend)
-   lsof -ti:3005 | xargs kill -9
-   
-   # Kill process on port 3002 (frontend)
-   lsof -ti:3002 | xargs kill -9
+   # Kill process on port 3001 (backend)
+   lsof -ti:3001 | xargs kill -9
+
+   # Kill process on port 3000 (frontend)
+   lsof -ti:3000 | xargs kill -9
    ```
 
 2. **MongoDB connection issues**:
@@ -473,7 +473,7 @@ git push origin main
    - Hard refresh the page (Ctrl+F5 or Cmd+Shift+R)
    - Clear browser cache or open in incognito mode
    - Check browser console for JavaScript errors
-   - Verify backend is running on port 3005
+   - Verify backend is running on port 3001
    - Ensure frontend API client is pointing to correct backend URL
 
 6. **API Response caching issues**:
@@ -515,10 +515,46 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 **Built with ❤️ using Next.js, Node.js, and MongoDB**
 
-*Last updated: September 23, 2025*
+*Last updated: October 15, 2025*
 🤖 *Generated and maintained with [Claude Code](https://claude.ai/code)*
 
 ## ⭐ Latest Updates
+
+### Version 1.3.13 - Policy Edit Flow Complete Feature Parity (October 15, 2025)
+- **📝 Enhanced Policy Edit Workflow**: Complete UI consistency achieved across all 5 stepper steps with streamlined navigation and improved user experience
+- **🎯 Inline Entity Creation**: Added inline creation capabilities for Subjects, Actions, Resources, and Attributes directly within policy edit flow, eliminating context switching
+- **⚡ State Management Enhancement**: Comprehensive state handling for additional resource attributes with proper TypeScript typing and validation
+- **🎨 UI Uniformity**: Standardized Card styling, Alert boxes, Paper wrappers, and Grid layouts across all policy edit steps matching create flow exactly
+- **🔄 Additional Resources Parity**: Complete Step 5 implementation with Selected/Available resources grid layout and comprehensive attribute management
+- **🛡️ Error Resolution**: Fixed critical ReferenceErrors in policy edit flow with proper state variable declarations and handler function implementations
+- **📊 Professional Layout**: Consistent Grid column ordering with Available resources (md:5) on left and Selected resources (md:7) on right for optimal UX
+- **🎯 Attribute Management**: Added comprehensive attribute selection handlers and delete functions for managing additional resource attributes
+- **📱 Responsive Design**: Enhanced mobile-friendly layouts with proper Material-UI grid breakpoints and responsive behavior
+- **✅ Complete Feature Parity**: All policy edit features now match policy creation with identical user experience and interaction patterns
+
+### Version 1.3.12 - Human-Readable Policy Display Format (October 14, 2025)
+- **📝 Unified Policy Format**: Implemented consistent human-readable policy display format across policy list, detail pages, and creation wizard
+- **✨ Stepper 6 Format Matching**: Policy display now matches exact format from Review & Create step (Stepper 6) throughout the application
+- **🎯 Professional Sentence Structure**: Complete natural language sentences showing ALLOWS/DENIES, subjects with conditions, actions, resources with attributes, and additional resources
+- **🔧 Policy Formatter Utility**: Created centralized policy formatter utility (/src/utils/policyFormatter.ts) for consistent formatting logic
+- **📊 Detail Page Enhancement**: Updated policy detail page to generate sentence exactly matching stepper 6 format using subjects/actions/resources arrays
+- **🎨 Attribute Formatting**: Proper formatting for subject attributes (when...) and resource attributes (where...) with comma-separated conditions and "and" before last item
+- **📱 Grammar Handling**: Intelligent grammar for multiple items (1 item, 2 items with "and", 3+ items with commas and "and")
+- **🔄 Action Name Display**: Lowercase action names with proper connector text ("to perform ... actions on")
+- **✅ Build Verification**: Successfully validated both frontend and backend builds with all TypeScript errors resolved
+- **🎭 Single-Line Display**: Clean, professional single-line policy descriptions replacing technical "1, 2, 3" section format
+
+### Version 1.3.10 - Resources Page Enhancement & Terminology Consistency (September 23, 2025)
+- **🏷️ Terminology Standardization**: Renamed "Conditional Resources" to "Additional Resources" throughout entire codebase for better clarity and user understanding
+- **🎨 Tabbed Interface Implementation**: Redesigned Resources page with professional tabbed interface separating "Resources" and "Additional Resources" for improved organization
+- **🗂️ Resource Dependency Tree Removal**: Removed Resource Dependency Tree section from main resources view to reduce visual clutter and improve focus
+- **📱 Enhanced User Experience**: Clean tab navigation with automatic selection clearing when switching between resource management modes
+- **🔧 Comprehensive Code Updates**: Updated frontend components, backend models, services, and database schemas with consistent "additional" terminology
+- **⚡ State Management**: Improved tab switching with proper state isolation and clean user interface transitions
+- **🎯 Professional Styling**: Material-UI tabs with consistent borders, typography, and Material Design principles for intuitive navigation
+- **🛡️ Backward Compatibility**: Maintained all existing functionality while improving information architecture and user workflow
+- **📊 Component Architecture**: Enhanced AdditionalResourceCard component with improved isolation in dedicated tab for complex policy management
+- **✨ Visual Consistency**: Standardized styling across all resource management interfaces with professional, organized layout design
 
 ### Version 1.3.9 - Professional Attribute Value Management & Enhanced User Experience (September 23, 2025)
 - **🎯 Professional Add Value Modal**: Complete redesign of "Add New Attribute Value" modal with modern styling, close button in top-right corner, and professional layout
@@ -530,6 +566,18 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - **📊 State Management Enhancement**: Updated both attributes and selectedAttributes state arrays for complete UI consistency during value additions
 - **✨ Modal UX Improvements**: Added professional styling with rounded corners, shadows, helper text, and enhanced accessibility features
 - **🚀 Build System Validation**: Successfully validated both frontend and backend builds with all TypeScript errors resolved
+
+### Version 1.3.11 - Comprehensive Additional Resources Implementation (September 24, 2025)
+- **📊 Additional Resources Management**: Implemented complete tabular view for Additional Resources tab with identical UI/UX to Resources tab
+- **🔄 Dynamic Header System**: Enhanced header section with tab-aware content showing appropriate titles, counts, and button labels
+- **⚡ Backend API Integration**: Created comprehensive Additional Resources API with full CRUD operations, pagination, search, sort, and filter functionality
+- **🗃️ Flexible Database Schema**: Designed database model supporting 5 resource types (conditions, states, workflows, templates, rules) with evaluation rules and dependencies
+- **🎯 UI Uniformity**: Achieved perfect UI consistency with Resources tab including search section, filter section, pagination controls, and table headers
+- **📝 Professional Modal Design**: Standardized create/edit modal dialogs with consistent styling matching other pages throughout the application
+- **🔧 Event-Driven Architecture**: Implemented custom event system for seamless communication between header create button and table component
+- **📱 Responsive Design**: Professional table layout with proper column sizing, action buttons, and mobile-friendly responsive behavior
+- **🛡️ Role-Based Access**: Integrated workspace-based access control with proper admin/super_admin permission handling
+- **⚙️ Advanced Filtering**: Comprehensive filter options by type, priority, category, tags, owner, and system status with popover-based UI
 
 ### Version 1.3.7 - Comprehensive Pagination & Filter/Sort Uniformity (September 23, 2025)
 - **📄 Advanced Pagination System**: Implemented comprehensive server-side pagination for workspaces page matching users page functionality with search, filtering, and sorting capabilities

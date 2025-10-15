@@ -5,6 +5,7 @@ import azureAdRoutes from './azureAdRoutes';
 import userRoutes from './userRoutes';
 import subjectRoutes from './subjectRoutes';
 import resourceRoutes from './resourceRoutes';
+import additionalResourceRoutes from './additionalResourceRoutes';
 import actionRoutes from './actionRoutes';
 import attributeRoutes from './attributeRoutes';
 import policyRoutes from './policyRoutes';
@@ -49,6 +50,7 @@ router.get('/info', (req: Request, res: Response) => {
       workspaces: `${config.apiPrefix}/workspaces`,
       subjects: `${config.apiPrefix}/subjects`,
       resources: `${config.apiPrefix}/resources`,
+      additionalResources: `${config.apiPrefix}/additional-resources`,
       actions: `${config.apiPrefix}/actions`,
       attributes: `${config.apiPrefix}/attributes`,
       policies: `${config.apiPrefix}/policies`,
@@ -71,6 +73,7 @@ router.use('/workspaces/:workspaceId/applications/:applicationId/environments', 
 // Legacy flat routes (for backward compatibility)
 router.use('/subjects', subjectRoutes);
 router.use('/resources', resourceRoutes);
+router.use('/additional-resources', additionalResourceRoutes);
 router.use('/actions', actionRoutes);
 router.use('/attributes', attributeRoutes);
 router.use('/policies', policyRoutes);

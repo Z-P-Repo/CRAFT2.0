@@ -617,44 +617,67 @@ export default function AttributesPage() {
   
   const handleBulkDeleteConfirm = async () => {
     if (selectedAttributes.length === 0) return;
-    
+
     setIsSubmitting(true);
     setBulkDeleteOpen(false);
-    
+
     try {
       // Use the bulk delete API endpoint
       const response = await apiClient.delete('/attributes/bulk/delete', {
         attributeIds: selectedAttributes
       });
-      
+
       if (response.success) {
-        // Update local state by filtering out deleted attributes
-        setAttributes(prev => prev.filter(attr => !selectedAttributes.includes(attr.id)));
-        setTotal(prev => prev - selectedAttributes.length);
-        
+        const { deletedCount, skippedCount, skippedAttributes, deleted } = response.data;
+
+        // Update local state by filtering out only the deleted attributes
+        const deletedIds = deleted?.map((attr: any) => attr.id) || [];
+        setAttributes(prev => prev.filter(attr => !deletedIds.includes(attr.id)));
+        setTotal(prev => prev - deletedCount);
+
         // Clear selection
         setSelectedAttributes([]);
-        
-        snackbar.showSuccess(`${selectedAttributes.length} attributes deleted successfully`);
+
+        // Show appropriate message based on results
+        if (deletedCount > 0 && skippedCount > 0) {
+          // Some deleted, some skipped
+          const skippedDetails = skippedAttributes
+            ?.map((attr: any) => {
+              if (attr.policyCount > 0) {
+                return `"${attr.name}" (used in ${attr.policyCount} ${attr.policyCount === 1 ? 'policy' : 'policies'})`;
+              }
+              return `"${attr.name}" (${attr.reason})`;
+            })
+            .join(', ');
+
+          snackbar.showWarning(
+            `${deletedCount} ${deletedCount === 1 ? 'attribute' : 'attributes'} deleted successfully. ${skippedCount} ${skippedCount === 1 ? 'attribute was' : 'attributes were'} skipped: ${skippedDetails}`
+          );
+        } else if (deletedCount > 0) {
+          // All deleted
+          snackbar.showSuccess(`${deletedCount} ${deletedCount === 1 ? 'attribute' : 'attributes'} deleted successfully`);
+        } else if (skippedCount > 0) {
+          // None deleted, all skipped
+          const skippedDetails = skippedAttributes
+            ?.map((attr: any) => {
+              if (attr.policyCount > 0) {
+                return `"${attr.name}" (used in ${attr.policyCount} ${attr.policyCount === 1 ? 'policy' : 'policies'})`;
+              }
+              return `"${attr.name}" (${attr.reason})`;
+            })
+            .join(', ');
+
+          snackbar.showWarning(
+            `No attributes were deleted. ${skippedCount} ${skippedCount === 1 ? 'attribute was' : 'attributes were'} skipped: ${skippedDetails}`
+          );
+        }
       } else {
         snackbar.handleApiResponse(response, undefined, 'Failed to delete attributes');
       }
-      
+
     } catch (error: any) {
       console.error('Failed to delete attributes:', error);
-      
-      // Get the error message from the API response
-      const errorMessage = error?.error || error?.message || 'Unknown error';
-      
-      // Handle specific error cases
-      if (errorMessage.includes('Cannot delete system attributes')) {
-        snackbar.showWarning('Some attributes could not be deleted because they are system attributes required for the system to function.');
-      } else if (errorMessage.includes('Unable to delete') && errorMessage.includes('currently being used in')) {
-        // Handle policy dependency error with simplified message
-        snackbar.showError(errorMessage);
-      } else {
-        snackbar.handleApiError(error, 'Failed to delete attributes');
-      }
+      snackbar.handleApiError(error, 'Failed to delete attributes');
     } finally {
       setIsSubmitting(false);
     }

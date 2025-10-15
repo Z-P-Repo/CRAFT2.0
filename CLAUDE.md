@@ -37,7 +37,47 @@ When user prompts "deploy", prepare the application for production deployment:
 - **Backend**: `/craft-backend` (Node.js 18+, Express 4.19.2, TypeScript 5.5.4, MongoDB 8.5.2, Mongoose ODM, Azure AD SSO, Advanced Rate Limiting, Redis Caching)
 - **Additional**: Zustand state management, TanStack React Query, Axios HTTP client, React Hook Form, Yup validation, Storybook, ESLint, Prettier
 
-## Latest Features (v1.3.9)
+## Latest Features (v1.3.13)
+- **Policy Edit Flow Feature Parity**: Complete feature parity between policy creation and edit flows across all 6 steps
+- **Step 2 - Attribute Management**: Added inline attribute creation and value management in edit flow matching create flow functionality
+- **Step 2 - Autocomplete Selection**: Implemented attribute selection dropdown before displaying configuration cards for consistent UX
+- **Step 2 - Add Value Button**: Fixed "Add Value" button placement to show for all enum-type attributes (both single and multi-value)
+- **Step 3 - Professional Action Selection**: Replaced basic Switch toggles with elegant Autocomplete multi-select with search and filter
+- **Step 3 - Action Creation**: Added "Create New Action" button for inline action creation directly from edit flow
+- **Step 4 - Resource Creation**: Enabled inline resource creation with "Create New Resource" button in resource selection step
+- **Step 4 - Resource Attribute Creation**: Added "Create New Resource Attribute" button with pre-selected 'resource' category
+- **Step 5 - UI Consistency**: Updated Additional Resources section with professional Card styling, Alert box, and Paper wrapper
+- **Step 5 - Grid Order Fix**: Reordered columns - Available Resources (left, md:5) and Selected Resources (right, md:7)
+- **Step 5 - Selected Resources Display**: Enhanced with detailed Box layout, "Add Attribute" buttons, and resource attribute management
+- **Step 5 - Empty State**: Added professional empty state with centered icon and helpful messaging
+- **State Management**: Added `selectedAdditionalResourceAttributes` state for managing attributes of additional resources
+- **Handler Functions**: Implemented `handleAdditionalResourceDelete` and `handleAdditionalResourceAttributeSelection` for complete functionality
+- **Auto-Selection**: Newly created entities automatically added to both resources and additional resources lists with immediate selection
+- **Dual-List Updates**: Resource creation now updates both regular and additional resource lists simultaneously for seamless UX
+- **Bundle Optimization**: Improved code efficiency with better component reuse (16 kB → 13.4 kB in Action Selection)
+
+## Previous Features (v1.3.12)
+- **Human-Readable Policy Display**: Implemented consistent policy display format matching Stepper 6 (Review & Create) across all pages
+- **Policy Formatter Utility**: Created centralized policy formatting logic at /craft-frontend/src/utils/policyFormatter.ts for consistent sentence generation
+- **Natural Language Sentences**: Complete natural language policy descriptions showing "This policy ALLOWS [subjects] (when [conditions]) to perform [actions] actions on [resources] (where [attributes]) and on additional resources [resources]"
+- **Grammar Intelligence**: Proper handling of 1 item, 2 items with "and", 3+ items with commas and final "and" across subjects, actions, resources
+- **Attribute Formatting**: Subject attributes display as "(when ...)" and resource attributes as "(where ...)" with comma-separated conditions
+- **Lowercase Actions**: Action names displayed in lowercase with proper connector text "to perform ... actions on"
+- **Single-Line Format**: Replaced technical "1, 2, 3" section format with professional single-line policy summaries
+- **Detail Page Enhancement**: Updated policy detail page (/app/policies/[id]/page.tsx) to match exact stepper 6 sentence structure
+
+## Latest Features (v1.3.11)
+- **Additional Resources Complete Implementation**: Fully implemented Additional Resources functionality with comprehensive tabular view, backend API integration, and database schema
+- **Dynamic Header System**: Intelligent header that adapts content (title, description, stats, button) based on active tab with proper routing to respective create dialogs
+- **Professional Table UI**: Complete table implementation with uniform styling matching Resources page including header design, pagination, search, filter, and sort functionality
+- **Backend API Integration**: Full CRUD operations with MongoDB schema supporting 5 resource types (Condition, State, Approval, Status, Ticket) with flexible attributes system
+- **UI Uniformity Enhancements**: Standardized all UI components including toolbar, filter popovers, table headers, pagination styling, and modal dialogs to match application-wide patterns
+- **Modal Dialog Consistency**: Updated Additional Resources dialogs with standard Paper styling, proper spacing, enhanced shadows, and Material-UI compliant layout patterns
+- **Create Button Integration**: Restored header-based create functionality with custom event system for seamless tab-to-component communication and consistent user experience
+- **Filter System Standardization**: Implemented Box-based filter layout with Typography sections matching Users page pattern for Type and Status filtering with proper checkbox behavior
+- **Database Schema Design**: Flexible schema with evaluation rules, dependencies, workspace hierarchy integration, and comprehensive metadata tracking for complex policy conditions
+
+## Previous Features (v1.3.9)
 - **Professional Add Value Modal**: Complete redesign of attribute value creation modal with modern styling, top-right close button, and enhanced user experience
 - **Duplicate Value Validation**: Case-insensitive duplicate checking with user-friendly error messages preventing duplicate attribute values from being added
 - **Real-Time State Updates**: Immediate local state synchronization ensuring newly added values appear instantly in dropdowns without API refresh delays
@@ -111,5 +151,5 @@ When user prompts "deploy", prepare the application for production deployment:
 - Backend: `cd craft-backend && npm run build`
 
 ## Development Commands
-- Frontend: `cd craft-frontend && npm run dev` (runs on port 3002)
-- Backend: `cd craft-backend && PORT=3005 npm run dev` (runs on port 3005)
+- Frontend: `cd craft-frontend && npm run dev` (runs on port 3000)
+- Backend: `cd craft-backend && npm run dev` (runs on port 3001)

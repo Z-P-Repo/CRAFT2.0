@@ -493,44 +493,81 @@ export class SubjectController {
     // Get subjects to be deleted
     const subjectsToDelete = await Subject.find({ id: { $in: subjectIds } });
 
-    // Prevent deletion of system subjects
+    // Separate system subjects (cannot delete)
     const systemSubjects = subjectsToDelete.filter(subject => subject.metadata.isSystem);
-    if (systemSubjects.length > 0) {
-      const systemSubjectNames = systemSubjects.map(subject => subject.displayName).join(', ');
-      throw new ValidationError(`Cannot delete system subjects: ${systemSubjectNames}`);
-    }
 
-    // Check if any subjects are used in policies
-    const subjectsInUse: { subject: string; policies: string[] }[] = [];
-    for (const subject of subjectsToDelete) {
+    // Get non-system subjects
+    const nonSystemSubjects = subjectsToDelete.filter(subject => !subject.metadata.isSystem);
+
+    // Check each non-system subject for policy usage
+    const subjectsInUse: { id: string; subject: string; policyCount: number; policies: string[] }[] = [];
+    const subjectsNotInUse: any[] = [];
+
+    for (const subject of nonSystemSubjects) {
+      console.log(`Checking bulk delete for subject: ${subject.displayName} (name: ${subject.name}, id: ${subject.id})`);
       const policiesUsingSubject = await SubjectController.checkSubjectUsageInPolicies(subject.id);
+      console.log(`Found ${policiesUsingSubject.length} policies using subject: ${subject.name}`);
       if (policiesUsingSubject.length > 0) {
         subjectsInUse.push({
+          id: subject.id,
           subject: subject.displayName,
-          policies: policiesUsingSubject.map(p => p.name)
+          policyCount: policiesUsingSubject.length,
+          policies: policiesUsingSubject.map(p => p.name || p.displayName)
         });
+      } else {
+        subjectsNotInUse.push(subject);
       }
     }
 
-    if (subjectsInUse.length > 0) {
-      const subjectCount = subjectsInUse.length;
-      const totalPolicies = [...new Set(subjectsInUse.flatMap(usage => usage.policies))].length;
-      
-      throw new ValidationError(
-        `Unable to delete ${subjectCount} ${subjectCount === 1 ? 'subject' : 'subjects'} - ${subjectCount === 1 ? 'It is' : 'They are'} currently being used in ${totalPolicies} ${totalPolicies === 1 ? 'policy' : 'policies'}`
-      );
+    // Delete only subjects that are not in use
+    const idsToDelete = subjectsNotInUse.map(subject => subject.id);
+    let deletedCount = 0;
+
+    if (idsToDelete.length > 0) {
+      const result = await Subject.deleteMany({ id: { $in: idsToDelete } });
+      deletedCount = result.deletedCount;
+      logger.info(`Bulk delete performed on ${deletedCount} subjects by ${req.user?.email}`);
     }
 
-    const result = await Subject.deleteMany({ id: { $in: subjectIds } });
+    // Prepare skipped subjects info
+    const skippedSubjects = [
+      ...systemSubjects.map(subject => ({
+        id: subject.id,
+        name: subject.displayName,
+        reason: 'System subject',
+        policyCount: 0,
+        policies: []
+      })),
+      ...subjectsInUse.map(usage => ({
+        id: usage.id,
+        name: usage.subject,
+        reason: 'Currently used in policies',
+        policyCount: usage.policyCount,
+        policies: usage.policies
+      }))
+    ];
 
-    logger.info(`Bulk delete performed on ${result.deletedCount} subjects by ${req.user?.email}`);
+    // Build response message
+    let message = '';
+    if (deletedCount > 0 && skippedSubjects.length > 0) {
+      message = `${deletedCount} ${deletedCount === 1 ? 'subject' : 'subjects'} deleted successfully. ${skippedSubjects.length} ${skippedSubjects.length === 1 ? 'subject' : 'subjects'} skipped (used in policies or system subjects).`;
+    } else if (deletedCount > 0) {
+      message = `${deletedCount} ${deletedCount === 1 ? 'subject' : 'subjects'} deleted successfully.`;
+    } else if (skippedSubjects.length > 0) {
+      message = `No subjects were deleted. ${skippedSubjects.length} ${skippedSubjects.length === 1 ? 'subject' : 'subjects'} skipped (used in policies or system subjects).`;
+    } else {
+      message = 'No subjects found to delete.';
+    }
 
     res.status(200).json({
       success: true,
       data: {
-        deletedCount: result.deletedCount,
+        deletedCount,
+        skippedCount: skippedSubjects.length,
+        skippedSubjects: skippedSubjects.length > 0 ? skippedSubjects : undefined,
+        deleted: subjectsNotInUse.map(subject => ({ id: subject.id, name: subject.displayName }))
       },
-      message: `${result.deletedCount} subjects deleted successfully`,
+      message,
     });
   });
 

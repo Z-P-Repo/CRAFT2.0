@@ -413,7 +413,7 @@ export default function ActionsPage() {
   // Multi-select handlers
   const handleSelectAll = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.checked) {
-      const newSelected = actions.map(action => action._id);
+      const newSelected = actions.map(action => action.id);
       setSelectedActions(newSelected);
     } else {
       setSelectedActions([]);
@@ -451,42 +451,65 @@ export default function ActionsPage() {
   const handleBulkDelete = async () => {
     try {
       setIsDeleting(true);
-      
+
       const response = await apiClient.delete('/actions/bulk/delete', {
         actionIds: selectedActions
       });
-      
+
       if (response.success) {
-        // Update local state by filtering out deleted actions
-        setActions(prev => prev.filter(action => !selectedActions.includes(action._id)));
-        setTotal(prev => prev - selectedActions.length);
-        
+        const { deletedCount, skippedCount, skippedActions, deleted } = response.data;
+
+        // Update local state by filtering out only the deleted actions
+        const deletedIds = deleted?.map((action: any) => action.id) || [];
+        setActions(prev => prev.filter(action => !deletedIds.includes(action.id)));
+        setTotal(prev => prev - deletedCount);
+
+        // Clear selection
         setSelectedActions([]);
         handleBulkDeleteClose();
-        snackbar.showSuccess(`${selectedActions.length} actions deleted successfully`);
+
+        // Show appropriate message based on results
+        if (deletedCount > 0 && skippedCount > 0) {
+          // Some deleted, some skipped
+          const skippedDetails = skippedActions
+            ?.map((action: any) => {
+              if (action.policyCount > 0) {
+                return `"${action.name}" (used in ${action.policyCount} ${action.policyCount === 1 ? 'policy' : 'policies'})`;
+              }
+              return `"${action.name}" (${action.reason})`;
+            })
+            .join(', ');
+
+          snackbar.showWarning(
+            `${deletedCount} ${deletedCount === 1 ? 'action' : 'actions'} deleted successfully. ${skippedCount} ${skippedCount === 1 ? 'action was' : 'actions were'} skipped: ${skippedDetails}`
+          );
+        } else if (deletedCount > 0) {
+          // All deleted
+          snackbar.showSuccess(`${deletedCount} ${deletedCount === 1 ? 'action' : 'actions'} deleted successfully`);
+        } else if (skippedCount > 0) {
+          // None deleted, all skipped
+          const skippedDetails = skippedActions
+            ?.map((action: any) => {
+              if (action.policyCount > 0) {
+                return `"${action.name}" (used in ${action.policyCount} ${action.policyCount === 1 ? 'policy' : 'policies'})`;
+              }
+              return `"${action.name}" (${action.reason})`;
+            })
+            .join(', ');
+
+          snackbar.showWarning(
+            `No actions were deleted. ${skippedCount} ${skippedCount === 1 ? 'action was' : 'actions were'} skipped: ${skippedDetails}`
+          );
+        }
       } else {
         snackbar.handleApiResponse(response, undefined, 'Failed to delete actions');
         handleBulkDeleteClose();
       }
-      
+
     } catch (error: any) {
       console.error('Failed to delete actions:', error);
-      
-      // Get the error message from the API response
-      const errorMessage = error?.error || error?.message || 'Unknown error';
-      
-      // Handle specific error cases
-      if (errorMessage.includes('Cannot delete system actions')) {
-        snackbar.showWarning('Some actions could not be deleted because they are system actions required for the system to function.');
-        handleBulkDeleteClose();
-      } else if (errorMessage.includes('Unable to delete') && errorMessage.includes('currently being used in')) {
-        // Handle policy dependency error with simplified message
-        snackbar.showError(errorMessage);
-        handleBulkDeleteClose();
-      } else {
-        snackbar.handleApiError(error, 'Failed to delete actions');
-        handleBulkDeleteClose();
-      }
+      snackbar.handleApiError(error, 'Failed to delete actions');
+      handleBulkDeleteClose();
     } finally {
       setIsDeleting(false);
     }
@@ -763,7 +786,7 @@ export default function ActionsPage() {
                 </TableRow>
               ) : (
                 actions.map((action) => {
-                  const isItemSelected = selectedActions.includes(action._id);
+                  const isItemSelected = selectedActions.includes(action.id);
                   return (
                     <TableRow
                       key={action._id}
@@ -775,7 +798,7 @@ export default function ActionsPage() {
                         <Checkbox
                           color="primary"
                           checked={isItemSelected}
-                          onChange={() => handleSelectAction(action._id)}
+                          onChange={() => handleSelectAction(action.id)}
                           size="small"
                         />
                       </TableCell>
@@ -1320,9 +1343,9 @@ export default function ActionsPage() {
         onConfirm={handleBulkDelete}
         title="Delete Multiple Actions"
         items={selectedActions.map(actionId => {
-          const action = actions.find(a => a._id === actionId);
+          const action = actions.find(a => a.id === actionId);
           return action ? {
-            id: action._id || action.id || '',
+            id: action.id || '',
             name: action.name || 'No name',
             displayName: action.displayName || action.name || 'No name',
             isSystem: false

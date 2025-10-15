@@ -2,7 +2,7 @@
 
 A modern, responsive React-based dashboard for managing the CRAFT (Attribute-Based Access Control) Permission System. Built with Next.js 15, TypeScript, and Material-UI with a professional collapsible sidebar layout.
 
-![Version](https://img.shields.io/badge/version-1.3.9-blue.svg)
+![Version](https://img.shields.io/badge/version-1.3.13-blue.svg)
 ![Next.js](https://img.shields.io/badge/Next.js-15.4.6-black.svg)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.5-blue.svg)
 ![Material-UI](https://img.shields.io/badge/Material--UI-7.3-blue.svg)
@@ -37,7 +37,7 @@ A modern, responsive React-based dashboard for managing the CRAFT (Attribute-Bas
 
 ### 👥 Entity Management System
 - **Subject Management** - Handle users, groups, and roles with detailed profiles and policy tracking
-- **Resource Management** - Manage system resources, files, databases, and APIs with hierarchy support
+- **Resource Management** - Manage system resources, files, databases, and APIs with hierarchy support and comprehensive Additional Resources functionality
 - **Action Management** - Define and categorize system actions with risk levels and policy dependencies
 - **Advanced Attribute System** - Multi-category ABAC attributes with conditional scope selection and category filtering
 - **User Management** - Complete user lifecycle with role changes and workspace assignments
@@ -211,7 +211,7 @@ src/
 - **Dashboard** (`/dashboard`): Main application dashboard (all users)
 - **Users** (`/users`): Complete user management with role changes (Admin/Super Admin only for CUD operations)
 - **Subjects** (`/subjects`): User and role management with policy count display and auto-refresh (view-only for Basic users)
-- **Resources** (`/resources`): Resource management with policy dependency tracking and manual refresh button (view-only for Basic users)
+- **Resources** (`/resources`): Resource management with policy dependency tracking, manual refresh button, and comprehensive Additional Resources tabbed interface (view-only for Basic users)
 - **Actions** (`/actions`): Action definitions with policy count badges and deletion protection (view-only for Basic users)
 - **Policies** (`/policies`): Access policy management with comprehensive pagination and filtering (view-only for Basic users)
   - **Policy Creation** (`/policies/create`): Enhanced 5-step wizard for policy creation with separated Action & Resource selection (Admin/Super Admin only)
@@ -534,12 +534,52 @@ await trackUser('updated', 'user-456', 'John Doe');
 
 ---
 
-*Last updated: September 23, 2025*
+*Last updated: October 15, 2025*
 🤖 *Generated and maintained with [Claude Code](https://claude.ai/code)*
 
-## 🔄 Recent Updates (Version 1.3.9)
+## 🔄 Recent Updates (Version 1.3.13)
 
-### Professional Attribute Value Management & Enhanced User Experience (September 23, 2025)
+### Policy Edit Flow Feature Parity (October 15, 2025)
+- **✨ Complete Edit/Create Parity**: Achieved complete feature parity between policy creation and edit flows across all 6 stepper steps ensuring consistent user experience
+- **📝 Step 2 Enhancements**: Added inline attribute creation, value management, and Autocomplete-based attribute selection matching create flow functionality
+- **🎯 Step 3 Professional UI**: Replaced basic Switch toggles with elegant Autocomplete multi-select featuring search, filter, and inline action creation capabilities
+- **🗃️ Step 4 Resource Management**: Enabled inline resource and resource attribute creation with pre-selected categories for streamlined workflow
+- **🔄 Step 5 UI Consistency**: Updated Additional Resources section with professional Card styling, Alert box, Paper wrapper, and reordered grid columns
+- **📊 Enhanced Selected Resources**: Detailed Box layout with "Add Attribute" buttons, resource attribute management, and professional empty states
+- **🔧 State Management**: Added `selectedAdditionalResourceAttributes` state with comprehensive handler functions for attribute management
+- **⚡ Auto-Selection**: Newly created entities automatically added to both resources and additional resources lists with immediate selection
+- **🎨 Dual-List Updates**: Resource creation now updates both regular and additional resource lists simultaneously for seamless user experience
+- **📦 Bundle Optimization**: Improved code efficiency with better component reuse (16 kB → 13.4 kB in Action Selection step)
+
+## Previous Updates (Version 1.3.11)
+
+### Comprehensive Additional Resources Implementation (September 24, 2025)
+- **📊 Additional Resources Management**: Implemented complete tabular view for Additional Resources tab with identical UI/UX to Resources tab including pagination, search, sort, and filter functionality
+- **🔄 Dynamic Header System**: Enhanced header section with tab-aware content showing appropriate titles, counts, and button labels for seamless tab switching experience
+- **⚡ Backend API Integration**: Created comprehensive Additional Resources API with full CRUD operations, server-side pagination, and advanced filtering capabilities
+- **🗃️ Flexible Database Schema**: Designed database model supporting 5 resource types (conditions, states, workflows, templates, rules) with evaluation rules and dependencies for complex policy scenarios
+- **🎯 UI Uniformity**: Achieved perfect UI consistency with Resources tab including search section, filter section with popover controls, pagination controls, and professional table headers
+- **📝 Professional Modal Design**: Standardized create/edit modal dialogs with consistent styling, proper PaperProps, DialogTitle formatting, and Material-UI design patterns matching other pages
+- **🔧 Event-Driven Architecture**: Implemented custom event system (`createAdditionalResource` event) for seamless communication between header create button and table component
+- **📱 Responsive Design**: Professional table layout with proper column sizing (Name, Type, Priority, Active status), action buttons, and mobile-friendly responsive behavior
+- **🛡️ Role-Based Access**: Integrated workspace-based access control with proper admin/super_admin permission handling and view-only access for basic users
+- **⚙️ Advanced Filtering**: Comprehensive filter options by type, priority, category, tags, owner, system status, and workspace/application/environment with Toolbar-based popover interface
+
+## Previous Updates (Version 1.3.10)
+
+### Resources Page Enhancement & Terminology Consistency (September 23, 2025)
+- **🏷️ Terminology Standardization**: Renamed "Conditional Resources" to "Additional Resources" throughout entire frontend codebase for better clarity and user understanding
+- **🎨 Tabbed Interface Implementation**: Redesigned Resources page with professional Material-UI tabbed interface separating "Resources" and "Additional Resources" for improved organization
+- **🗂️ Resource Dependency Tree Removal**: Removed Resource Dependency Tree section from main resources view to reduce visual clutter and improve focus on core functionality
+- **📱 Enhanced User Experience**: Clean tab navigation with automatic selection clearing when switching between resource management modes for better state isolation
+- **🔧 Component Architecture**: Enhanced AdditionalResourceCard component with improved isolation in dedicated tab for complex policy management
+- **⚡ State Management**: Improved tab switching with proper state isolation, clean user interface transitions, and comprehensive selection management
+- **🎯 Professional Styling**: Material-UI tabs with consistent borders, typography, and Material Design principles for intuitive navigation and visual consistency
+- **🛡️ Backward Compatibility**: Maintained all existing functionality while improving information architecture and user workflow patterns
+- **📊 Component Updates**: Updated ResourceDependencyTree type definitions from "conditional" to "additional" for consistent terminology
+- **✨ Visual Consistency**: Standardized styling across all resource management interfaces with professional, organized layout design and consistent UI patterns
+
+### Previous Updates (Version 1.3.9) - Professional Attribute Value Management & Enhanced User Experience (September 23, 2025)
 - **🎯 Professional Add Value Modal**: Complete redesign of "Add New Attribute Value" modal with modern styling, top-right close button, professional layout, and enhanced accessibility features
 - **🔍 Duplicate Value Validation**: Implemented comprehensive case-insensitive duplicate checking with user-friendly error messages preventing duplicate attribute values from being added
 - **⚡ Real-Time Dropdown Updates**: Added immediate local state synchronization ensuring newly added values appear instantly in dropdown menus without requiring API refresh or page reload

@@ -2,7 +2,7 @@
 
 A robust, scalable Node.js backend API for the CRAFT (Attribute-Based Access Control) Permission System. Built with Express.js, TypeScript, MongoDB, and comprehensive security features.
 
-![Version](https://img.shields.io/badge/version-1.3.7-blue.svg)
+![Version](https://img.shields.io/badge/version-1.3.13-blue.svg)
 ![Node.js](https://img.shields.io/badge/Node.js-18+-green.svg)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.5-blue.svg)
 ![Express](https://img.shields.io/badge/Express-4.19-black.svg)
@@ -19,7 +19,7 @@ A robust, scalable Node.js backend API for the CRAFT (Attribute-Based Access Con
 - **🛡️ Role Management** - Hierarchical role change functionality with strict permission validation
 - **🔒 Permission Control** - Basic users have view-only access; Admin/Super Admin have full CRUD access
 - **📱 Advanced API Optimization** - Multiple API call prevention, intelligent request batching, and standardized debouncing
-- **📁 Resource Management** - Handle files, databases, APIs, and system resources with enhanced performance
+- **📁 Resource Management** - Handle files, databases, APIs, and system resources with enhanced performance and comprehensive Additional Resources functionality
 - **⚡ Action Framework** - Categorized system actions with risk assessment and optimized response times
 - **🏷️ Enhanced Attribute System** - Multi-category attribute management (Subject/Resource) with conditional scope selection, category filtering, and improved boolean attribute handling
 - **📊 Policy Dependency Tracking** - Real-time policy count display and dependency visualization across all entities
@@ -207,6 +207,17 @@ src/
 - `PUT /api/v1/resources/:id` - Update resource
 - `DELETE /api/v1/resources/:id` - Delete resource (with policy dependency protection)
 
+### Additional Resources
+- `GET /api/v1/additional-resources` - List additional resources with pagination, search, sort, and filter functionality
+- `POST /api/v1/additional-resources` - Create new additional resource (Admin/Super Admin only)
+- `GET /api/v1/additional-resources/:id` - Get specific additional resource
+- `PUT /api/v1/additional-resources/:id` - Update additional resource (Admin/Super Admin only)
+- `DELETE /api/v1/additional-resources/:id` - Delete additional resource (Admin/Super Admin only)
+- `DELETE /api/v1/additional-resources/bulk/delete` - Bulk delete additional resources (Admin/Super Admin only)
+- `GET /api/v1/additional-resources/type/:type` - Get additional resources by type with environment filtering
+- `POST /api/v1/additional-resources/:id/evaluate` - Evaluate additional resource with context
+- `GET /api/v1/additional-resources/stats` - Get additional resources statistics by workspace/application/environment
+
 ### Attributes
 - `GET /api/v1/attributes` - List attributes with pagination, filtering, and policy count tracking
 - `POST /api/v1/attributes` - Create new attribute
@@ -353,10 +364,38 @@ For support and questions:
 
 ---
 
-*Last updated: September 23, 2025*
+*Last updated: October 15, 2025*
 🤖 *Generated and maintained with [Claude Code](https://claude.ai/code)*
 
-## 🔄 Recent Updates (Version 1.3.7)
+## 🔄 Recent Updates (Version 1.3.13)
+
+### Policy Edit Flow Complete Feature Parity (October 15, 2025)
+- **📝 Enhanced Policy Edit Workflow**: Complete UI consistency across all 5 stepper steps with streamlined navigation and improved user experience
+- **🎯 Inline Entity Creation**: Added inline creation for Subjects, Actions, Resources, and Attributes directly within policy edit flow eliminating context switching
+- **⚡ State Management Enhancement**: Comprehensive state handling for additional resource attributes with proper TypeScript typing
+- **🎨 UI Uniformity**: Standardized Card styling, Alert boxes, Paper wrappers, and Grid layouts across all policy edit steps matching create flow
+- **🔄 Additional Resources Parity**: Complete Step 5 implementation with Selected/Available resources grid layout and attribute management
+- **🛡️ Error Resolution**: Fixed critical ReferenceErrors in policy edit flow with proper state variable and handler function implementation
+- **📊 Professional Layout**: Consistent Grid column ordering with Available resources (md:5) on left and Selected resources (md:7) on right
+- **🎯 Attribute Management**: Added attribute selection handlers and delete functions for managing additional resource attributes
+- **📱 Responsive Design**: Enhanced mobile-friendly layouts with proper Material-UI grid breakpoints
+- **✅ Complete Functionality**: All policy edit features now match policy creation with identical user experience and interaction patterns
+
+## Previous Updates (Version 1.3.11)
+
+### Comprehensive Additional Resources Implementation (September 24, 2025)
+- **📊 Additional Resources API**: Created complete Additional Resources API with full CRUD operations, pagination, search, sort, and filter functionality
+- **🗃️ Flexible Database Schema**: Designed MongoDB model supporting 5 resource types (conditions, states, workflows, templates, rules) with evaluation rules and dependencies
+- **⚡ Backend Controller**: Implemented comprehensive AdditionalResourceController with all standard operations plus stats and evaluation endpoints
+- **🔧 Route Integration**: Added additional-resources routes to main API routing system with proper authentication and authorization middleware
+- **🛡️ Role-Based Access**: Integrated workspace-based access control with admin/super_admin permission requirements for CUD operations
+- **📱 Advanced Filtering**: Backend support for filtering by type, priority, category, tags, owner, system status, and workspace/application/environment
+- **🎯 Evaluation System**: Built-in resource evaluation capabilities with context support for complex policy conditions
+- **📈 Statistics API**: Comprehensive stats endpoint providing counts by type, priority, and workspace hierarchy
+- **🔄 Bulk Operations**: Support for bulk delete operations with proper validation and error handling
+- **⚙️ Type-Specific Queries**: Specialized endpoints for retrieving additional resources by type with environment filtering
+
+## Previous Updates (Version 1.3.7)
 
 ### Comprehensive Pagination & Filter/Sort Uniformity (September 23, 2025)
 - **📄 Advanced Pagination Infrastructure**: Implemented comprehensive server-side pagination for workspaces with search, filtering, and sorting capabilities matching users page functionality

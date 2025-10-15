@@ -576,46 +576,81 @@ export class ActionController {
     // Get actions to be deleted
     const actionsToDelete = await Action.find({ id: { $in: actionIds } });
 
-    // Prevent deletion of system actions
+    // Separate system actions (cannot delete)
     const systemActions = actionsToDelete.filter(action => action.metadata.isSystem);
-    if (systemActions.length > 0) {
-      const systemActionNames = systemActions.map(action => action.displayName).join(', ');
-      throw new ValidationError(`Cannot delete system actions: ${systemActionNames}`);
-    }
 
-    // Check if any actions are used in policies
-    const actionsInUse: { action: string; policies: string[] }[] = [];
-    for (const action of actionsToDelete) {
+    // Get non-system actions
+    const nonSystemActions = actionsToDelete.filter(action => !action.metadata.isSystem);
+
+    // Check each non-system action for policy usage
+    const actionsInUse: { id: string; action: string; policyCount: number; policies: string[] }[] = [];
+    const actionsNotInUse: any[] = [];
+
+    for (const action of nonSystemActions) {
       console.log(`Checking bulk delete for action: ${action.displayName} (name: ${action.name}, id: ${action.id})`);
       const policiesUsingAction = await ActionController.checkActionUsageInPolicies(action.id);
       console.log(`Found ${policiesUsingAction.length} policies using action: ${action.name}`);
       if (policiesUsingAction.length > 0) {
         actionsInUse.push({
+          id: action.id,
           action: action.displayName,
-          policies: policiesUsingAction.map(p => p.name)
+          policyCount: policiesUsingAction.length,
+          policies: policiesUsingAction.map(p => p.name || p.displayName)
         });
+      } else {
+        actionsNotInUse.push(action);
       }
     }
 
-    if (actionsInUse.length > 0) {
-      const actionCount = actionsInUse.length;
-      const totalPolicies = [...new Set(actionsInUse.flatMap(usage => usage.policies))].length;
-      
-      throw new ValidationError(
-        `Unable to delete ${actionCount} ${actionCount === 1 ? 'action' : 'actions'} - ${actionCount === 1 ? 'It is' : 'They are'} currently being used in ${totalPolicies} ${totalPolicies === 1 ? 'policy' : 'policies'}`
-      );
+    // Delete only actions that are not in use
+    const idsToDelete = actionsNotInUse.map(action => action.id);
+    let deletedCount = 0;
+
+    if (idsToDelete.length > 0) {
+      const result = await Action.deleteMany({ id: { $in: idsToDelete } });
+      deletedCount = result.deletedCount;
+      logger.info(`Bulk delete performed on ${deletedCount} actions by ${req.user?.email}`);
     }
 
-    const result = await Action.deleteMany({ id: { $in: actionIds } });
+    // Prepare skipped actions info
+    const skippedActions = [
+      ...systemActions.map(action => ({
+        id: action.id,
+        name: action.displayName,
+        reason: 'System action',
+        policyCount: 0,
+        policies: []
+      })),
+      ...actionsInUse.map(usage => ({
+        id: usage.id,
+        name: usage.action,
+        reason: 'Currently used in policies',
+        policyCount: usage.policyCount,
+        policies: usage.policies
+      }))
+    ];
 
-    logger.info(`Bulk delete performed on ${result.deletedCount} actions by ${req.user?.email}`);
+    // Build response message
+    let message = '';
+    if (deletedCount > 0 && skippedActions.length > 0) {
+      message = `${deletedCount} ${deletedCount === 1 ? 'action' : 'actions'} deleted successfully. ${skippedActions.length} ${skippedActions.length === 1 ? 'action' : 'actions'} skipped (used in policies or system actions).`;
+    } else if (deletedCount > 0) {
+      message = `${deletedCount} ${deletedCount === 1 ? 'action' : 'actions'} deleted successfully.`;
+    } else if (skippedActions.length > 0) {
+      message = `No actions were deleted. ${skippedActions.length} ${skippedActions.length === 1 ? 'action' : 'actions'} skipped (used in policies or system actions).`;
+    } else {
+      message = 'No actions found to delete.';
+    }
 
     res.status(200).json({
       success: true,
       data: {
-        deletedCount: result.deletedCount,
+        deletedCount,
+        skippedCount: skippedActions.length,
+        skippedActions: skippedActions.length > 0 ? skippedActions : undefined,
+        deleted: actionsNotInUse.map(action => ({ id: action.id, name: action.displayName }))
       },
-      message: `${result.deletedCount} actions deleted successfully`,
+      message,
     });
   });
 

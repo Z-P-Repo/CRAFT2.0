@@ -67,6 +67,33 @@ import { canManage, canEdit, canDelete, canCreate } from '@/utils/permissions';
 import RoleProtection from '@/components/auth/RoleProtection';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
 
+interface PolicyAttribute {
+  name: string;
+  operator: string;
+  value: string | string[];
+}
+
+interface PolicyRule {
+  id: string;
+  subject: {
+    type: string;
+    attributes: PolicyAttribute[];
+  };
+  action: {
+    name: string;
+    displayName: string;
+  };
+  object: {
+    type: string;
+    attributes: PolicyAttribute[];
+  };
+}
+
+interface AdditionalResource {
+  id: string;
+  attributes: PolicyAttribute[];
+}
+
 interface Policy {
   _id: string;
   id: string;
@@ -74,8 +101,12 @@ interface Policy {
   description?: string;
   effect: 'Allow' | 'Deny';
   status: 'Active' | 'Inactive' | 'Draft';
-  priority: number;
-  rules: any[];
+  priority?: number;
+  rules: PolicyRule[];
+  subjects: string[];
+  actions: string[];
+  resources: string[];
+  additionalResources?: AdditionalResource[];
   metadata: {
     createdBy: string;
     lastModifiedBy: string;
@@ -97,6 +128,13 @@ export default function PoliciesPage() {
   // State for policies
   const [policies, setPolicies] = useState<Policy[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Lookup data for human-readable formatting
+  const [subjects, setSubjects] = useState<any[]>([]);
+  const [actions, setActions] = useState<any[]>([]);
+  const [resources, setResources] = useState<any[]>([]);
+  const [additionalResources, setAdditionalResources] = useState<any[]>([]);
+  const [attributes, setAttributes] = useState<any[]>([]);
   
   // Pagination state
   const [page, setPage] = useState(0);
@@ -129,6 +167,153 @@ export default function PoliciesPage() {
   // Rate limiting: track last request time
   const lastRequestTimeRef = useRef<number>(0);
   const requestTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Load lookup data for human-readable formatting
+  const loadLookupData = useCallback(async () => {
+    try {
+      const [subjectsRes, actionsRes, resourcesRes, additionalResourcesRes, attributesRes] = await Promise.all([
+        apiClient.get('/subjects?page=1&limit=1000'),
+        apiClient.get('/actions?page=1&limit=1000'),
+        apiClient.get('/resources?page=1&limit=1000'),
+        apiClient.get('/additional-resources?page=1&limit=1000'),
+        apiClient.get('/attributes?page=1&limit=1000')
+      ]);
+
+      if (subjectsRes.success && subjectsRes.data) {
+        setSubjects(Array.isArray(subjectsRes.data) ? subjectsRes.data : subjectsRes.data.data || []);
+      }
+      if (actionsRes.success && actionsRes.data) {
+        setActions(Array.isArray(actionsRes.data) ? actionsRes.data : actionsRes.data.data || []);
+      }
+      if (resourcesRes.success && resourcesRes.data) {
+        setResources(Array.isArray(resourcesRes.data) ? resourcesRes.data : resourcesRes.data.data || []);
+      }
+      if (additionalResourcesRes.success && additionalResourcesRes.data) {
+        setAdditionalResources(Array.isArray(additionalResourcesRes.data) ? additionalResourcesRes.data : additionalResourcesRes.data.data || []);
+      }
+      if (attributesRes.success && attributesRes.data) {
+        setAttributes(Array.isArray(attributesRes.data) ? attributesRes.data : attributesRes.data.data || []);
+      }
+    } catch (error) {
+      console.error('Failed to load lookup data:', error);
+    }
+  }, []);
+
+  // Lookup functions for human-readable names
+  const getSubjectDisplayName = useCallback((subjectId: string) => {
+    const subject = subjects.find(s => s.id === subjectId);
+    return subject ? subject.displayName : subjectId;
+  }, [subjects]);
+
+  const getResourceDisplayName = useCallback((resourceId: string) => {
+    const resource = resources.find(r => r.id === resourceId);
+    return resource ? resource.displayName : resourceId;
+  }, [resources]);
+
+  const getAdditionalResourceDisplayName = useCallback((resourceId: string) => {
+    const resource = additionalResources.find(r => r.id === resourceId);
+    return resource ? resource.displayName || resource.name : resourceId;
+  }, [additionalResources]);
+
+  const getAttributeDisplayName = useCallback((attrName: string) => {
+    const attribute = attributes.find(a => a.name === attrName || a.id === attrName);
+    return attribute ? attribute.displayName : attrName;
+  }, [attributes]);
+
+  // Generate policy description using lookup data
+  const generatePolicyDescriptionWithLookup = useCallback((policy: Policy) => {
+    if (!policy || !policy.rules || policy.rules.length === 0) return '';
+
+    const effectText = policy.effect === 'Allow' ? 'ALLOWS' : 'DENIES';
+    const rule = policy.rules[0]; // Use first rule for consistency
+
+    let sentence = `This policy ${effectText} `;
+
+    // Subject
+    sentence += getSubjectDisplayName(rule.subject.type);
+
+    // Subject attributes
+    if (rule.subject.attributes && rule.subject.attributes.length > 0) {
+      const conditions = rule.subject.attributes
+        .filter(attr => attr.value !== '' && attr.value !== null && attr.value !== undefined)
+        .map((attr, index, array) => {
+          const formattedValue = Array.isArray(attr.value) ? attr.value.join(' or ') : attr.value;
+          const condition = `${getAttributeDisplayName(attr.name).toLowerCase()} is ${formattedValue}`;
+          if (index === array.length - 1 && array.length > 1) {
+            return `and ${condition}`;
+          }
+          return condition;
+        })
+        .join(', ');
+
+      if (conditions) {
+        sentence += ` (when ${conditions})`;
+      }
+    }
+
+    sentence += ' to perform ';
+
+    // Actions
+    const actionNames = policy.actions.map(id => {
+      const action = actions.find(a => a.id === id);
+      return action ? action.displayName.toLowerCase() : id.toLowerCase();
+    });
+    if (actionNames.length === 1) {
+      sentence += actionNames[0];
+    } else if (actionNames.length === 2) {
+      sentence += `${actionNames[0]} and ${actionNames[1]}`;
+    } else {
+      sentence += `${actionNames.slice(0, -1).join(', ')}, and ${actionNames[actionNames.length - 1]}`;
+    }
+
+    sentence += ' actions on ';
+
+    // Resources
+    const resourceNames = policy.resources.map(id => getResourceDisplayName(id));
+    if (resourceNames.length === 1) {
+      sentence += resourceNames[0];
+    } else if (resourceNames.length === 2) {
+      sentence += `${resourceNames[0]} and ${resourceNames[1]}`;
+    } else {
+      sentence += `${resourceNames.slice(0, -1).join(', ')}, and ${resourceNames[resourceNames.length - 1]}`;
+    }
+
+    // Resource attributes
+    if (rule.object.attributes && rule.object.attributes.length > 0) {
+      const conditions = rule.object.attributes
+        .filter(attr => attr.value !== '' && attr.value !== null && attr.value !== undefined)
+        .map((attr, index, array) => {
+          const formattedValue = Array.isArray(attr.value) ? attr.value.join(' or ') : attr.value;
+          const condition = `${getAttributeDisplayName(attr.name).toLowerCase()} is ${formattedValue}`;
+          if (index === array.length - 1 && array.length > 1) {
+            return `and ${condition}`;
+          }
+          return condition;
+        })
+        .join(', ');
+
+      if (conditions) {
+        sentence += ` (where ${conditions})`;
+      }
+    }
+
+    // Additional resources
+    if (policy.additionalResources && policy.additionalResources.length > 0) {
+      sentence += ' if ';
+      const additionalNames = policy.additionalResources.map(res => getAdditionalResourceDisplayName(res.id));
+      if (additionalNames.length === 1) {
+        sentence += additionalNames[0];
+      } else if (additionalNames.length === 2) {
+        sentence += `${additionalNames[0]} and ${additionalNames[1]}`;
+      } else {
+        sentence += `${additionalNames.slice(0, -1).join(', ')}, and ${additionalNames[additionalNames.length - 1]}`;
+      }
+    }
+
+    sentence += '.';
+    return sentence;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [getSubjectDisplayName, getResourceDisplayName, getAdditionalResourceDisplayName, getAttributeDisplayName]);
 
   // Fetch policies with rate limiting
   const fetchPolicies = useCallback(async () => {
@@ -170,11 +355,16 @@ export default function PoliciesPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page, rowsPerPage, searchTerm, filterStatus, filterEffect, sortBy, sortOrder]);
 
+  // Load lookup data on mount
+  useEffect(() => {
+    loadLookupData();
+  }, [loadLookupData]);
+
   useEffect(() => {
     const timeoutId = setTimeout(() => {
       fetchPolicies();
     }, 300); // Debounce API calls
-    
+
     return () => clearTimeout(timeoutId);
     // ESLint disable to prevent infinite loop - fetchPolicies causes circular dependency
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -486,7 +676,7 @@ export default function PoliciesPage() {
       {/* Policies Table */}
       <Paper>
         <TableContainer>
-          <Table>
+          <Table sx={{ tableLayout: 'fixed', width: '100%' }}>
               <TableHead>
                 <TableRow sx={{ bgcolor: 'grey.50' }}>
                   <TableCell padding="checkbox">
@@ -500,21 +690,20 @@ export default function PoliciesPage() {
                       }}
                     />
                   </TableCell>
-                  <TableCell 
-                    sx={{ 
-                      fontWeight: 600, 
-                      fontSize: '0.875rem', 
+                  <TableCell
+                    sx={{
+                      fontWeight: 600,
+                      fontSize: '0.875rem',
                       color: 'text.primary',
-                      width: '450px',
-                      minWidth: '350px'
+                      width: '40%'
                     }}
                   >
                     Name & Description
                   </TableCell>
-                  <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', color: 'text.primary' }}>Effect</TableCell>
-                  <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', color: 'text.primary' }}>Status</TableCell>
-                  <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', color: 'text.primary' }}>Created By</TableCell>
-                  <TableCell align="center" sx={{ fontWeight: 600, fontSize: '0.875rem', color: 'text.primary', width: '120px', minWidth: '120px' }}>
+                  <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', color: 'text.primary', width: '15%' }}>Effect</TableCell>
+                  <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', color: 'text.primary', width: '15%' }}>Status</TableCell>
+                  <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', color: 'text.primary', width: '15%' }}>Created By</TableCell>
+                  <TableCell align="center" sx={{ fontWeight: 600, fontSize: '0.875rem', color: 'text.primary', width: '15%' }}>
                     Actions
                   </TableCell>
                 </TableRow>
@@ -545,16 +734,33 @@ export default function PoliciesPage() {
                           checkedIcon={<CheckBoxIcon />}
                         />
                       </TableCell>
-                      <TableCell>
+                      <TableCell sx={{ width: '40%', maxWidth: 0 }}>
                         <Box>
-                          <Typography variant="body2" fontWeight="500">
+                          <Typography
+                            variant="body2"
+                            fontWeight="600"
+                            sx={{
+                              whiteSpace: 'nowrap',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              width: '100%'
+                            }}
+                          >
                             {policy.name}
                           </Typography>
-                          {policy.description && (
-                            <Typography variant="caption" color="text.secondary">
-                              {policy.description}
-                            </Typography>
-                          )}
+                          <Typography
+                            variant="caption"
+                            color="text.secondary"
+                            sx={{
+                              whiteSpace: 'nowrap',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              display: 'block',
+                              width: '100%'
+                            }}
+                          >
+                            {generatePolicyDescriptionWithLookup(policy)}
+                          </Typography>
                         </Box>
                       </TableCell>
                       <TableCell>
@@ -572,8 +778,16 @@ export default function PoliciesPage() {
                           color={getStatusColor(policy.status) as any}
                         />
                       </TableCell>
-                      <TableCell>
-                        <Typography variant="body2">
+                      <TableCell sx={{ width: '15%', maxWidth: 0 }}>
+                        <Typography
+                          variant="body2"
+                          sx={{
+                            whiteSpace: 'nowrap',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            width: '100%'
+                          }}
+                        >
                           {policy.metadata?.createdBy || 'Unknown'}
                         </Typography>
                       </TableCell>

@@ -42,6 +42,8 @@ import {
   OutlinedInput,
   Alert,
   AlertTitle,
+  Tabs,
+  Tab,
 } from '@mui/material';
 import {
   Folder as FolderIcon,
@@ -76,6 +78,8 @@ import { useApiSnackbar } from '@/contexts/SnackbarContext';
 import { canManage, canEdit, canDelete, canCreate } from '@/utils/permissions';
 import RoleProtection from '@/components/auth/RoleProtection';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
+import AdditionalResourcesTable from '@/components/resources/AdditionalResourcesTable';
+import ResourceCreationDialog from '@/components/resources/ResourceCreationDialog';
 
 interface ExtendedResourceObject extends ResourceObject {
   id?: string;
@@ -137,9 +141,6 @@ export default function ObjectsPage() {
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [selectedObjects, setSelectedObjects] = useState<string[]>([]);
-  const [displayName, setDisplayName] = useState('');
-  const [displayNameError, setDisplayNameError] = useState('');
-  const [description, setDescription] = useState('');
 
   // Search, Filter, Sort states
   const [searchTerm, setSearchTerm] = useState('');
@@ -157,6 +158,18 @@ export default function ObjectsPage() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
+  const [tabValue, setTabValue] = useState(0);
+
+  // Additional Resources State
+  const [additionalResources, setAdditionalResources] = useState([]);
+  const [additionalResourcesLoading, setAdditionalResourcesLoading] = useState(false);
+  const [additionalResourcesPage, setAdditionalResourcesPage] = useState(0);
+  const [additionalResourcesRowsPerPage, setAdditionalResourcesRowsPerPage] = useState(10);
+  const [additionalResourcesSearchTerm, setAdditionalResourcesSearchTerm] = useState('');
+  const [additionalResourcesSortBy, setAdditionalResourcesSortBy] = useState('name');
+  const [additionalResourcesSortOrder, setAdditionalResourcesSortOrder] = useState('asc');
+  const [additionalResourcesFilterType, setAdditionalResourcesFilterType] = useState('all');
+  const [additionalResourcesFilterStatus, setAdditionalResourcesFilterStatus] = useState('all');
 
   // Mock data for now - in real implementation this would come from API
   const mockObjects: ExtendedResourceObject[] = useMemo(() => [
@@ -218,9 +231,6 @@ export default function ObjectsPage() {
 
   const handleClickOpen = (object?: ExtendedResourceObject) => {
     setSelectedObject(object || null);
-    setDisplayName(object?.displayName || '');
-    setDisplayNameError('');
-    setDescription(object?.description || '');
     setOpen(true);
   };
 
@@ -307,18 +317,6 @@ export default function ObjectsPage() {
   const handleClose = () => {
     setOpen(false);
     setSelectedObject(null);
-    setDisplayName('');
-    setDisplayNameError('');
-    setDescription('');
-  };
-
-  const handleDisplayNameChange = (value: string) => {
-    setDisplayName(value);
-    if (value.trim().length < 2) {
-      setDisplayNameError('Name must be at least 2 characters long.');
-    } else {
-      setDisplayNameError('');
-    }
   };
 
   // Multi-selection handlers
@@ -379,46 +377,67 @@ export default function ObjectsPage() {
       });
 
       if (response.success) {
-        // Update local state by filtering out deleted objects using both id and _id
-        const updatedObjects = objects.filter(obj => 
-          !(selectedObjects.includes(obj.id || '') || selectedObjects.includes(obj._id || ''))
-        );
-        setObjects(updatedObjects);
-        setTotal(updatedObjects.length);
+        const { deletedCount, skippedCount, skippedResources, deleted } = response.data;
+
+        // Update local state by filtering out only the deleted resources
+        const deletedIds = deleted?.map((resource: any) => resource.id) || [];
+        setObjects(prev => prev.filter(obj => !deletedIds.includes(obj.id)));
+        setTotal(prev => prev - deletedCount);
 
         // Clear selection
         setSelectedObjects([]);
-        
-        // Show success message
-        snackbar.showSuccess(`${selectedObjects.length} resource${selectedObjects.length === 1 ? '' : 's'} deleted successfully`);
 
+        // Show appropriate message based on results
+        if (deletedCount > 0 && skippedCount > 0) {
+          // Some deleted, some skipped
+          const skippedDetails = skippedResources
+            ?.map((resource: any) => {
+              if (resource.policyCount > 0) {
+                return `"${resource.name}" (used in ${resource.policyCount} ${resource.policyCount === 1 ? 'policy' : 'policies'})`;
+              }
+              return `"${resource.name}" (${resource.reason})`;
+            })
+            .join(', ');
+
+          snackbar.showWarning(
+            `${deletedCount} ${deletedCount === 1 ? 'resource' : 'resources'} deleted successfully. ${skippedCount} ${skippedCount === 1 ? 'resource was' : 'resources were'} skipped: ${skippedDetails}`
+          );
+        } else if (deletedCount > 0) {
+          // All deleted
+          snackbar.showSuccess(`${deletedCount} ${deletedCount === 1 ? 'resource' : 'resources'} deleted successfully`);
+        } else if (skippedCount > 0) {
+          // None deleted, all skipped
+          const skippedDetails = skippedResources
+            ?.map((resource: any) => {
+              if (resource.policyCount > 0) {
+                return `"${resource.name}" (used in ${resource.policyCount} ${resource.policyCount === 1 ? 'policy' : 'policies'})`;
+              }
+              return `"${resource.name}" (${resource.reason})`;
+            })
+            .join(', ');
+
+          snackbar.showWarning(
+            `No resources were deleted. ${skippedCount} ${skippedCount === 1 ? 'resource was' : 'resources were'} skipped: ${skippedDetails}`
+          );
+        }
       } else {
-        throw new Error(response.error || 'Failed to delete objects');
+        throw new Error(response.error || 'Failed to delete resources');
       }
     } catch (error: any) {
-      console.error('Failed to delete objects:', error);
-
-      // Always refresh the data to sync with backend state
-      await fetchObjects();
-
-      // Clear selection regardless of error
-      setSelectedObjects([]);
-
-      // Extract error message from API response
-      const errorMessage = error?.error || error?.message || 'Unknown error';
-      
-      // Handle specific error cases
-      if (errorMessage.includes('Unable to delete') && errorMessage.includes('currently being used in')) {
-        snackbar.showError(errorMessage);
-      } else if (!error.message?.includes('not found') && error.code !== 'NOT_FOUND') {
-        snackbar.showError('Failed to delete some resources. Please try again.');
-      }
+      console.error('Failed to delete resources:', error);
+      snackbar.handleApiError(error, 'Failed to delete resources');
     } finally {
       setIsSubmitting(false);
     }
   };
 
   const clearSelection = () => {
+    setSelectedObjects([]);
+  };
+
+  const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
+    setTabValue(newValue);
+    // Clear selection when switching tabs
     setSelectedObjects([]);
   };
 
@@ -456,90 +475,6 @@ export default function ObjectsPage() {
     setSortBy(field);
   };
 
-  const handleSubmit = async () => {
-    if (!displayName.trim() || displayNameError) {
-      return;
-    }
-
-    // Check if required context is available
-    if (!currentWorkspace || !currentApplication || !currentEnvironment) {
-      snackbar.showError('Please select a workspace, application, and environment before creating a resource.');
-      return;
-    }
-
-    setIsSubmitting(true);
-    try {
-      const objectData = {
-        name: displayName.toLowerCase().replace(/\s+/g, ''),
-        displayName: displayName.trim(),
-        description: description?.trim() || '',
-        type: 'file',
-        uri: `/${displayName.toLowerCase().replace(/\s+/g, '')}`,
-        active: true,
-        // Required workspace context for backend validation
-        workspaceId: currentWorkspace._id,
-        applicationId: currentApplication._id,
-        environmentId: currentEnvironment._id,
-        attributes: new Map(),
-        children: [],
-        permissions: {
-          read: true,
-          write: false,
-          delete: false,
-          execute: false,
-          admin: false
-        },
-        metadata: {
-          owner: currentUser?.name || 'System',
-          createdBy: currentUser?.name || 'System',
-          lastModifiedBy: currentUser?.name || 'System',
-          tags: [],
-          classification: 'internal' as 'public' | 'internal' | 'confidential' | 'restricted',
-          isSystem: false,
-          isCustom: true,
-          version: '1.0.0'
-        }
-      };
-
-      if (selectedObject) {
-        // Update existing object
-        const response = await apiClient.put(`/resources/${selectedObject?._id}`, objectData);
-        
-        if (response.success) {
-          // Refresh the data by calling fetchObjects
-          await fetchObjects();
-          snackbar.showSuccess(`Resource "${objectData.displayName}" updated successfully`);
-          handleClose();
-        } else {
-          snackbar.handleApiResponse(response, undefined, 'Failed to update resource');
-        }
-      } else {
-        // Create new resource
-        const response = await apiClient.post('/resources', objectData);
-        
-        if (response.success) {
-          // Refresh the data by calling fetchObjects
-          await fetchObjects();
-          snackbar.showSuccess(`Resource "${objectData.displayName}" created successfully`);
-          handleClose();
-        } else {
-          snackbar.handleApiResponse(response, undefined, 'Failed to create resource');
-        }
-      }
-      
-    } catch (error: any) {
-      console.error('Failed to save resource:', error);
-      
-      // Handle specific duplicate error
-      if (error?.error && error.error.includes('already exists')) {
-        snackbar.showError(`Resource "${displayName.trim()}" already exists. Please choose a different name.`);
-      } else {
-        snackbar.handleApiError(error, 'Failed to save resource. Please try again.');
-      }
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
 
   // Fetch objects function
   const fetchObjects = useCallback(async () => {
@@ -676,6 +611,38 @@ export default function ObjectsPage() {
   const activeCount = validObjects.filter(obj => obj.active !== false).length;
   const inactiveCount = validObjects.filter(obj => obj.active === false).length;
 
+  // Additional Resources Stats calculation
+  const validAdditionalResources = additionalResources.filter(resource => resource.id);
+  const additionalActiveCount = validAdditionalResources.filter(resource => resource.active !== false).length;
+  const additionalInactiveCount = validAdditionalResources.filter(resource => resource.active === false).length;
+
+  // Dynamic header content based on tab
+  const getHeaderContent = () => {
+    if (tabValue === 0) {
+      return {
+        title: 'Resources',
+        description: 'Manage files, folders, databases, and other system objects in your permission system.',
+        buttonLabel: 'Create Resource',
+        total: validObjects.length,
+        active: activeCount,
+        inactive: inactiveCount,
+        loading: loading
+      };
+    } else {
+      return {
+        title: 'Additional Resources',
+        description: 'Manage additional resources like conditions, states, and workflows for complex policies.',
+        buttonLabel: 'Create Additional Resource',
+        total: validAdditionalResources.length,
+        active: additionalActiveCount,
+        inactive: additionalInactiveCount,
+        loading: additionalResourcesLoading
+      };
+    }
+  };
+
+  const headerContent = getHeaderContent();
+
   // Check if user can create entities (requires workspace, application, and environment selection)
   const canCreateEntity = currentWorkspace && currentApplication && currentEnvironment && canCreate(currentUser);
 
@@ -697,13 +664,13 @@ export default function ObjectsPage() {
           <Box sx={{ display: 'flex', alignItems: 'center' }}>
             <FolderIcon sx={{ mr: 2, color: 'text.secondary' }} />
             <Typography variant="h5" component="h1" fontWeight="600">
-              Resources
+              {headerContent.title}
             </Typography>
           </Box>
           <Box sx={{ display: 'flex', gap: 3, textAlign: 'center' }}>
             <Box>
               <Typography variant="h6" color="primary.main" fontWeight="600">
-                {loading ? '...' : validObjects.length}
+                {headerContent.loading ? '...' : headerContent.total}
               </Typography>
               <Typography variant="caption" color="text.secondary">
                 Total
@@ -711,7 +678,7 @@ export default function ObjectsPage() {
             </Box>
             <Box>
               <Typography variant="h6" color="success.main" fontWeight="600">
-                {loading ? '...' : activeCount}
+                {headerContent.loading ? '...' : headerContent.active}
               </Typography>
               <Typography variant="caption" color="text.secondary">
                 Active
@@ -719,7 +686,7 @@ export default function ObjectsPage() {
             </Box>
             <Box>
               <Typography variant="h6" color="error.main" fontWeight="600">
-                {loading ? '...' : inactiveCount}
+                {headerContent.loading ? '...' : headerContent.inactive}
               </Typography>
               <Typography variant="caption" color="text.secondary">
                 Inactive
@@ -730,23 +697,55 @@ export default function ObjectsPage() {
         
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 2 }}>
           <Typography variant="body2" color="text.secondary">
-            Manage files, folders, databases, and other system objects in your permission system.
+            {headerContent.description}
           </Typography>
           <Button
             variant="contained"
             startIcon={<AddIcon />}
-            onClick={() => handleClickOpen()}
+            onClick={() => {
+              if (tabValue === 0) {
+                handleClickOpen();
+              } else {
+                // For Additional Resources tab, we need to trigger the create dialog
+                // This will be handled by the AdditionalResourcesTable component
+                const event = new CustomEvent('createAdditionalResource');
+                window.dispatchEvent(event);
+              }
+            }}
             disabled={!canCreateEntity}
             sx={{ px: 3 }}
           >
-            Create Resource
+            {headerContent.buttonLabel}
           </Button>
         </Box>
       </Paper>
 
+      {/* Tabs for Resources and Additional Resources */}
+      <Paper elevation={0} sx={{ mb: 3, border: '1px solid', borderColor: 'grey.200' }}>
+        <Tabs
+          value={tabValue}
+          onChange={handleTabChange}
+          aria-label="resources tabs"
+          sx={{
+            borderBottom: 1,
+            borderColor: 'divider',
+            '& .MuiTab-root': {
+              textTransform: 'none',
+              fontWeight: 600,
+              fontSize: '0.95rem'
+            }
+          }}
+        >
+          <Tab label="Resources" id="tab-0" aria-controls="tabpanel-0" />
+          <Tab label="Additional Resources" id="tab-1" aria-controls="tabpanel-1" />
+        </Tabs>
+      </Paper>
 
-      {/* Toolbar */}
-      <Paper sx={{ mb: 2 }}>
+
+      {/* Tab Content */}
+      <Box sx={{ display: tabValue === 0 ? 'block' : 'none' }}>
+        {/* Toolbar */}
+        <Paper sx={{ mb: 2 }}>
         <Toolbar sx={{ px: { sm: 2 }, minHeight: '64px !important' }}>
           {selectedObjects.length > 0 ? (
             <>
@@ -827,9 +826,9 @@ export default function ObjectsPage() {
             </>
           )}
         </Toolbar>
-      </Paper>
+        </Paper>
 
-      {/* Resources Table */}
+        {/* Resources Table */}
       <Paper elevation={0} sx={{ border: '1px solid', borderColor: 'grey.200' }}>
         {error && (
           <Box sx={{ p: 3, textAlign: 'center' }}>
@@ -1073,7 +1072,37 @@ export default function ObjectsPage() {
             />
           </>
         )}
-      </Paper>
+        </Paper>
+      </Box>
+
+      {/* Additional Resources Tab */}
+      <Box sx={{ display: tabValue === 1 ? 'block' : 'none' }}>
+        <AdditionalResourcesTable
+          searchTerm={additionalResourcesSearchTerm}
+          onSearchChange={setAdditionalResourcesSearchTerm}
+          page={additionalResourcesPage}
+          rowsPerPage={additionalResourcesRowsPerPage}
+          onPageChange={setAdditionalResourcesPage}
+          onRowsPerPageChange={(rowsPerPage) => {
+            setAdditionalResourcesRowsPerPage(rowsPerPage);
+            setAdditionalResourcesPage(0);
+          }}
+          sortBy={additionalResourcesSortBy}
+          sortOrder={additionalResourcesSortOrder as 'asc' | 'desc'}
+          onSortChange={(sortBy, sortOrder) => {
+            setAdditionalResourcesSortBy(sortBy);
+            setAdditionalResourcesSortOrder(sortOrder);
+          }}
+          filterType={additionalResourcesFilterType}
+          filterStatus={additionalResourcesFilterStatus}
+          onFilterTypeChange={setAdditionalResourcesFilterType}
+          onFilterStatusChange={setAdditionalResourcesFilterStatus}
+          onResourcesChange={(resources) => {
+            // Update parent state with the new resources for stats calculation
+            setAdditionalResources(resources);
+          }}
+        />
+      </Box>
 
       {/* Filter Popover */}
       <Popover
@@ -1187,111 +1216,20 @@ export default function ObjectsPage() {
         <AddIcon />
       </Fab>
 
-      {/* Resource Dialog */}
-      <Dialog
+      {/* Resource Creation Dialog */}
+      <ResourceCreationDialog
         open={open}
         onClose={handleClose}
-        maxWidth="sm"
-        fullWidth
-        PaperProps={{
-          sx: {
-            borderRadius: 2,
-            boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
-            m: 2,
-          }
+        editingResource={selectedObject}
+        onResourceCreated={() => {
+          fetchObjects();
+          handleClose();
         }}
-      >
-        <DialogTitle sx={{
-          pb: 1,
-          pt: 2.5,
-          px: 3,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between'
-        }}>
-          <Typography variant="h6" fontWeight="600" color="text.primary">
-            {selectedObject ? 'Edit Resource' : 'New Resource'}
-          </Typography>
-          <IconButton
-            onClick={handleClose}
-            size="small"
-            sx={{
-              color: 'grey.500',
-              '&:hover': {
-                bgcolor: 'grey.100'
-              }
-            }}
-          >
-            <CloseIcon fontSize="small" />
-          </IconButton>
-        </DialogTitle>
-
-        <DialogContent sx={{ px: 3, pt: 2, pb: 2 }}>
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5, mt: 1 }}>
-            <TextField
-              fullWidth
-              label="Name"
-              value={displayName}
-              onChange={(e) => handleDisplayNameChange(e.target.value)}
-              variant="outlined"
-              placeholder="e.g., Customer Database, User Files, System Config"
-              error={!!displayNameError}
-              helperText={displayNameError || 'Enter the resource name'}
-            />
-
-            <TextField
-              fullWidth
-              label="Description"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              variant="outlined"
-              placeholder="Brief description of the resource"
-              multiline
-              rows={3}
-            />
-          </Box>
-        </DialogContent>
-
-        <DialogActions sx={{
-          px: 3,
-          pb: 3,
-          pt: 1,
-          gap: 1.5
-        }}>
-          <Button
-            onClick={handleClose}
-            variant="outlined"
-            disabled={isSubmitting}
-            sx={{
-              textTransform: 'none',
-              minWidth: 100,
-              borderColor: 'grey.300',
-              color: 'text.secondary',
-              '&:hover': {
-                borderColor: 'grey.400',
-                bgcolor: 'grey.50'
-              }
-            }}
-          >
-            Cancel
-          </Button>
-          <Button
-            onClick={handleSubmit}
-            variant="contained"
-            disabled={isSubmitting || !displayName.trim() || !!displayNameError}
-            sx={{
-              textTransform: 'none',
-              minWidth: 120,
-              bgcolor: 'primary.main',
-              '&:hover': {
-                bgcolor: 'primary.dark'
-              }
-            }}
-          >
-            {isSubmitting ? 'Saving...' : (selectedObject ? 'Update Resource' : 'Create Resource')}
-          </Button>
-        </DialogActions>
-      </Dialog>
+        onResourceUpdated={() => {
+          fetchObjects();
+          handleClose();
+        }}
+      />
 
       {/* View Object Dialog */}
       <Dialog
