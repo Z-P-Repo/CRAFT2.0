@@ -5,7 +5,7 @@ export interface IAttribute extends Document {
   name: string;
   displayName: string;
   description?: string;
-  categories: ('subject' | 'resource')[];
+  categories: ('subject' | 'resource' | 'additional-resource')[];
   dataType: 'string' | 'number' | 'boolean' | 'date' | 'array' | 'object';
   isRequired: boolean;
   isMultiValue: boolean;
@@ -137,8 +137,8 @@ const AttributeSchema = new Schema<IAttribute>({
       message: 'At least one category must be selected'
     },
     enum: {
-      values: ['subject', 'resource'],
-      message: '{VALUE} is not a valid category. Only subject and resource are allowed'
+      values: ['subject', 'resource', 'additional-resource'],
+      message: '{VALUE} is not a valid category. Only subject, resource, and additional-resource are allowed'
     }
   },
   dataType: {

@@ -505,6 +505,18 @@ class ApiClient {
     });
   }
 
+  async updateAdditionalResourceAttributes(
+    id: string,
+    attributes: Record<string, any>,
+    operation: 'merge' | 'replace' = 'merge'
+  ): Promise<ApiResponse<any>> {
+    return this.request({
+      method: 'PATCH',
+      url: `/additional-resources/${id}/attributes`,
+      data: { attributes, operation },
+    });
+  }
+
   async getAdditionalResourceStats(params?: {
     workspaceId?: string;
     applicationId?: string;

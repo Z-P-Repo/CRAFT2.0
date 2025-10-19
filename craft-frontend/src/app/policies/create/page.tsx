@@ -62,6 +62,7 @@ import { useWorkspace } from '@/contexts/WorkspaceContext';
 import SubjectCreationDialog from '@/components/subjects/SubjectCreationDialog';
 import ActionCreationDialog from '@/components/actions/ActionCreationDialog';
 import ResourceCreationDialog from '@/components/resources/ResourceCreationDialog';
+import AdditionalResourceCreationDialog from '@/components/resources/AdditionalResourceCreationDialog';
 import RoleProtection from '@/components/auth/RoleProtection';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
 
@@ -245,6 +246,7 @@ export default function CreatePolicyPage() {
 
   // Resource creation modal state
   const [resourceDialogOpen, setResourceDialogOpen] = useState(false);
+  const [additionalResourceDialogOpen, setAdditionalResourceDialogOpen] = useState(false);
 
   // Cancel confirmation dialog state
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
@@ -616,16 +618,33 @@ export default function CreatePolicyPage() {
   };
 
   const handleResourceCreated = (newResource: any) => {
-    // Add the new resource to both resources and additional resources lists
+    // Add the new resource to the resources list
     setResources(prev => [...prev, newResource]);
-    setAdditionalResources(prev => [...prev, newResource]);
 
-    // Select the newly created resource in both lists
+    // Select the newly created resource
     setSelectedResources(prev => [...prev, newResource.id]);
-    setSelectedAdditionalResources(prev => [...prev, newResource.id]);
 
     // Show success message using snackbar
     snackbar.showSuccess('Resource created successfully!');
+  };
+
+  const handleOpenAdditionalResourceDialog = () => {
+    setAdditionalResourceDialogOpen(true);
+  };
+
+  const handleCloseAdditionalResourceDialog = () => {
+    setAdditionalResourceDialogOpen(false);
+  };
+
+  const handleAdditionalResourceCreated = (newResource: any) => {
+    // Add the new additional resource to the additional resources list
+    setAdditionalResources(prev => [...prev, newResource]);
+
+    // Select the newly created additional resource
+    setSelectedAdditionalResources(prev => [...prev, newResource.id]);
+
+    // Show success message using snackbar
+    snackbar.showSuccess('Additional resource created successfully!');
   };
 
   // Cancel confirmation handlers
@@ -1154,7 +1173,7 @@ export default function CreatePolicyPage() {
               <Grid container spacing={3}>
                 <Grid size={{ xs: 12, md: 5 }}>
                   <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500 }}>
+                    <Typography variant="subtitle1" fontWeight="600">
                       Select Subject
                     </Typography>
                     <Button
@@ -2242,10 +2261,10 @@ export default function CreatePolicyPage() {
                     <Button
                       variant="outlined"
                       startIcon={<AddIcon />}
-                      onClick={handleOpenResourceDialog}
+                      onClick={handleOpenAdditionalResourceDialog}
                       sx={{ fontSize: '0.75rem' }}
                     >
-                      Create New Resource
+                      Create New Additional Resource
                     </Button>
                   </Box>
                   <Autocomplete
@@ -3916,6 +3935,13 @@ export default function CreatePolicyPage() {
             open={resourceDialogOpen}
             onClose={handleCloseResourceDialog}
             onResourceCreated={handleResourceCreated}
+          />
+
+          {/* Additional Resource Creation Dialog */}
+          <AdditionalResourceCreationDialog
+            open={additionalResourceDialogOpen}
+            onClose={handleCloseAdditionalResourceDialog}
+            onResourceCreated={handleAdditionalResourceCreated}
           />
 
           {/* Cancel Confirmation Dialog */}

@@ -12,6 +12,9 @@ router.get('/', auth, AdditionalResourceController.getAdditionalResources);
 router.get('/stats', auth, AdditionalResourceController.getAdditionalResourceStats);
 router.post('/:id/evaluate', auth, AdditionalResourceController.evaluateAdditionalResource);
 
+// Attribute management for additional resources
+router.patch('/:id/attributes', auth, requireAdminOrSuperAdmin, AdditionalResourceController.updateAdditionalResourceAttributes);
+
 router.get('/:id', auth, AdditionalResourceController.getAdditionalResourceById);
 router.post('/', auth, requireAdminOrSuperAdmin, AdditionalResourceController.createAdditionalResource);
 router.put('/:id', auth, requireAdminOrSuperAdmin, AdditionalResourceController.updateAdditionalResource);

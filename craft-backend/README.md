@@ -2,7 +2,7 @@
 
 A robust, scalable Node.js backend API for the CRAFT (Attribute-Based Access Control) Permission System. Built with Express.js, TypeScript, MongoDB, and comprehensive security features.
 
-![Version](https://img.shields.io/badge/version-1.3.14-blue.svg)
+![Version](https://img.shields.io/badge/version-1.3.15-blue.svg)
 ![Node.js](https://img.shields.io/badge/Node.js-18+-green.svg)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.5-blue.svg)
 ![Express](https://img.shields.io/badge/Express-4.19-black.svg)
@@ -367,7 +367,19 @@ For support and questions:
 *Last updated: October 15, 2025*
 🤖 *Generated and maintained with [Claude Code](https://claude.ai/code)*
 
-## 🔄 Recent Updates (Version 1.3.14)
+## 🔄 Recent Updates (Version 1.3.15)
+
+### Additional Resource Attributes Schema Enhancement (October 18, 2025)
+- **🏷️ Attribute Category Expansion**: Updated Attribute model to support 'additional-resource' as a valid category alongside 'subject' and 'resource' in MongoDB enum validation
+- **📝 Schema Enhancement**: Modified AttributeSchema enum values from `['subject', 'resource']` to `['subject', 'resource', 'additional-resource']` for complete attribute categorization
+- **✅ TypeScript Interface Update**: Enhanced IAttribute interface to include 'additional-resource' in categories union type for full type safety
+- **🔧 Validation Rules**: Updated category validation error messages to reflect all three supported categories with clear user-friendly messaging
+- **🛡️ Data Integrity**: Maintained backward compatibility while extending attribute categorization for advanced policy condition management
+- **📊 Policy Integration**: Enabled frontend policy creation and edit flows to properly manage attributes specific to additional resources
+- **🎯 Frontend Support**: Backend now fully supports frontend's comprehensive additional resource attribute selection and display features
+- **🔄 Model Consistency**: Ensured schema validation aligns with frontend requirements for attribute filtering by 'additional-resource' category
+
+## Previous Updates (Version 1.3.14)
 
 ### Dashboard API Support & Frontend Enhancement (October 15, 2025)
 - **📊 Real-Time Dashboard Integration**: Backend APIs now support comprehensive dashboard statistics fetching from 8 parallel endpoints

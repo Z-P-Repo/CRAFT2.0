@@ -32,9 +32,9 @@ export interface SubjectCreationDialogProps {
   editingSubject?: any;
 }
 
-export default function SubjectCreationDialog({ 
-  open, 
-  onClose, 
+export default function SubjectCreationDialog({
+  open,
+  onClose,
   onSubjectCreated,
   onSubjectUpdated,
   editingSubject
@@ -60,13 +60,13 @@ export default function SubjectCreationDialog({
 
   const handleClose = () => {
     if (isCreating) return; // Prevent closing during creation
-    
+
     // Check if form has data and show confirmation
     if (displayName.trim() || description.trim()) {
       setCancelDialogOpen(true);
       return;
     }
-    
+
     // No data, close directly
     setDisplayName('');
     setDescription('');
@@ -98,7 +98,7 @@ export default function SubjectCreationDialog({
 
     setIsCreating(true);
     const isEditing = !!editingSubject;
-    const url = isEditing 
+    const url = isEditing
       ? `${process.env.NEXT_PUBLIC_API_URL}/subjects/${editingSubject.id || editingSubject._id}`
       : `${process.env.NEXT_PUBLIC_API_URL}/subjects`;
     const method = isEditing ? 'PUT' : 'POST';
@@ -135,7 +135,7 @@ export default function SubjectCreationDialog({
         } else {
           onSubjectCreated?.(response.data);
         }
-        
+
         // Reset form and close dialog
         setDisplayName('');
         setDescription('');
@@ -175,7 +175,7 @@ export default function SubjectCreationDialog({
         alignItems: 'center',
         justifyContent: 'space-between'
       }}>
-{editingSubject ? 'Edit Subject' : 'Create New Subject'}
+        {editingSubject ? 'Edit Subject' : 'Create New Subject'}
         <IconButton
           onClick={handleClose}
           disabled={isCreating}
@@ -189,7 +189,7 @@ export default function SubjectCreationDialog({
       </DialogTitle>
 
       <DialogContent sx={{ px: 3, pt: 2, pb: 2 }}>
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3, paddingTop: '8px' }}>
           <TextField
             fullWidth
             label="Subject Name"
@@ -201,7 +201,7 @@ export default function SubjectCreationDialog({
             error={!displayName.trim() && displayName !== ''}
             helperText={!displayName.trim() && displayName !== '' ? 'Subject name is required' : ''}
           />
-          
+
           <TextField
             fullWidth
             label="Description"
@@ -248,8 +248,8 @@ export default function SubjectCreationDialog({
             }
           }}
         >
-          {isCreating 
-            ? `${editingSubject ? 'Updating' : 'Creating'}...` 
+          {isCreating
+            ? `${editingSubject ? 'Updating' : 'Creating'}...`
             : `${editingSubject ? 'Update' : 'Create'} Subject`}
         </Button>
       </DialogActions>

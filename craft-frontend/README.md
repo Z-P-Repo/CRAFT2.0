@@ -2,7 +2,7 @@
 
 A modern, responsive React-based dashboard for managing the CRAFT (Attribute-Based Access Control) Permission System. Built with Next.js 15, TypeScript, and Material-UI with a professional collapsible sidebar layout.
 
-![Version](https://img.shields.io/badge/version-1.3.14-blue.svg)
+![Version](https://img.shields.io/badge/version-1.3.15-blue.svg)
 ![Next.js](https://img.shields.io/badge/Next.js-15.4.6-black.svg)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.5-blue.svg)
 ![Material-UI](https://img.shields.io/badge/Material--UI-7.3-blue.svg)
@@ -537,7 +537,24 @@ await trackUser('updated', 'user-456', 'John Doe');
 *Last updated: October 15, 2025*
 🤖 *Generated and maintained with [Claude Code](https://claude.ai/code)*
 
-## 🔄 Recent Updates (Version 1.3.14)
+## 🔄 Recent Updates (Version 1.3.15)
+
+### Additional Resource Attributes Complete Display System (October 18, 2025)
+- **📊 Policy Details Enhancement**: Added comprehensive "Additional Resources (Conditions)" section to policy details page displaying each resource with its configured attributes as professional green-bordered chips
+- **💬 Natural Language Policy Statements**: Enhanced human-readable policy descriptions to include additional resource attribute conditions in format: "if L3 Ticket (when status is approved and priority is high)"
+- **✨ Create Flow Attribute Display**: Updated Review & Create step (Stepper 6) to show additional resource attributes in both human-readable statement and detailed technical details section
+- **📝 Edit Flow Attribute Display**: Enhanced Review & Save step in edit flow to display additional resource attributes in human-readable policy summary with proper formatting
+- **🎨 Comprehensive Edit Flow UI Overhaul**: Completely redesigned Additional Resources section (Stepper 4) in policy edit page with professional Autocomplete-based attribute selection interface
+- **🔍 Advanced Attribute Selection**: Multi-select Autocomplete dropdown with intelligent filtering by 'additional-resource' category, searchable by name, description, type, and category
+- **🎯 Data-Type-Specific Controls**: Individual attribute cards with appropriate input controls for different data types - text fields, number inputs, boolean switches, select dropdowns, multi-select Autocomplete
+- **➕ Inline Attribute Creation**: "Create New Attribute" button in edit flow that automatically pre-selects 'additional-resource' category for streamlined attribute creation workflow
+- **🎨 Professional Visual Indicators**: Color-coded dots for required/optional attributes (red/green), required attribute chips, and polished hover effects on attribute cards
+- **🔄 Dual State Management**: Smart handlers that update both new comprehensive state variables and existing data structures for full backward compatibility with previous implementations
+- **📭 Empty State Handling**: Professional "No attributes configured" messages displayed for additional resources without any configured attributes
+- **🛡️ Backend Category Validation**: Updated Attribute model schema to properly support 'additional-resource' as a valid category in MongoDB enum validation rules
+- **✅ Complete Feature Parity**: Achieved full consistency between policy create and edit flows for additional resource attribute management across all policy pages
+
+## Previous Updates (Version 1.3.14)
 
 ### Comprehensive Dashboard Implementation (October 15, 2025)
 - **📊 Real-Time Data Dashboard**: Complete redesign from static content to dynamic real-time data visualization with live statistics from 8 parallel API endpoints

@@ -37,7 +37,33 @@ When user prompts "deploy", prepare the application for production deployment:
 - **Backend**: `/craft-backend` (Node.js 18+, Express 4.19.2, TypeScript 5.5.4, MongoDB 8.5.2, Mongoose ODM, Azure AD SSO, Advanced Rate Limiting, Redis Caching)
 - **Additional**: Zustand state management, TanStack React Query, Axios HTTP client, React Hook Form, Yup validation, Storybook, ESLint, Prettier
 
-## Latest Features (v1.3.14)
+## Latest Features (v1.3.16)
+- **Policy Flow Additional Resource Creation Fix**: Fixed policy creation and edit flows (Step 5 - Additional Resources) to use AdditionalResourceCreationDialog instead of ResourceCreationDialog ensuring correct resource type creation
+- **Button Text Clarity Enhancement**: Updated button text from "Create New Resource" to "Create New Additional Resource" in policy workflow Step 5 for better user understanding and workflow clarity
+- **User Attribution System**: Fixed "Created By" and metadata fields across Resources and Additional Resources to display actual user names/emails instead of "System" or user IDs
+- **Backend Metadata Enhancement**: Enhanced AdditionalResourceController to use `user?.name || user?.email` for owner, createdBy, and lastModifiedBy fields ensuring proper user attribution
+- **Frontend Payload Optimization**: Removed hardcoded metadata from frontend resource creation dialogs allowing backend to automatically populate user information from authenticated sessions
+- **Dual Dialog Architecture**: Properly separated regular Resource creation (Step 3) from Additional Resource creation (Step 5) with dedicated dialogs and independent state management
+- **Comprehensive State Handlers**: Added complete state management with handleOpenAdditionalResourceDialog, handleCloseAdditionalResourceDialog, and handleAdditionalResourceCreated functions
+- **Automatic Resource Selection**: Newly created additional resources are automatically added to dropdown lists and selected in the policy workflow for seamless user experience
+- **Resource List Synchronization**: Additional resource creation updates both frontend state and immediately refreshes available resources for instant user feedback
+
+## Previous Features (v1.3.15)
+- **Additional Resource Attributes Display**: Complete implementation of attribute display for additional resources across all policy views
+- **Policy Details Page Enhancement**: Added dedicated "Additional Resources (Conditions)" section showing each resource with its configured attributes as green-bordered chips
+- **Human-Readable Statements with Attributes**: Updated policy statements to include attribute conditions in natural language format "if L3 Ticket (when status is approved and priority is high)"
+- **Create Flow Attribute Display**: Enhanced Review & Create step (Stepper 6) to show additional resource attributes in both human-readable statement and technical details section
+- **Edit Flow Attribute Display**: Updated Review & Save step to display additional resource attributes in human-readable policy summary
+- **Comprehensive Edit Flow UI**: Completely overhauled Additional Resources section (Stepper 4) in policy edit page with professional Autocomplete-based attribute selection
+- **Attribute Selection Interface**: Added multi-select Autocomplete dropdown filtered by 'additional-resource' category with advanced search by name, description, type, and category
+- **Attribute Cards UI**: Individual cards for each selected attribute with data-type-specific input controls (text, number, boolean, select, multi-select)
+- **Create New Attribute Integration**: "Create New Attribute" button in edit flow that pre-selects 'additional-resource' category for seamless attribute creation
+- **Visual Indicators**: Color-coded dots for required/optional attributes, required attribute chips, and professional hover effects on cards
+- **Dual State Management**: Handlers update both new comprehensive state variables and existing structures for full backward compatibility
+- **Empty State Handling**: Professional "No attributes configured" messages for resources without attributes
+- **Backend Category Support**: Updated Attribute model to support 'additional-resource' as valid category in enum validation
+
+## Previous Features (v1.3.14)
 - **Comprehensive Dashboard Implementation**: Complete redesign of dashboard from static content to real-time data visualization
 - **Real-Time Statistics**: Live data fetching from 8 API endpoints in parallel (policies, subjects, actions, resources, additional resources, attributes, workspaces, users)
 - **Beautiful Gradient Cards**: 4 main statistics cards with stunning gradient backgrounds and hover animations for Policies, Subjects, Actions, and Resources

@@ -45,6 +45,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useWorkspace } from '@/contexts/WorkspaceContext';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
+import PolicyCreationGuide from '@/components/dashboard/PolicyCreationGuide';
 import { apiClient } from '@/lib/api';
 import { useApiSnackbar } from '@/contexts/SnackbarContext';
 
@@ -399,6 +400,11 @@ export default function DashboardPage() {
         </Paper>
 
         {loading && <LinearProgress sx={{ mb: 3 }} />}
+
+        {/* Policy Creation Guide */}
+        <Box sx={{ mb: 4 }}>
+          <PolicyCreationGuide />
+        </Box>
 
         {/* Main Statistics Cards */}
         <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 3, mb: 4 }}>

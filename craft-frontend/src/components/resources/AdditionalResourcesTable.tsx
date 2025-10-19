@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Paper,
   Table,
@@ -49,6 +49,7 @@ import {
   Search as SearchIcon,
   Sort as SortIcon,
   Clear as ClearIcon,
+  Close as CloseIcon,
   ArrowUpward as ArrowUpIcon,
   ArrowDownward as ArrowDownIcon,
   CheckCircle as ActiveIcon,
@@ -150,6 +151,10 @@ const PREDEFINED_RESOURCE_NAMES = {
   ]
 };
 
+interface ExtendedAdditionalResourcesTableProps extends AdditionalResourcesTableProps {
+  isVisible?: boolean;
+}
+
 export default function AdditionalResourcesTable({
   searchTerm,
   onSearchChange,
@@ -164,8 +169,9 @@ export default function AdditionalResourcesTable({
   filterStatus,
   onFilterTypeChange,
   onFilterStatusChange,
-  onResourcesChange
-}: AdditionalResourcesTableProps) {
+  onResourcesChange,
+  isVisible = true
+}: ExtendedAdditionalResourcesTableProps) {
   const snackbar = useApiSnackbar();
   const { currentWorkspace, currentApplication, currentEnvironment } = useWorkspace();
 
@@ -184,13 +190,24 @@ export default function AdditionalResourcesTable({
   const [isCustomName, setIsCustomName] = useState(false);
   const [editingResource, setEditingResource] = useState<AdditionalResource | null>(null);
   const [deletingResourceId, setDeletingResourceId] = useState<string>('');
+  const [bulkDeleteDialogOpen, setBulkDeleteDialogOpen] = useState(false);
+  const [isBulkDeleting, setIsBulkDeleting] = useState(false);
 
   // Filter and sort popover states
   const [filterAnchor, setFilterAnchor] = useState<HTMLButtonElement | null>(null);
   const [sortAnchor, setSortAnchor] = useState<HTMLButtonElement | null>(null);
 
   const loadAdditionalResources = useCallback(async () => {
-    if (!currentEnvironment) return;
+    console.log('loadAdditionalResources called');
+    console.log('currentWorkspace:', currentWorkspace);
+    console.log('currentApplication:', currentApplication);
+    console.log('currentEnvironment:', currentEnvironment);
+
+    if (!currentEnvironment) {
+      console.log('No environment selected, skipping API call');
+      setLoading(false);
+      return;
+    }
 
     setLoading(true);
     try {
@@ -203,8 +220,17 @@ export default function AdditionalResourcesTable({
         workspaceId: currentWorkspace?._id
       });
 
-      console.log('Additional resources loaded:', response.data);
-      const resources = response.data || [];
+      console.log('Additional resources API response:', response);
+      console.log('Response data type:', typeof response.data);
+      console.log('Is array?:', Array.isArray(response.data));
+      console.log('Response data:', response.data);
+
+      // Backend returns { success: true, data: [...], pagination: {...}, filters: {...}, sort: {...} }
+      // response.data should be the array of resources
+      const resources = Array.isArray(response.data) ? response.data : [];
+
+      console.log('Final resources array:', resources);
+      console.log('Resources length:', resources.length);
       setAdditionalResources(resources);
       onResourcesChange(resources);
     } catch (error) {
@@ -218,9 +244,30 @@ export default function AdditionalResourcesTable({
     }
   }, [currentEnvironment, currentApplication, currentWorkspace, onResourcesChange, snackbar]);
 
+  // Load resources when tab becomes visible AND environment is selected
+  // Only watch primitive values, not the callback function itself to avoid infinite loops
   useEffect(() => {
-    loadAdditionalResources();
-  }, [loadAdditionalResources]);
+    console.log('=== Visibility Effect Triggered ===');
+    console.log('isVisible:', isVisible);
+    console.log('currentEnvironment:', currentEnvironment);
+    console.log('currentWorkspace:', currentWorkspace);
+    console.log('currentApplication:', currentApplication);
+
+    if (isVisible && currentEnvironment) {
+      console.log('✅ Tab is visible AND environment exists, calling loadAdditionalResources');
+      loadAdditionalResources();
+    } else {
+      console.log('❌ NOT loading because:');
+      console.log('  - isVisible:', isVisible);
+      console.log('  - currentEnvironment exists:', !!currentEnvironment);
+
+      // Set loading to false if we're not going to load
+      if (!currentEnvironment) {
+        setLoading(false);
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isVisible, currentEnvironment?._id, currentWorkspace?._id, currentApplication?._id]);
 
   // Listen for create button clicks from header
   useEffect(() => {
@@ -239,14 +286,14 @@ export default function AdditionalResourcesTable({
   // Filter and sort the resources
   const filteredResources = additionalResources.filter(resource => {
     const matchesSearch = resource.displayName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         resource.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         resource.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         resource.type.toLowerCase().includes(searchTerm.toLowerCase());
+      resource.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      resource.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      resource.type.toLowerCase().includes(searchTerm.toLowerCase());
 
     const matchesType = filterType === 'all' || resource.type === filterType;
     const matchesStatus = filterStatus === 'all' ||
-                         (filterStatus === 'active' && resource.active) ||
-                         (filterStatus === 'inactive' && !resource.active);
+      (filterStatus === 'active' && resource.active) ||
+      (filterStatus === 'inactive' && !resource.active);
 
     return matchesSearch && matchesType && matchesStatus;
   });
@@ -330,12 +377,7 @@ export default function AdditionalResourcesTable({
         description: customDescription.trim() || '',
         attributes: {},
         active: true,
-        metadata: {
-          owner: 'User',
-          createdBy: 'User',
-          tags: [selectedType, 'custom'],
-          isSystem: false
-        }
+        // Backend will automatically set owner, createdBy, and lastModifiedBy from authenticated user
       };
     } else {
       if (!selectedResourceName) {
@@ -351,12 +393,7 @@ export default function AdditionalResourcesTable({
         description: customDescription.trim() || `Predefined ${selectedType} resource: ${selectedResourceName.name}`,
         attributes: selectedResourceName.attributes,
         active: true,
-        metadata: {
-          owner: 'System',
-          createdBy: 'User',
-          tags: [selectedType, 'predefined'],
-          isSystem: false
-        }
+        // Backend will automatically set owner, createdBy, and lastModifiedBy from authenticated user
       };
     }
 
@@ -444,6 +481,56 @@ export default function AdditionalResourcesTable({
     }
   };
 
+  const handleBulkDeleteOpen = () => {
+    setBulkDeleteDialogOpen(true);
+  };
+
+  const handleBulkDeleteClose = () => {
+    setBulkDeleteDialogOpen(false);
+  };
+
+  const handleBulkDeleteConfirm = async () => {
+    if (selectedResources.length === 0) return;
+
+    setIsBulkDeleting(true);
+    try {
+      console.log('Bulk deleting additional resources:', selectedResources);
+
+      // Delete each resource individually since we may not have a bulk delete endpoint
+      const deletePromises = selectedResources.map(resourceId =>
+        apiClient.deleteAdditionalResource(resourceId)
+      );
+
+      const results = await Promise.allSettled(deletePromises);
+
+      // Count successes and failures
+      const successCount = results.filter(r => r.status === 'fulfilled').length;
+      const failureCount = results.filter(r => r.status === 'rejected').length;
+
+      // Reload the resources to get the updated list from the server
+      await loadAdditionalResources();
+
+      // Clear selection
+      setSelectedResources([]);
+
+      // Show appropriate message
+      if (successCount > 0 && failureCount === 0) {
+        snackbar.showSuccess(`${successCount} additional ${successCount === 1 ? 'resource' : 'resources'} deleted successfully`);
+      } else if (successCount > 0 && failureCount > 0) {
+        snackbar.showWarning(`${successCount} additional ${successCount === 1 ? 'resource' : 'resources'} deleted successfully. ${failureCount} failed.`);
+      } else {
+        snackbar.showError(`Failed to delete ${failureCount} additional ${failureCount === 1 ? 'resource' : 'resources'}`);
+      }
+
+      setBulkDeleteDialogOpen(false);
+    } catch (error) {
+      console.error('Error bulk deleting additional resources:', error);
+      snackbar.showError('Failed to delete additional resources');
+    } finally {
+      setIsBulkDeleting(false);
+    }
+  };
+
   const handleSelectAll = () => {
     if (selectedResources.length === paginatedResources.length) {
       setSelectedResources([]);
@@ -488,78 +575,70 @@ export default function AdditionalResourcesTable({
 
   return (
     <>
-      {/* Info Alert */}
-      <Alert severity="info" sx={{ mb: 3 }}>
-        <Typography variant="body2">
-          <strong>Additional Resources</strong> represent states, conditions, or approval workflows that can be used in complex policies.
-          For example: "L3 Ticket", "Active Status", "Approved By Director".
-        </Typography>
-      </Alert>
-
       {/* Toolbar */}
-      <Paper sx={{ mb: 2 }}>
+      <Paper elevation={0} sx={{ border: '1px solid', borderColor: 'grey.200', mb: 2 }}>
         <Toolbar sx={{ px: { sm: 2 }, minHeight: '64px !important' }}>
-        {selectedResources.length > 0 ? (
-          <>
-            <Typography sx={{ flex: '1 1 100%' }} color="inherit" variant="subtitle1">
-              {selectedResources.length} selected
-            </Typography>
-            <Tooltip title="Delete selected">
-              <IconButton color="error">
-                <DeleteIcon />
-              </IconButton>
-            </Tooltip>
-          </>
-        ) : (
-          <>
-            <Box sx={{ flex: 1, display: 'flex', gap: 1, alignItems: 'center' }}>
-              <OutlinedInput
-                size="small"
-                placeholder="Search resources..."
-                value={searchTerm}
-                onChange={(e) => onSearchChange(e.target.value)}
-                startAdornment={
-                  <InputAdornment position="start">
-                    <SearchIcon />
-                  </InputAdornment>
-                }
-                sx={{ minWidth: 300 }}
-              />
-
-              {(filterType !== 'all' || filterStatus !== 'all') && (
-                <Button variant="outlined" startIcon={<ClearIcon />} onClick={() => {
-                  onFilterTypeChange('all');
-                  onFilterStatusChange('all');
-                }} size="small">
-                  Clear
-                </Button>
-              )}
-            </Box>
-
-            <Box sx={{ display: 'flex', gap: 1 }}>
-              <Tooltip title="Filter">
-                <IconButton onClick={(e) => setFilterAnchor(e.currentTarget)}>
-                  <FilterIcon />
+          {selectedResources.length > 0 ? (
+            <>
+              <Typography sx={{ flex: '1 1 100%' }} color="inherit" variant="subtitle1">
+                {selectedResources.length} selected
+              </Typography>
+              <Tooltip title="Delete selected">
+                <IconButton color="error" onClick={handleBulkDeleteOpen}>
+                  <DeleteIcon />
                 </IconButton>
               </Tooltip>
+            </>
+          ) : (
+            <>
+              <Box sx={{ flex: 1, display: 'flex', gap: 1, alignItems: 'center' }}>
+                <OutlinedInput
+                  size="small"
+                  placeholder="Search resources..."
+                  value={searchTerm}
+                  onChange={(e) => onSearchChange(e.target.value)}
+                  startAdornment={
+                    <InputAdornment position="start">
+                      <SearchIcon />
+                    </InputAdornment>
+                  }
+                  sx={{ minWidth: 300 }}
+                />
 
-              <Tooltip title="Sort">
-                <IconButton onClick={(e) => setSortAnchor(e.currentTarget)}>
-                  <SortIcon />
-                  {sortBy && (
-                    sortOrder === 'asc' ? <ArrowUpIcon fontSize="small" /> : <ArrowDownIcon fontSize="small" />
-                  )}
-                </IconButton>
-              </Tooltip>
+                {(filterType !== 'all' || filterStatus !== 'all') && (
+                  <Button variant="outlined" startIcon={<ClearIcon />} onClick={() => {
+                    onFilterTypeChange('all');
+                    onFilterStatusChange('all');
+                  }} size="small">
+                    Clear
+                  </Button>
+                )}
+              </Box>
 
-              <Tooltip title="Refresh data - Updates counts and other information">
-                <IconButton onClick={() => window.location.reload()} disabled={loading}>
-                  <RefreshIcon />
-                </IconButton>
-              </Tooltip>
-            </Box>
-          </>
-        )}
+              <Box sx={{ display: 'flex', gap: 1 }}>
+                <Tooltip title="Filter">
+                  <IconButton onClick={(e) => setFilterAnchor(e.currentTarget)}>
+                    <FilterIcon />
+                  </IconButton>
+                </Tooltip>
+
+                <Tooltip title="Sort">
+                  <IconButton onClick={(e) => setSortAnchor(e.currentTarget)}>
+                    <SortIcon />
+                    {sortBy && (
+                      sortOrder === 'asc' ? <ArrowUpIcon fontSize="small" /> : <ArrowDownIcon fontSize="small" />
+                    )}
+                  </IconButton>
+                </Tooltip>
+
+                <Tooltip title="Refresh data - Updates counts and other information">
+                  <IconButton onClick={() => window.location.reload()} disabled={loading}>
+                    <RefreshIcon />
+                  </IconButton>
+                </Tooltip>
+              </Box>
+            </>
+          )}
         </Toolbar>
       </Paper>
 
@@ -676,7 +755,7 @@ export default function AdditionalResourcesTable({
       </Popover>
 
       {/* Table */}
-      <Paper>
+      <Paper elevation={0} sx={{ border: '1px solid', borderColor: 'grey.200' }}>
         <TableContainer>
           <Table>
             <TableHead>
@@ -688,11 +767,11 @@ export default function AdditionalResourcesTable({
                     onChange={handleSelectAll}
                   />
                 </TableCell>
-                <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', color: 'text.primary' }}>Name</TableCell>
+                <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', color: 'text.primary' }}>Name & Description</TableCell>
                 <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', color: 'text.primary' }}>Type</TableCell>
                 <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', color: 'text.primary' }}>Attributes</TableCell>
-                <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', color: 'text.primary' }}>Status</TableCell>
-                <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', color: 'text.primary' }}>Actions</TableCell>
+                <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', color: 'text.primary', width: '180px', minWidth: '180px' }}>Created By</TableCell>
+                <TableCell align="center" sx={{ fontWeight: 600, fontSize: '0.875rem', color: 'text.primary', width: '120px', minWidth: '120px' }}>Actions</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
@@ -705,45 +784,47 @@ export default function AdditionalResourcesTable({
               ) : paginatedResources.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={6} align="center" sx={{ py: 4 }}>
-                    <Box>
-                      <ConditionsIcon sx={{ fontSize: 48, color: 'text.secondary', mb: 2 }} />
-                      <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                        No additional resources found
-                      </Typography>
-                      {searchTerm || filterType !== 'all' || filterStatus !== 'all' ? (
-                        <Typography variant="body2" color="text.secondary">
-                          Try adjusting your search or filters
-                        </Typography>
-                      ) : (
-                        <Button
-                          variant="outlined"
-                          startIcon={<AddIcon />}
-                          onClick={handleCreateClick}
-                        >
-                          Create Your First Additional Resource
-                        </Button>
-                      )}
-                    </Box>
+                    <Typography variant="body1" color="text.secondary">
+                      No additional resources found
+                    </Typography>
                   </TableCell>
                 </TableRow>
               ) : (
                 paginatedResources.map((resource) => (
-                  <TableRow key={resource.id} hover>
+                  <TableRow
+                    key={resource.id}
+                    hover
+                    onClick={() => handleSelectResource(resource.id)}
+                    role="checkbox"
+                    aria-checked={selectedResources.includes(resource.id)}
+                    tabIndex={-1}
+                    selected={selectedResources.includes(resource.id)}
+                    sx={{ cursor: 'pointer' }}
+                  >
                     <TableCell padding="checkbox">
                       <Checkbox
+                        color="primary"
                         checked={selectedResources.includes(resource.id)}
-                        onChange={() => handleSelectResource(resource.id)}
+                        inputProps={{
+                          'aria-labelledby': `resource-${resource.id}`,
+                        }}
                       />
                     </TableCell>
                     <TableCell>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        {getTypeIcon(resource.type)}
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                        <Avatar sx={{ bgcolor: `${getTypeColor(resource.type)}.main` }}>
+                          {getTypeIcon(resource.type)}
+                        </Avatar>
                         <Box>
-                          <Typography variant="body2" fontWeight="600">
+                          <Typography
+                            variant="subtitle2"
+                            fontWeight="medium"
+                            id={`resource-${resource.id}`}
+                          >
                             {resource.displayName}
                           </Typography>
                           <Typography variant="caption" color="text.secondary">
-                            {resource.name}
+                            {resource.description || 'No description'}
                           </Typography>
                         </Box>
                       </Box>
@@ -758,43 +839,68 @@ export default function AdditionalResourcesTable({
                     </TableCell>
                     <TableCell>
                       <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                        {Object.entries(resource.attributes).map(([key, value]) => (
+                        {Object.entries(resource.attributes).length > 0 ? (
+                          Object.entries(resource.attributes).slice(0, 3).map(([key, value]) => (
+                            <Chip
+                              key={key}
+                              label={`${key}: ${value}`}
+                              size="small"
+                              variant="outlined"
+                              sx={{ fontSize: '0.75rem' }}
+                            />
+                          ))
+                        ) : (
+                          <Typography variant="caption" color="text.secondary">
+                            No attributes
+                          </Typography>
+                        )}
+                        {Object.entries(resource.attributes).length > 3 && (
                           <Chip
-                            key={key}
-                            label={`${key}: ${value}`}
+                            label={`+${Object.entries(resource.attributes).length - 3}`}
                             size="small"
                             variant="outlined"
                             sx={{ fontSize: '0.75rem' }}
                           />
-                        ))}
+                        )}
                       </Box>
                     </TableCell>
-                    <TableCell>
-                      <Chip
-                        icon={resource.active ? <ActiveIcon /> : <InactiveIcon />}
-                        label={resource.active ? 'Active' : 'Inactive'}
-                        size="small"
-                        color={resource.active ? 'success' : 'default'}
-                        variant="filled"
-                      />
+                    <TableCell sx={{ width: '180px', minWidth: '180px' }}>
+                      <Typography variant="body2" color="text.secondary">
+                        {resource.metadata?.createdBy || 'System'}
+                      </Typography>
                     </TableCell>
-                    <TableCell>
-                      <Box sx={{ display: 'flex', gap: 0.5 }}>
-                        <Tooltip title="View">
-                          <IconButton size="small">
-                            <ViewIcon />
-                          </IconButton>
-                        </Tooltip>
-                        <Tooltip title="Edit">
-                          <IconButton size="small" onClick={() => handleEditClick(resource)}>
-                            <EditIcon />
-                          </IconButton>
-                        </Tooltip>
-                        <Tooltip title="Delete">
-                          <IconButton size="small" color="error" onClick={() => handleDeleteClick(resource.id)}>
-                            <DeleteIcon />
-                          </IconButton>
-                        </Tooltip>
+                    <TableCell align="center" sx={{ width: '120px', minWidth: '120px' }}>
+                      <Box sx={{ display: 'flex', gap: 1, justifyContent: 'center' }}>
+                        <IconButton
+                          size="small"
+                          color="primary"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            // View functionality can be added here
+                          }}
+                        >
+                          <ViewIcon fontSize="small" />
+                        </IconButton>
+                        <IconButton
+                          size="small"
+                          color="primary"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleEditClick(resource);
+                          }}
+                        >
+                          <EditIcon fontSize="small" />
+                        </IconButton>
+                        <IconButton
+                          size="small"
+                          color="error"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteClick(resource.id);
+                          }}
+                        >
+                          <DeleteIcon fontSize="small" />
+                        </IconButton>
                       </Box>
                     </TableCell>
                   </TableRow>
@@ -823,26 +929,38 @@ export default function AdditionalResourcesTable({
         PaperProps={{
           sx: {
             borderRadius: 2,
-            boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
-            m: 2,
+            boxShadow: '0 8px 32px rgba(0,0,0,0.1)',
+            zIndex: 1300
           }
+        }}
+        sx={{
+          zIndex: 1300
         }}
       >
         <DialogTitle sx={{
-          pb: 1,
-          pt: 2.5,
+          fontWeight: 600,
+          fontSize: '1.25rem',
           px: 3,
+          pt: 3,
+          pb: 1,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between'
-        }}>Create Additional Resource</DialogTitle>
+        }}>
+          Create Additional Resource
+          <IconButton
+            onClick={() => setCreateDialogOpen(false)}
+            sx={{
+              color: 'grey.500',
+              '&:hover': { bgcolor: 'grey.100' }
+            }}
+          >
+            <CloseIcon />
+          </IconButton>
+        </DialogTitle>
         <DialogContent sx={{ px: 3, pt: 2, pb: 2 }}>
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5, mt: 1 }}>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-              Create additional resources that represent states, conditions, or workflows for use in complex policies.
-            </Typography>
-
-            <FormControl fullWidth sx={{ mb: 3 }}>
+            <FormControl fullWidth>
               <InputLabel>Resource Type</InputLabel>
               <Select
                 value={selectedType}
@@ -853,19 +971,11 @@ export default function AdditionalResourcesTable({
                 }}
                 label="Resource Type"
               >
-                {RESOURCE_TYPES.map((type) => (
-                  <MenuItem key={type.value} value={type.value}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      {type.icon}
-                      <Box>
-                        <Typography variant="body2">{type.label}</Typography>
-                        <Typography variant="caption" color="text.secondary">
-                          {type.description}
-                        </Typography>
-                      </Box>
-                    </Box>
-                  </MenuItem>
-                ))}
+                <MenuItem value="condition">Condition</MenuItem>
+                <MenuItem value="state">State</MenuItem>
+                <MenuItem value="approval">Approval</MenuItem>
+                <MenuItem value="status">Status</MenuItem>
+                <MenuItem value="ticket">Ticket</MenuItem>
               </Select>
             </FormControl>
 
@@ -910,7 +1020,6 @@ export default function AdditionalResourcesTable({
                     fullWidth
                   />
                 )}
-                sx={{ mb: 3 }}
               />
             )}
 
@@ -922,10 +1031,9 @@ export default function AdditionalResourcesTable({
               placeholder="Describe what this additional resource represents"
               multiline
               rows={3}
-              sx={{ mb: 3 }}
             />
 
-            <FormControl fullWidth sx={{ mb: 3 }}>
+            <FormControl fullWidth>
               <InputLabel>Data Type</InputLabel>
               <Select
                 value={selectedDataType}
@@ -948,11 +1056,30 @@ export default function AdditionalResourcesTable({
           pt: 1,
           gap: 1.5
         }}>
-          <Button onClick={() => setCreateDialogOpen(false)}>Cancel</Button>
+          <Button
+            onClick={() => setCreateDialogOpen(false)}
+            variant="outlined"
+            sx={{
+              borderColor: 'grey.300',
+              color: 'text.secondary',
+              '&:hover': {
+                borderColor: 'grey.400',
+                bgcolor: 'grey.50'
+              }
+            }}
+          >
+            Cancel
+          </Button>
           <Button
             onClick={handleCreateAdditionalResource}
             variant="contained"
             disabled={!selectedType || (!isCustomName && !selectedResourceName) || (isCustomName && !customName.trim())}
+            sx={{
+              bgcolor: 'primary.main',
+              '&:hover': {
+                bgcolor: 'primary.dark'
+              }
+            }}
           >
             Create Resource
           </Button>
@@ -968,40 +1095,48 @@ export default function AdditionalResourcesTable({
         PaperProps={{
           sx: {
             borderRadius: 2,
-            boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
-            m: 2,
+            boxShadow: '0 8px 32px rgba(0,0,0,0.1)',
+            zIndex: 1300
           }
+        }}
+        sx={{
+          zIndex: 1300
         }}
       >
         <DialogTitle sx={{
-          pb: 1,
-          pt: 2.5,
+          fontWeight: 600,
+          fontSize: '1.25rem',
           px: 3,
+          pt: 3,
+          pb: 1,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between'
-        }}>Edit Additional Resource</DialogTitle>
+        }}>
+          Edit Additional Resource
+          <IconButton
+            onClick={() => setEditDialogOpen(false)}
+            sx={{
+              color: 'grey.500',
+              '&:hover': { bgcolor: 'grey.100' }
+            }}
+          >
+            <CloseIcon />
+          </IconButton>
+        </DialogTitle>
         <DialogContent sx={{ px: 3, pt: 2, pb: 2 }}>
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5, mt: 1 }}>
-            <FormControl fullWidth disabled sx={{ mb: 3 }}>
+            <FormControl fullWidth disabled>
               <InputLabel>Resource Type</InputLabel>
               <Select
                 value={selectedType}
                 label="Resource Type"
               >
-                {RESOURCE_TYPES.map((type) => (
-                  <MenuItem key={type.value} value={type.value}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      {type.icon}
-                      <Box>
-                        <Typography variant="body2">{type.label}</Typography>
-                        <Typography variant="caption" color="text.secondary">
-                          {type.description}
-                        </Typography>
-                      </Box>
-                    </Box>
-                  </MenuItem>
-                ))}
+                <MenuItem value="condition">Condition</MenuItem>
+                <MenuItem value="state">State</MenuItem>
+                <MenuItem value="approval">Approval</MenuItem>
+                <MenuItem value="status">Status</MenuItem>
+                <MenuItem value="ticket">Ticket</MenuItem>
               </Select>
             </FormControl>
 
@@ -1046,7 +1181,6 @@ export default function AdditionalResourcesTable({
                   fullWidth
                 />
               )}
-              sx={{ mb: 3 }}
             />
 
             <TextField
@@ -1056,10 +1190,9 @@ export default function AdditionalResourcesTable({
               onChange={(e) => setCustomDescription(e.target.value)}
               multiline
               rows={3}
-              sx={{ mb: 3 }}
             />
 
-            <FormControl fullWidth sx={{ mb: 3 }}>
+            <FormControl fullWidth>
               <InputLabel>Data Type</InputLabel>
               <Select
                 value={selectedDataType}
@@ -1082,11 +1215,30 @@ export default function AdditionalResourcesTable({
           pt: 1,
           gap: 1.5
         }}>
-          <Button onClick={() => setEditDialogOpen(false)}>Cancel</Button>
+          <Button
+            onClick={() => setEditDialogOpen(false)}
+            variant="outlined"
+            sx={{
+              borderColor: 'grey.300',
+              color: 'text.secondary',
+              '&:hover': {
+                borderColor: 'grey.400',
+                bgcolor: 'grey.50'
+              }
+            }}
+          >
+            Cancel
+          </Button>
           <Button
             onClick={handleUpdateAdditionalResource}
             variant="contained"
             disabled={(!isCustomName && !selectedResourceName) || (isCustomName && !customName.trim())}
+            sx={{
+              bgcolor: 'primary.main',
+              '&:hover': {
+                bgcolor: 'primary.dark'
+              }
+            }}
           >
             Update Resource
           </Button>
@@ -1101,6 +1253,28 @@ export default function AdditionalResourcesTable({
         title="Delete Additional Resource"
         entityName="additional resource"
         entityNamePlural="additional resources"
+      />
+
+      {/* Bulk Delete Confirmation Dialog */}
+      <DeleteConfirmationDialog
+        open={bulkDeleteDialogOpen}
+        onClose={handleBulkDeleteClose}
+        onConfirm={handleBulkDeleteConfirm}
+        title="Delete Multiple Additional Resources"
+        items={selectedResources.map(resourceId => {
+          const resource = additionalResources.find(r => r.id === resourceId);
+          return resource ? {
+            id: resource.id,
+            name: resource.name,
+            displayName: resource.displayName,
+            isSystem: false
+          } : { id: resourceId, name: resourceId, displayName: resourceId, isSystem: false };
+        })}
+        loading={isBulkDeleting}
+        entityName="additional resource"
+        entityNamePlural="additional resources"
+        bulkMode={true}
+        additionalInfo="Deleting additional resources may affect existing policies that use them."
       />
     </>
   );

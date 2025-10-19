@@ -329,17 +329,39 @@ export default function PolicyViewPage() {
       }
     }
 
-    // Additional resources
+    // Additional resources with their attributes
     if (policy.additionalResources && policy.additionalResources.length > 0) {
       sentence += ' if ';
-      const additionalNames = policy.additionalResources.map(res => getAdditionalResourceDisplayName(res.id));
-      if (additionalNames.length === 1) {
-        sentence += additionalNames[0];
-      } else if (additionalNames.length === 2) {
-        sentence += `${additionalNames[0]} and ${additionalNames[1]}`;
-      } else {
-        sentence += `${additionalNames.slice(0, -1).join(', ')}, and ${additionalNames[additionalNames.length - 1]}`;
-      }
+      policy.additionalResources.forEach((res, idx, arr) => {
+        const resourceName = getAdditionalResourceDisplayName(res.id);
+        sentence += resourceName;
+
+        // Add attribute conditions if present
+        if (res.attributes && res.attributes.length > 0) {
+          const conditions = res.attributes
+            .filter(attr => attr.value !== '' && attr.value !== null && attr.value !== undefined)
+            .map((attr, index, array) => {
+              const formattedValue = Array.isArray(attr.value) ? attr.value.join(' or ') : attr.value;
+              const condition = `${getAttributeDisplayName(attr.name).toLowerCase()} is ${formattedValue}`;
+              if (index === array.length - 1 && array.length > 1) {
+                return `and ${condition}`;
+              }
+              return condition;
+            })
+            .join(', ');
+
+          if (conditions) {
+            sentence += ` (when ${conditions})`;
+          }
+        }
+
+        // Add appropriate connector
+        if (idx < arr.length - 2) {
+          sentence += ', ';
+        } else if (idx === arr.length - 2) {
+          sentence += ' and ';
+        }
+      });
     }
 
     sentence += '.';
@@ -567,14 +589,14 @@ export default function PolicyViewPage() {
                 <SecurityIcon color="primary" />
                 Policy Rules
               </Typography>
-              
+
               <Grid container spacing={2}>
                 {policy.rules.map((rule, index) => (
                   <Grid key={rule.id} size={{ xs: 12 }}>
-                    <Paper 
-                      variant="outlined" 
-                      sx={{ 
-                        p: 2, 
+                    <Paper
+                      variant="outlined"
+                      sx={{
+                        p: 2,
                         borderRadius: 2,
                         bgcolor: 'grey.50',
                         border: '1px solid',
@@ -584,14 +606,14 @@ export default function PolicyViewPage() {
                       <Typography variant="subtitle2" fontWeight="600" gutterBottom sx={{ mb: 1.5, color: 'primary.main' }}>
                         Rule {index + 1}
                       </Typography>
-                      
+
                       <Grid container spacing={2}>
                         <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-                          <Box sx={{ 
-                            p: 1.5, 
-                            bgcolor: 'white', 
-                            borderRadius: 1, 
-                            border: '1px solid', 
+                          <Box sx={{
+                            p: 1.5,
+                            bgcolor: 'white',
+                            borderRadius: 1,
+                            border: '1px solid',
                             borderColor: 'grey.200',
                             height: '100%'
                           }}>
@@ -608,7 +630,7 @@ export default function PolicyViewPage() {
                                 </Typography>
                                 {rule.subject.attributes.map((attr, i) => (
                                   <Box key={i} sx={{ mt: 0.3 }}>
-                                    <Chip 
+                                    <Chip
                                       label={`${getAttributeDisplayName(attr.name)}: ${Array.isArray(attr.value) ? attr.value.join(', ') : attr.value}`}
                                       size="small"
                                       variant="outlined"
@@ -620,13 +642,13 @@ export default function PolicyViewPage() {
                             )}
                           </Box>
                         </Grid>
-                        
+
                         <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-                          <Box sx={{ 
-                            p: 1.5, 
-                            bgcolor: 'white', 
-                            borderRadius: 1, 
-                            border: '1px solid', 
+                          <Box sx={{
+                            p: 1.5,
+                            bgcolor: 'white',
+                            borderRadius: 1,
+                            border: '1px solid',
                             borderColor: 'grey.200',
                             height: '100%'
                           }}>
@@ -638,13 +660,13 @@ export default function PolicyViewPage() {
                             </Typography>
                           </Box>
                         </Grid>
-                        
+
                         <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-                          <Box sx={{ 
-                            p: 1.5, 
-                            bgcolor: 'white', 
-                            borderRadius: 1, 
-                            border: '1px solid', 
+                          <Box sx={{
+                            p: 1.5,
+                            bgcolor: 'white',
+                            borderRadius: 1,
+                            border: '1px solid',
                             borderColor: 'grey.200',
                             height: '100%'
                           }}>
@@ -661,7 +683,7 @@ export default function PolicyViewPage() {
                                 </Typography>
                                 {rule.object.attributes.map((attr, i) => (
                                   <Box key={i} sx={{ mt: 0.3 }}>
-                                    <Chip 
+                                    <Chip
                                       label={`${getAttributeDisplayName(attr.name)}: ${Array.isArray(attr.value) ? attr.value.join(', ') : attr.value}`}
                                       size="small"
                                       variant="outlined"
@@ -673,13 +695,13 @@ export default function PolicyViewPage() {
                             )}
                           </Box>
                         </Grid>
-                        
+
                         <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-                          <Box sx={{ 
-                            p: 1.5, 
-                            bgcolor: 'white', 
-                            borderRadius: 1, 
-                            border: '1px solid', 
+                          <Box sx={{
+                            p: 1.5,
+                            bgcolor: 'white',
+                            borderRadius: 1,
+                            border: '1px solid',
                             borderColor: 'grey.200',
                             height: '100%'
                           }}>
@@ -687,7 +709,7 @@ export default function PolicyViewPage() {
                               Effect
                             </Typography>
                             <Box sx={{ mt: 0.5 }}>
-                              <Chip 
+                              <Chip
                                 label={policy.effect}
                                 size="small"
                                 color={policy.effect === 'Allow' ? 'success' : 'error'}
@@ -709,6 +731,77 @@ export default function PolicyViewPage() {
                           </Box>
                         </Grid>
                       </Grid>
+                    </Paper>
+                  </Grid>
+                ))}
+              </Grid>
+            </Box>
+          </Card>
+        )}
+
+        {/* Additional Resources Section */}
+        {policy.additionalResources && policy.additionalResources.length > 0 && (
+          <Card sx={{ mt: 3, borderRadius: 2, boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }}>
+            <Box sx={{ p: 3 }}>
+              <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+                <InfoIcon color="success" />
+                Additional Resources (Conditions)
+              </Typography>
+
+              <Grid container spacing={2}>
+                {policy.additionalResources.map((resource, index) => (
+                  <Grid key={index} size={{ xs: 12 }}>
+                    <Paper
+                      variant="outlined"
+                      sx={{
+                        p: 2,
+                        borderRadius: 2,
+                        bgcolor: 'grey.50',
+                        border: '1px solid',
+                        borderColor: 'grey.200'
+                      }}
+                    >
+                      <Box sx={{
+                        p: 1.5,
+                        bgcolor: 'white',
+                        borderRadius: 1,
+                        border: '1px solid',
+                        borderColor: 'grey.200'
+                      }}>
+                        <Typography variant="overline" sx={{ color: 'success.main', fontWeight: 600, fontSize: '0.7rem' }}>
+                          Additional Resource {index + 1}
+                        </Typography>
+                        <Typography variant="body2" fontWeight="500" sx={{ mt: 0.5 }}>
+                          {getAdditionalResourceDisplayName(resource.id)}
+                        </Typography>
+
+                        {resource.attributes && resource.attributes.length > 0 && (
+                          <Box sx={{ mt: 1 }}>
+                            <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 500, fontSize: '0.65rem' }}>
+                              Attributes:
+                            </Typography>
+                            {resource.attributes.map((attr, i) => (
+                              <Box key={i} sx={{ mt: 0.3 }}>
+                                <Chip
+                                  label={`${getAttributeDisplayName(attr.name)}: ${Array.isArray(attr.value) ? attr.value.join(', ') : attr.value}`}
+                                  size="small"
+                                  variant="outlined"
+                                  color="success"
+                                  sx={{ fontSize: '0.65rem', height: '20px' }}
+                                />
+                              </Box>
+                            ))}
+                          </Box>
+                        )}
+
+                        {(!resource.attributes || resource.attributes.length === 0) && (
+                          <Box sx={{ mt: 1 }}>
+                            <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.65rem', fontStyle: 'italic' }}>
+                              No attributes configured
+                            </Typography>
+                          </Box>
+                        )}
+                      </Box>
                     </Paper>
                   </Grid>
                 ))}

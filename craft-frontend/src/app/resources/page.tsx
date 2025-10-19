@@ -1101,6 +1101,7 @@ export default function ObjectsPage() {
             // Update parent state with the new resources for stats calculation
             setAdditionalResources(resources);
           }}
+          isVisible={tabValue === 1}
         />
       </Box>
 

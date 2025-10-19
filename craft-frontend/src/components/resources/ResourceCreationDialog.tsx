@@ -51,6 +51,7 @@ export interface ResourceCreationDialogProps {
   onResourceCreated?: (resource: any) => void;
   onResourceUpdated?: (resource: any) => void;
   editingResource?: any;
+  isAdditionalResource?: boolean; // Flag to determine if creating Additional Resource
 }
 
 export default function ResourceCreationDialog({
@@ -58,7 +59,8 @@ export default function ResourceCreationDialog({
   onClose,
   onResourceCreated,
   onResourceUpdated,
-  editingResource
+  editingResource,
+  isAdditionalResource = false
 }: ResourceCreationDialogProps) {
   const { currentWorkspace, currentApplication, currentEnvironment } = useWorkspace();
   const snackbar = useApiSnackbar();
@@ -91,27 +93,31 @@ export default function ResourceCreationDialog({
   const [attributeValues, setAttributeValues] = useState<string[]>([]);
 
   // Populate form when editing and load attributes
-  React.useEffect(() => {
-    if (editingResource && open) {
-      setDisplayName(editingResource.displayName || '');
-      setDescription(editingResource.description || '');
-      setResourceType(editingResource.type || '');
-      setDataType(editingResource.dataType || '');
-      setDisplayNameError('');
-    } else if (!editingResource && open) {
-      // Reset form for new resource
-      setDisplayName('');
-      setDescription('');
-      setResourceType('');
-      setDataType('');
-      setDisplayNameError('');
-    }
+  const [hasInitialized, setHasInitialized] = React.useState(false);
 
-    // Load attributes when dialog opens
-    if (open) {
+  React.useEffect(() => {
+    if (open && !hasInitialized) {
+      if (editingResource) {
+        setDisplayName(editingResource.displayName || '');
+        setDescription(editingResource.description || '');
+        setResourceType(editingResource.type || '');
+        setDataType(editingResource.dataType || '');
+        setDisplayNameError('');
+      } else {
+        // Reset form for new resource
+        setDisplayName('');
+        setDescription('');
+        setResourceType('');
+        setDataType('');
+        setDisplayNameError('');
+      }
       loadAttributes();
+      setHasInitialized(true);
+    } else if (!open) {
+      // Reset initialization flag when dialog closes
+      setHasInitialized(false);
     }
-  }, [editingResource, open]);
+  }, [editingResource, open, hasInitialized]);
 
   const loadAttributes = async () => {
     try {
@@ -130,13 +136,13 @@ export default function ResourceCreationDialog({
 
   const handleClose = () => {
     if (isCreating) return; // Prevent closing during creation
-    
+
     // Check if form has data and show confirmation
     if (displayName.trim() || description.trim() || resourceType.trim() || dataType.trim()) {
       setCancelDialogOpen(true);
       return;
     }
-    
+
     // No data, close directly
     setDisplayName('');
     setDescription('');
@@ -300,7 +306,7 @@ export default function ResourceCreationDialog({
 
     setIsCreating(true);
     const isEditing = !!editingResource;
-    const url = isEditing 
+    const url = isEditing
       ? `${process.env.NEXT_PUBLIC_API_URL}/resources/${editingResource._id}`
       : `${process.env.NEXT_PUBLIC_API_URL}/resources`;
     const method = isEditing ? 'PUT' : 'POST';
@@ -324,32 +330,19 @@ export default function ResourceCreationDialog({
         };
         return map;
       }, {} as any),
-      children: [],
-      permissions: {
-        read: true,
-        write: false,
-        delete: false,
-        execute: false,
-        admin: false
-      },
-      metadata: {
-        owner: 'System',
-        createdBy: 'System',
-        lastModifiedBy: 'System',
-        classification: 'internal' as 'public' | 'internal' | 'confidential' | 'restricted',
-        tags: [],
-        isSystem: false,
-        isCustom: true,
-        version: '1.0.0'
-      }
+      // Backend will automatically set owner, createdBy, and lastModifiedBy from authenticated user
     };
 
     try {
       let response;
       if (isEditing) {
-        response = await apiClient.put(`/resources/${editingResource._id}`, payload);
+        // Use appropriate endpoint based on resource type
+        const endpoint = isAdditionalResource ? 'additional-resources' : 'resources';
+        response = await apiClient.put(`/${endpoint}/${editingResource._id}`, payload);
       } else {
-        response = await apiClient.post('/resources', payload);
+        // Use appropriate endpoint based on resource type
+        const endpoint = isAdditionalResource ? 'additional-resources' : 'resources';
+        response = await apiClient.post(`/${endpoint}`, payload);
       }
 
       if (response.success) {
@@ -359,7 +352,7 @@ export default function ResourceCreationDialog({
         } else {
           onResourceCreated?.(response.data);
         }
-        
+
         // Reset form and close dialog
         setDisplayName('');
         setDescription('');
@@ -390,8 +383,12 @@ export default function ResourceCreationDialog({
       PaperProps={{
         sx: {
           borderRadius: 2,
-          boxShadow: '0 8px 32px rgba(0,0,0,0.1)'
+          boxShadow: '0 8px 32px rgba(0,0,0,0.1)',
+          zIndex: 1300
         }
+      }}
+      sx={{
+        zIndex: 1300
       }}
     >
       <DialogTitle sx={{
@@ -432,11 +429,41 @@ export default function ResourceCreationDialog({
           />
 
           <FormControl fullWidth disabled={isCreating}>
-            <InputLabel>Resource Type</InputLabel>
+            <InputLabel id="resource-type-label">Resource Type</InputLabel>
             <Select
+              labelId="resource-type-label"
+              id="resource-type-select"
               value={resourceType}
               onChange={(e) => setResourceType(e.target.value)}
               label="Resource Type"
+              sx={{
+                pointerEvents: 'auto',
+                cursor: 'pointer',
+                '& .MuiSelect-select': {
+                  cursor: 'pointer',
+                  pointerEvents: 'auto'
+                },
+                '& .MuiOutlinedInput-notchedOutline': {
+                  pointerEvents: 'none'
+                }
+              }}
+              MenuProps={{
+                disablePortal: false,
+                anchorOrigin: {
+                  vertical: 'bottom',
+                  horizontal: 'left',
+                },
+                transformOrigin: {
+                  vertical: 'top',
+                  horizontal: 'left',
+                },
+                PaperProps: {
+                  style: {
+                    maxHeight: 300,
+                    zIndex: 9999,
+                  },
+                },
+              }}
             >
               <MenuItem value="file">File</MenuItem>
               <MenuItem value="document">Document</MenuItem>
@@ -460,11 +487,41 @@ export default function ResourceCreationDialog({
           />
 
           <FormControl fullWidth disabled={isCreating}>
-            <InputLabel>Data Type</InputLabel>
+            <InputLabel id="data-type-label">Data Type</InputLabel>
             <Select
+              labelId="data-type-label"
+              id="data-type-select"
               value={dataType}
               onChange={(e) => setDataType(e.target.value)}
               label="Data Type"
+              sx={{
+                pointerEvents: 'auto',
+                cursor: 'pointer',
+                '& .MuiSelect-select': {
+                  cursor: 'pointer',
+                  pointerEvents: 'auto'
+                },
+                '& .MuiOutlinedInput-notchedOutline': {
+                  pointerEvents: 'none'
+                }
+              }}
+              MenuProps={{
+                disablePortal: false,
+                anchorOrigin: {
+                  vertical: 'bottom',
+                  horizontal: 'left',
+                },
+                transformOrigin: {
+                  vertical: 'top',
+                  horizontal: 'left',
+                },
+                PaperProps: {
+                  style: {
+                    maxHeight: 300,
+                    zIndex: 9999,
+                  },
+                },
+              }}
             >
               <MenuItem value="string">String</MenuItem>
               <MenuItem value="number">Number</MenuItem>
@@ -600,8 +657,8 @@ export default function ResourceCreationDialog({
             }
           }}
         >
-          {isCreating 
-            ? `${editingResource ? 'Updating' : 'Creating'}...` 
+          {isCreating
+            ? `${editingResource ? 'Updating' : 'Creating'}...`
             : `${editingResource ? 'Update' : 'Create'} Resource`}
         </Button>
       </DialogActions>
@@ -688,11 +745,41 @@ export default function ResourceCreationDialog({
             />
 
             <FormControl fullWidth disabled={isCreatingAttribute}>
-              <InputLabel>Data Type</InputLabel>
+              <InputLabel id="attribute-data-type-label">Data Type</InputLabel>
               <Select
+                labelId="attribute-data-type-label"
+                id="attribute-data-type-select"
                 value={selectedAttributeDataType}
                 onChange={(e) => setSelectedAttributeDataType(e.target.value)}
                 label="Data Type"
+                sx={{
+                  pointerEvents: 'auto',
+                  cursor: 'pointer',
+                  '& .MuiSelect-select': {
+                    cursor: 'pointer',
+                    pointerEvents: 'auto'
+                  },
+                  '& .MuiOutlinedInput-notchedOutline': {
+                    pointerEvents: 'none'
+                  }
+                }}
+                MenuProps={{
+                  disablePortal: false,
+                  anchorOrigin: {
+                    vertical: 'bottom',
+                    horizontal: 'left',
+                  },
+                  transformOrigin: {
+                    vertical: 'top',
+                    horizontal: 'left',
+                  },
+                  PaperProps: {
+                    style: {
+                      maxHeight: 300,
+                      zIndex: 9999,
+                    },
+                  },
+                }}
               >
                 <MenuItem value="string">String</MenuItem>
                 <MenuItem value="number">Number</MenuItem>
@@ -815,12 +902,42 @@ export default function ResourceCreationDialog({
 
             <Grid size={{ xs: 12, md: 3 }}>
               <FormControl fullWidth>
-                <InputLabel>Operator</InputLabel>
+                <InputLabel id="operator-label">Operator</InputLabel>
                 <Select
+                  labelId="operator-label"
+                  id="operator-select"
                   value={selectedOperator}
                   onChange={(e) => handleOperatorChange(e.target.value)}
                   label="Operator"
                   disabled={!selectedAttribute}
+                  sx={{
+                    pointerEvents: 'auto',
+                    cursor: 'pointer',
+                    '& .MuiSelect-select': {
+                      cursor: 'pointer',
+                      pointerEvents: 'auto'
+                    },
+                    '& .MuiOutlinedInput-notchedOutline': {
+                      pointerEvents: 'none'
+                    }
+                  }}
+                  MenuProps={{
+                    disablePortal: false,
+                    anchorOrigin: {
+                      vertical: 'bottom',
+                      horizontal: 'left',
+                    },
+                    transformOrigin: {
+                      vertical: 'top',
+                      horizontal: 'left',
+                    },
+                    PaperProps: {
+                      style: {
+                        maxHeight: 300,
+                        zIndex: 9999,
+                      },
+                    },
+                  }}
                 >
                   {OPERATOR_OPTIONS.map((option) => (
                     <MenuItem key={option.value} value={option.value}>

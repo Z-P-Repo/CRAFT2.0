@@ -207,6 +207,11 @@ export class PolicyController {
     logger.info(`[PolicyController.updatePolicy] Request params:`, { id });
     logger.info(`[PolicyController.updatePolicy] Update data keys:`, Object.keys(updates));
 
+    // Validate ID format (string, not empty)
+    if (!id || typeof id !== 'string' || id.trim().length === 0) {
+      throw new ValidationError('Invalid policy ID format');
+    }
+
     // Remove non-updatable fields
     delete updates.id;
     delete updates._id;
@@ -218,6 +223,33 @@ export class PolicyController {
       throw new NotFoundError('Policy not found');
     }
 
+    // Ensure array fields are properly formatted
+    if (updates.subjects && !Array.isArray(updates.subjects)) {
+      throw new ValidationError('Subjects must be an array');
+    }
+    if (updates.resources && !Array.isArray(updates.resources)) {
+      throw new ValidationError('Resources must be an array');
+    }
+    if (updates.actions && !Array.isArray(updates.actions)) {
+      throw new ValidationError('Actions must be an array');
+    }
+    if (updates.additionalResources && !Array.isArray(updates.additionalResources)) {
+      throw new ValidationError('Additional resources must be an array');
+    }
+
+    // Validate additionalResources structure
+    if (updates.additionalResources) {
+      for (const resource of updates.additionalResources) {
+        if (!resource.id || typeof resource.id !== 'string') {
+          logger.error(`[PolicyController.updatePolicy] Invalid additional resource structure:`, resource);
+          throw new ValidationError('Each additional resource must have a valid string ID');
+        }
+        if (resource.attributes && !Array.isArray(resource.attributes)) {
+          throw new ValidationError('Additional resource attributes must be an array');
+        }
+      }
+    }
+
     // Update metadata
     if (updates.metadata) {
       updates.metadata = { ...existingPolicy.metadata, ...updates.metadata };
@@ -225,6 +257,8 @@ export class PolicyController {
       updates.metadata = existingPolicy.metadata;
     }
     updates.metadata.lastModifiedBy = req.user?.email || 'system';
+
+    logger.info(`[PolicyController.updatePolicy] Validated updates for policy: ${id}`);
 
     const policy = await Policy.findByIdAndUpdate(
       existingPolicy._id,

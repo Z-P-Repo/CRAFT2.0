@@ -1,4 +1,5 @@
 import { Request, Response } from 'express';
+import { Types } from 'mongoose';
 import { AuthRequest } from '@/middleware/auth';
 import { ValidationError, NotFoundError, ConflictError } from '@/exceptions/AppError';
 import { asyncHandler } from '@/middleware/errorHandler';
@@ -183,7 +184,10 @@ export class AdditionalResourceController {
     logger.info(`GET /additional-resources/${id} called by user:`, user?._id);
 
     // Build filter for workspace access control
-    const filter: any = { _id: id };
+    // Try both _id (MongoDB ObjectId) and id (custom string field)
+    const filter: any = (id && Types.ObjectId.isValid(id))
+      ? { _id: id }
+      : { id: id };
 
     // Apply workspace-based filtering for basic and admin users
     if (userRole === 'basic' || userRole === 'admin') {
@@ -266,9 +270,9 @@ export class AdditionalResourceController {
       environmentId,
       config: new Map(Object.entries(config)),
       metadata: {
-        owner: user?._id || 'system',
-        createdBy: user?._id || 'system',
-        lastModifiedBy: user?._id || 'system',
+        owner: user?.name || user?.email || 'system',
+        createdBy: user?.name || user?.email || 'system',
+        lastModifiedBy: user?.name || user?.email || 'system',
         tags: metadata.tags || [],
         category: metadata.category,
         priority: metadata.priority || 'medium',
@@ -312,7 +316,10 @@ export class AdditionalResourceController {
     logger.info(`PUT /additional-resources/${id} called by user:`, user?._id);
 
     // Build filter for workspace access control
-    const filter: any = { _id: id };
+    // Try both _id (MongoDB ObjectId) and id (custom string field)
+    const filter: any = (id && Types.ObjectId.isValid(id))
+      ? { _id: id }
+      : { id: id };
 
     // Apply workspace-based filtering for basic and admin users
     if (userRole === 'basic' || userRole === 'admin') {
@@ -343,7 +350,7 @@ export class AdditionalResourceController {
 
     // Prepare update data
     const updateData: any = {
-      'metadata.lastModifiedBy': user?._id || 'system'
+      'metadata.lastModifiedBy': user?.name || user?.email || 'system'
     };
 
     if (displayName) updateData.displayName = displayName.trim();
@@ -362,8 +369,8 @@ export class AdditionalResourceController {
     if (metadata.externalId) updateData['metadata.externalId'] = metadata.externalId;
 
     try {
-      const updatedResource = await AdditionalResource.findByIdAndUpdate(
-        id,
+      const updatedResource = await AdditionalResource.findOneAndUpdate(
+        filter,
         updateData,
         { new: true, runValidators: true }
       );
@@ -381,6 +388,91 @@ export class AdditionalResourceController {
     }
   });
 
+  // Update additional resource attributes (PATCH endpoint for attribute management)
+  static updateAdditionalResourceAttributes = asyncHandler(async (req: AuthRequest, res: Response): Promise<any> => {
+    const { id } = req.params;
+    const user = req.user;
+    const userRole = user?.role;
+
+    logger.info(`PATCH /additional-resources/${id}/attributes called by user:`, user?._id);
+
+    // Build filter for workspace access control
+    // Try both _id (MongoDB ObjectId) and id (custom string field)
+    const filter: any = (id && Types.ObjectId.isValid(id))
+      ? { _id: id }
+      : { id: id };
+
+    // Apply workspace-based filtering for basic and admin users
+    if (userRole === 'basic' || userRole === 'admin') {
+      const assignedWorkspaces = user?.assignedWorkspaces || [];
+      if (assignedWorkspaces.length > 0) {
+        filter.workspaceId = { $in: assignedWorkspaces };
+      } else {
+        filter.workspaceId = null;
+      }
+    }
+
+    const existingResource = await AdditionalResource.findOne(filter);
+
+    if (!existingResource) {
+      throw new NotFoundError('Additional resource not found');
+    }
+
+    const { attributes, operation = 'merge' } = req.body;
+
+    if (!attributes || typeof attributes !== 'object') {
+      throw new ValidationError('Attributes object is required');
+    }
+
+    try {
+      let updatedAttributes: Map<string, any>;
+
+      // Handle different operations
+      switch (operation) {
+        case 'replace':
+          // Replace all attributes
+          updatedAttributes = new Map(Object.entries(attributes));
+          break;
+
+        case 'merge':
+        default:
+          // Merge new attributes with existing ones
+          updatedAttributes = new Map(existingResource.attributes || new Map());
+          Object.entries(attributes).forEach(([key, value]) => {
+            if (value === null || value === undefined) {
+              // Remove attribute if value is null/undefined
+              updatedAttributes.delete(key);
+            } else {
+              // Add or update attribute
+              updatedAttributes.set(key, value);
+            }
+          });
+          break;
+      }
+
+      // Update the resource with new attributes
+      const updatedResource = await AdditionalResource.findOneAndUpdate(
+        filter,
+        {
+          attributes: updatedAttributes,
+          'metadata.lastModifiedBy': user?.name || user?.email || 'system'
+        },
+        { new: true, runValidators: true }
+      );
+
+      logger.info(`Additional resource attributes updated: ${id} by user: ${user?._id}`);
+
+      res.json({
+        success: true,
+        data: updatedResource,
+        message: 'Additional resource attributes updated successfully'
+      });
+    } catch (error: any) {
+      logger.error('Error updating additional resource attributes:', error);
+      throw new ValidationError(error.message || 'Failed to update additional resource attributes');
+    }
+  });
+
   // Delete additional resource
   static deleteAdditionalResource = asyncHandler(async (req: AuthRequest, res: Response): Promise<any> => {
     const { id } = req.params;
@@ -390,7 +482,10 @@ export class AdditionalResourceController {
     logger.info(`DELETE /additional-resources/${id} called by user:`, user?._id);
 
     // Build filter for workspace access control
-    const filter: any = { _id: id };
+    // Try both _id (MongoDB ObjectId) and id (custom string field)
+    const filter: any = (id && Types.ObjectId.isValid(id))
+      ? { _id: id }
+      : { id: id };
 
     // Apply workspace-based filtering for basic and admin users
     if (userRole === 'basic' || userRole === 'admin') {
@@ -417,7 +512,7 @@ export class AdditionalResourceController {
     //   throw new ConflictError('Cannot delete additional resource that is being used in active policies');
     // }
 
-    await AdditionalResource.findByIdAndDelete(id);
+    await AdditionalResource.findOneAndDelete(filter);
 
     logger.info(`Additional resource deleted: ${id} by user: ${user?._id}`);
 
@@ -439,8 +534,26 @@ export class AdditionalResourceController {
       throw new ValidationError('IDs array is required and must not be empty');
     }
 
+    // Separate ObjectIds and custom IDs
+    const objectIds = ids.filter(id => Types.ObjectId.isValid(id));
+    const customIds = ids.filter(id => !Types.ObjectId.isValid(id));
+
     // Build filter for workspace access control
-    const filter: any = { _id: { $in: ids } };
+    const filter: any = {
+      $or: []
+    };
+
+    if (objectIds.length > 0) {
+      filter.$or.push({ _id: { $in: objectIds } });
+    }
+    if (customIds.length > 0) {
+      filter.$or.push({ id: { $in: customIds } });
+    }
+
+    // If no valid IDs, return error
+    if (filter.$or.length === 0) {
+      throw new ValidationError('No valid IDs provided');
+    }
 
     // Apply workspace-based filtering for basic and admin users
     if (userRole === 'basic' || userRole === 'admin') {
@@ -454,15 +567,17 @@ export class AdditionalResourceController {
 
     // Check which resources exist and user has access to
     const existingResources = await AdditionalResource.find(filter);
-    const existingIds = existingResources.map(resource => resource._id.toString());
 
-    if (existingIds.length === 0) {
+    if (existingResources.length === 0) {
       throw new NotFoundError('No accessible additional resources found with provided IDs');
     }
 
+    // Get the IDs to delete (using _id for actual deletion)
+    const idsToDelete = existingResources.map(resource => resource._id);
+
     // Delete the resources
     const deleteResult = await AdditionalResource.deleteMany({
-      _id: { $in: existingIds }
+      _id: { $in: idsToDelete }
     });
 
     logger.info(`Bulk deleted ${deleteResult.deletedCount} additional resources by user: ${user?._id}`);
@@ -472,7 +587,7 @@ export class AdditionalResourceController {
       data: {
         deletedCount: deleteResult.deletedCount,
         requestedIds: ids.length,
-        deletedIds: existingIds
+        deletedIds: idsToDelete.map(id => id.toString())
       },
       message: `Successfully deleted ${deleteResult.deletedCount} additional resource(s)`
     });
