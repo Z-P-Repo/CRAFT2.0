@@ -524,6 +524,29 @@ export default function CreatePolicyPage() {
     setOpen(true);
   };
 
+  const handleCreateAdditionalResourceAttribute = async () => {
+    setSelectedAttribute(null);
+    setAttributeDisplayName('');
+    setAttributeDisplayNameError('');
+    setSelectedCategories(['additional-resource']); // Pre-select additional-resource category
+    setSelectedDataType('');
+    setAttributeDescription('');
+    setPermittedValues('');
+    setParsedValues([]);
+    setBooleanValues([]);
+    setNumberValues([]);
+    setStringValues([]);
+    setArrayValues([]);
+    setObjectValues([]);
+    setDateValues([]);
+    setDateInputType('single');
+    setSelectedDays([]);
+    setExistingValues([]);
+    setIsAttributeUsedInPolicies(false);
+    setCurrentAdditionalResourceId(null);
+    setOpen(true);
+  };
+
   const handleClose = () => {
     setOpen(false);
     setCurrentAdditionalResourceId(null);
@@ -895,6 +918,36 @@ export default function CreatePolicyPage() {
         // Also update selectedAttributes if this attribute is in the selection
         setSelectedAttributes(prevSelectedAttributes =>
           prevSelectedAttributes.map(attr =>
+            attr.id === attributeId
+              ? {
+                ...attr,
+                constraints: {
+                  ...attr.constraints,
+                  enumValues: updatedEnumValues
+                }
+              }
+              : attr
+          )
+        );
+
+        // Also update selectedResourceAttributes for resource attributes in Step 4
+        setSelectedResourceAttributes(prevSelectedResourceAttributes =>
+          prevSelectedResourceAttributes.map(attr =>
+            attr.id === attributeId
+              ? {
+                ...attr,
+                constraints: {
+                  ...attr.constraints,
+                  enumValues: updatedEnumValues
+                }
+              }
+              : attr
+          )
+        );
+
+        // Also update resourceAttributes for resource attribute options
+        setResourceAttributes(prevResourceAttributes =>
+          prevResourceAttributes.map(attr =>
             attr.id === attributeId
               ? {
                 ...attr,
@@ -2339,44 +2392,75 @@ export default function CreatePolicyPage() {
                   {selectedAdditionalResources.length > 0 ? (
                     <Box>
                       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
-                        <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500 }}>
-                          Selected Additional Resources ({selectedAdditionalResources.length})
+                        <Typography variant="h6" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <AttributeIcon color="primary" />
+                          Additional Resource Attribute Conditions
                         </Typography>
                         <Button
                           size="small"
-                          onClick={handleClearAllAdditionalResources}
-                          startIcon={<DeleteIcon />}
+                          variant="outlined"
+                          startIcon={<AddIcon />}
+                          onClick={handleCreateAdditionalResourceAttribute}
+                          sx={{ fontSize: '0.75rem' }}
                         >
-                          Clear All
+                          Create New Attribute
                         </Button>
                       </Box>
 
-                      <Box sx={{ maxHeight: 300, overflow: 'auto' }} key={`additional-resources-${selectedAdditionalResources.length}`}>
+                      <Box sx={{ mb: 3 }}>
+                        <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
+                          Configure attributes for each additional resource (optional):
+                        </Typography>
+                      </Box>
+
+                      <Box sx={{ maxHeight: 400, overflow: 'auto' }} key={`additional-resources-${selectedAdditionalResources.length}`}>
                         {selectedAdditionalResources.map((resourceId, index) => {
                           const resource = additionalResources.find(r => r.id === resourceId);
                           if (!resource) return null;
 
                           return (
-                            <Box key={resourceId} sx={{ mb: 2 }}>
-                              <Box
+                            <Box key={resourceId} sx={{ mb: 3 }}>
+                              <Card
+                                variant="outlined"
                                 sx={{
-                                  display: 'flex',
-                                  alignItems: 'center',
                                   p: 2,
+                                  bgcolor: 'grey.50',
                                   border: '1px solid',
                                   borderColor: 'grey.200',
                                   borderRadius: 1,
-                                  bgcolor: 'grey.50'
+                                  '&:hover': {
+                                    borderColor: 'primary.main',
+                                    boxShadow: 1
+                                  }
                                 }}
                               >
-                                <ResourceIcon color="secondary" sx={{ mr: 2 }} />
-                                <Box sx={{ flexGrow: 1 }}>
-                                  <Typography variant="body2" fontWeight="600">
-                                    {resource.displayName || resource.name}
-                                  </Typography>
-                                  <Typography variant="caption" color="text.secondary">
-                                    {resource.description || 'No description'} • {resource.type} • Priority: {resource.priority || 'Normal'}
-                                  </Typography>
+                                <Box sx={{ display: 'flex', alignItems: 'center', mb: 1.5 }}>
+                                  <ResourceIcon color="secondary" sx={{ mr: 1.5, fontSize: 20 }} />
+                                  <Box sx={{ flexGrow: 1 }}>
+                                    <Typography variant="body2" fontWeight="600" sx={{ mb: 0.25 }}>
+                                      {resource.displayName || resource.name}
+                                    </Typography>
+                                    <Typography variant="caption" color="text.secondary">
+                                      {resource.description || 'No description'} • {resource.type}
+                                    </Typography>
+                                  </Box>
+                                  <IconButton
+                                    size="small"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleAdditionalResourceDelete(resourceId);
+                                    }}
+                                    sx={{
+                                      ml: 1,
+                                      color: 'text.secondary',
+                                      '&:hover': {
+                                        color: 'error.main',
+                                        bgcolor: 'error.50'
+                                      }
+                                    }}
+                                  >
+                                    <DeleteIcon fontSize="small" />
+                                  </IconButton>
                                 </Box>
                                 <Button
                                   size="small"
@@ -2385,27 +2469,29 @@ export default function CreatePolicyPage() {
                                     setCurrentAdditionalResourceId(resourceId);
                                     setOpen(true);
                                   }}
-                                  sx={{ mr: 1 }}
                                   variant="outlined"
-                                >
-                                  Add Attribute
-                                </Button>
-                                <IconButton
-                                  size="small"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleAdditionalResourceDelete(resourceId);
+                                  fullWidth
+                                  sx={{
+                                    fontSize: '0.75rem',
+                                    py: 0.75,
+                                    borderColor: 'grey.300',
+                                    color: 'text.secondary',
+                                    '&:hover': {
+                                      borderColor: 'primary.main',
+                                      bgcolor: 'primary.50',
+                                      color: 'primary.main'
+                                    }
                                   }}
-                                  sx={{ ml: 1 }}
                                 >
-                                  <DeleteIcon fontSize="small" />
-                                </IconButton>
-                              </Box>
+                                  Add Attribute to this Resource
+                                </Button>
+                              </Card>
+
                               {/* Additional Resource Attributes */}
                               {selectedAdditionalResourceAttributes[resourceId] && Object.keys(selectedAdditionalResourceAttributes[resourceId]).length > 0 && (
-                                <Box sx={{ mt: 2, pl: 6 }}>
-                                  <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500, mb: 1 }}>
-                                    Resource Attributes:
+                                <Box sx={{ mt: 2 }}>
+                                  <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500, mb: 1.5, pl: 0.5 }}>
+                                    Configured Attributes ({Object.keys(selectedAdditionalResourceAttributes[resourceId]).length}):
                                   </Typography>
                                   <Grid container spacing={1.5}>
                                     {Object.entries(selectedAdditionalResourceAttributes[resourceId]).map(([attrId, value]) => {
@@ -2414,9 +2500,22 @@ export default function CreatePolicyPage() {
 
                                       return (
                                         <Grid size={{ xs: 12, sm: 6, md: 4 }} key={attrId}>
-                                          <Card sx={{ p: 1.5, bgcolor: 'white', border: '1px solid', borderColor: 'grey.200', height: '100%' }}>
-                                            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
-                                              <Typography variant="body2" fontWeight="600" color="secondary" noWrap sx={{ fontSize: '0.8rem', flex: 1, minWidth: 0 }}>
+                                          <Card
+                                            variant="outlined"
+                                            sx={{
+                                              p: 1.5,
+                                              bgcolor: 'white',
+                                              border: '1px solid',
+                                              borderColor: 'grey.200',
+                                              height: '100%',
+                                              '&:hover': {
+                                                borderColor: 'primary.main',
+                                                boxShadow: 1
+                                              }
+                                            }}
+                                          >
+                                            <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', mb: 1 }}>
+                                              <Typography variant="body2" fontWeight="600" color="text.primary" noWrap sx={{ fontSize: '0.8rem', flex: 1, minWidth: 0 }}>
                                                 {attribute.displayName}
                                               </Typography>
                                               <IconButton
@@ -2752,14 +2851,41 @@ export default function CreatePolicyPage() {
                       {selectedAdditionalResources.length > 0 && (
                         <span>
                           {' '}if{' '}
-                          <strong style={{ color: '#2e7d32' }}>
-                            {selectedAdditionalResources.length === 1
-                              ? additionalResources.find(r => r.id === selectedAdditionalResources[0])?.displayName || additionalResources.find(r => r.id === selectedAdditionalResources[0])?.name
-                              : selectedAdditionalResources.length === 2
-                                ? `${additionalResources.find(r => r.id === selectedAdditionalResources[0])?.displayName || additionalResources.find(r => r.id === selectedAdditionalResources[0])?.name} and ${additionalResources.find(r => r.id === selectedAdditionalResources[1])?.displayName || additionalResources.find(r => r.id === selectedAdditionalResources[1])?.name}`
-                                : `${selectedAdditionalResources.slice(0, -1).map(id => additionalResources.find(r => r.id === id)?.displayName || additionalResources.find(r => r.id === id)?.name).join(', ')}, and ${additionalResources.find(r => r.id === selectedAdditionalResources[selectedAdditionalResources.length - 1])?.displayName || additionalResources.find(r => r.id === selectedAdditionalResources[selectedAdditionalResources.length - 1])?.name}`
-                            }
-                          </strong>
+                          {selectedAdditionalResources.map((resourceId, idx) => {
+                            const resource = additionalResources.find(r => r.id === resourceId);
+                            const resourceName = resource?.displayName || resource?.name;
+                            const resourceAttrs = selectedAdditionalResourceAttributes[resourceId] || {};
+
+                            // Get attribute conditions for this resource
+                            const attrConditions = Object.entries(resourceAttrs)
+                              .filter(([_, value]) => value !== '' && value !== null && value !== undefined)
+                              .map(([attrId, value], index, array) => {
+                                const attr = attributes.find(a => a.id === attrId);
+                                if (!attr) return '';
+                                const formattedValue = Array.isArray(value) ? value.join(' or ') : value;
+                                const condition = `${attr.displayName.toLowerCase()} is ${formattedValue}`;
+                                if (index === array.length - 1 && array.length > 1) {
+                                  return `and ${condition}`;
+                                }
+                                return condition;
+                              })
+                              .filter(Boolean);
+
+                            return (
+                              <React.Fragment key={resourceId}>
+                                <strong style={{ color: '#2e7d32' }}>
+                                  {resourceName}
+                                </strong>
+                                {attrConditions.length > 0 && (
+                                  <span>
+                                    {' '}(when {attrConditions.join(', ')})
+                                  </span>
+                                )}
+                                {idx < selectedAdditionalResources.length - 2 && ', '}
+                                {idx === selectedAdditionalResources.length - 2 && ' and '}
+                              </React.Fragment>
+                            );
+                          })}
                         </span>
                       )}.
                     </Typography>

@@ -428,6 +428,57 @@ export default function EditPolicyPage() {
     }
   }, [resourceAttributes, selectedResourceAttributeValues]);
 
+  // Initialize additional resource attributes when policy and attributes are loaded
+  useEffect(() => {
+    if (originalPolicy && additionalResourceAttributes.length > 0 &&
+        originalPolicy.additionalResources && Array.isArray(originalPolicy.additionalResources)) {
+      console.log('Initializing additional resource attributes from policy:', originalPolicy.additionalResources);
+
+      const attributesList: { [resourceId: string]: Attribute[] } = {};
+      const attributeValues: { [resourceId: string]: { [attributeId: string]: any } } = {};
+
+      originalPolicy.additionalResources.forEach((additionalResource: any) => {
+        const resourceId = typeof additionalResource === 'object' && additionalResource?.id
+          ? additionalResource.id
+          : additionalResource;
+
+        if (additionalResource.attributes && Array.isArray(additionalResource.attributes)) {
+          const resourceAttrs: Attribute[] = [];
+          const resourceAttrValues: { [attributeId: string]: any } = {};
+
+          additionalResource.attributes.forEach((attr: any) => {
+            // Find the attribute object in additionalResourceAttributes
+            const attributeObj = additionalResourceAttributes.find(a =>
+              a.name === attr.name || a.id === attr.name
+            );
+
+            if (attributeObj) {
+              // Add to the list of selected attributes for this resource
+              resourceAttrs.push(attributeObj);
+              // Store the value for this attribute
+              resourceAttrValues[attributeObj.id] = attr.value;
+            }
+          });
+
+          if (resourceAttrs.length > 0) {
+            attributesList[resourceId] = resourceAttrs;
+            attributeValues[resourceId] = resourceAttrValues;
+          }
+        }
+      });
+
+      console.log('Initialized additional resource attributes list:', attributesList);
+      console.log('Initialized additional resource attribute values:', attributeValues);
+
+      if (Object.keys(attributesList).length > 0) {
+        setSelectedAdditionalResourceAttributesList(attributesList);
+      }
+      if (Object.keys(attributeValues).length > 0) {
+        setSelectedAdditionalResourceAttributeValues(attributeValues);
+      }
+    }
+  }, [originalPolicy, additionalResourceAttributes]);
+
   // Fetch dropdown data
   const fetchDropdownData = useCallback(async () => {
     try {
@@ -1105,6 +1156,68 @@ export default function EditPolicyPage() {
           return attr;
         }));
 
+        // Also update selectedAttributes for subject attributes
+        setSelectedAttributes(prev => prev.map(attr => {
+          if (attr.id === attributeId) {
+            return {
+              ...attr,
+              constraints: {
+                ...attr.constraints,
+                enumValues: [...existingValues, trimmedNewValue]
+              }
+            };
+          }
+          return attr;
+        }));
+
+        // Also update selectedResourceAttributes for resource attributes
+        setSelectedResourceAttributes(prev => prev.map(attr => {
+          if (attr.id === attributeId) {
+            return {
+              ...attr,
+              constraints: {
+                ...attr.constraints,
+                enumValues: [...existingValues, trimmedNewValue]
+              }
+            };
+          }
+          return attr;
+        }));
+
+        // Also update additionalResourceAttributes for additional resource attributes
+        setAdditionalResourceAttributes(prev => prev.map(attr => {
+          if (attr.id === attributeId) {
+            return {
+              ...attr,
+              constraints: {
+                ...attr.constraints,
+                enumValues: [...existingValues, trimmedNewValue]
+              }
+            };
+          }
+          return attr;
+        }));
+
+        // Also update selectedAdditionalResourceAttributesList for any resources that have this attribute
+        setSelectedAdditionalResourceAttributesList(prev => {
+          const updated = { ...prev };
+          Object.keys(updated).forEach(resourceId => {
+            updated[resourceId] = updated[resourceId].map(attr => {
+              if (attr.id === attributeId) {
+                return {
+                  ...attr,
+                  constraints: {
+                    ...attr.constraints,
+                    enumValues: [...existingValues, trimmedNewValue]
+                  }
+                };
+              }
+              return attr;
+            });
+          });
+          return updated;
+        });
+
         snackbar.showSuccess(`Value "${trimmedNewValue}" added successfully`);
         setShowCreateValue(null);
         setNewValueData('');
@@ -1262,14 +1375,19 @@ export default function EditPolicyPage() {
         additionalResources: selectedAdditionalResources
           .filter(resourceId => resourceId && typeof resourceId === 'string' && resourceId.trim().length > 0)
           .map(resourceId => {
-            const resourceAttributes = selectedAdditionalResourceAttributes[resourceId] || {};
+            const selectedAttrs = selectedAdditionalResourceAttributesList[resourceId] || [];
+            const attrValues = selectedAdditionalResourceAttributeValues[resourceId] || {};
 
-            // Additional Resources use simple key-value pairs, NOT Attribute entities
-            const resourceAttributesArray = Object.entries(resourceAttributes)
-              .filter(([_, value]) => value !== '' && value !== null && value !== undefined)
-              .map(([attrKey, value]) => {
+            // Build attributes array from selected attributes and their values
+            const resourceAttributesArray = selectedAttrs
+              .filter(attr => {
+                const value = attrValues[attr.id];
+                return value !== '' && value !== null && value !== undefined;
+              })
+              .map(attr => {
+                const value = attrValues[attr.id];
                 return {
-                  name: attrKey,
+                  name: attr.id, // Use attribute ID as the name
                   operator: Array.isArray(value) ? 'in' : 'equals',
                   value: value
                 };
@@ -2497,19 +2615,28 @@ export default function EditPolicyPage() {
                   {selectedAdditionalResources.length > 0 ? (
                     <Box>
                       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
-                        <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500 }}>
-                          Selected Additional Resources ({selectedAdditionalResources.length})
+                        <Typography variant="h6" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <AttributeIcon color="primary" />
+                          Additional Resource Attribute Conditions
                         </Typography>
                         <Button
                           size="small"
-                          onClick={handleClearAllAdditionalResources}
-                          startIcon={<DeleteIcon />}
+                          variant="outlined"
+                          startIcon={<AddIcon />}
+                          onClick={handleCreateAdditionalResourceAttribute}
+                          sx={{ fontSize: '0.75rem' }}
                         >
-                          Clear All
+                          Create New Attribute
                         </Button>
                       </Box>
 
-                      <Box sx={{ maxHeight: 500, overflow: 'auto' }} key={`additional-resources-${selectedAdditionalResources.length}`}>
+                      <Box sx={{ mb: 3 }}>
+                        <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
+                          Configure attributes for each additional resource (optional):
+                        </Typography>
+                      </Box>
+
+                      <Box sx={{ maxHeight: 400, overflow: 'auto' }} key={`additional-resources-${selectedAdditionalResources.length}`}>
                         {selectedAdditionalResources.map((resourceId, index) => {
                           const resource = additionalResources.find(r => r.id === resourceId);
                           if (!resource) return null;
@@ -2518,58 +2645,51 @@ export default function EditPolicyPage() {
 
                           return (
                             <Box key={resourceId} sx={{ mb: 3 }}>
-                              <Box
+                              <Card
+                                variant="outlined"
                                 sx={{
-                                  display: 'flex',
-                                  alignItems: 'center',
                                   p: 2,
+                                  bgcolor: 'grey.50',
                                   border: '1px solid',
                                   borderColor: 'grey.200',
                                   borderRadius: 1,
-                                  bgcolor: 'grey.50'
+                                  '&:hover': {
+                                    borderColor: 'primary.main',
+                                    boxShadow: 1
+                                  }
                                 }}
                               >
-                                <ResourceIcon color="secondary" sx={{ mr: 2 }} />
-                                <Box sx={{ flexGrow: 1 }}>
-                                  <Typography variant="body2" fontWeight="600">
-                                    {resource.displayName || resource.name}
-                                  </Typography>
-                                  <Typography variant="caption" color="text.secondary">
-                                    {resource.description || 'No description'} • {resource.type} • Priority: {resource.priority || 'Normal'}
-                                  </Typography>
-                                </Box>
-                                <IconButton
-                                  size="small"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleAdditionalResourceDelete(resourceId);
-                                  }}
-                                  sx={{ ml: 1 }}
-                                >
-                                  <DeleteIcon fontSize="small" />
-                                </IconButton>
-                              </Box>
-
-                              {/* Attribute Selection UI */}
-                              <Box sx={{ mt: 2, pl: 0 }}>
-                                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
-                                  <Typography variant="body2" sx={{ display: 'flex', alignItems: 'center', gap: 1, fontWeight: 500 }}>
-                                    <AttributeIcon color="primary" sx={{ fontSize: 18 }} />
-                                    Attribute Conditions
-                                  </Typography>
-                                  <Button
+                                <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                                  <ResourceIcon color="secondary" sx={{ mr: 1.5, fontSize: 20 }} />
+                                  <Box sx={{ flexGrow: 1 }}>
+                                    <Typography variant="body2" fontWeight="600" sx={{ mb: 0.25 }}>
+                                      {resource.displayName || resource.name}
+                                    </Typography>
+                                    <Typography variant="caption" color="text.secondary">
+                                      {resource.description || 'No description'} • {resource.type}
+                                    </Typography>
+                                  </Box>
+                                  <IconButton
                                     size="small"
-                                    variant="outlined"
-                                    startIcon={<AddIcon />}
-                                    onClick={handleCreateAdditionalResourceAttribute}
-                                    sx={{ fontSize: '0.7rem' }}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleAdditionalResourceDelete(resourceId);
+                                    }}
+                                    sx={{
+                                      ml: 1,
+                                      color: 'text.secondary',
+                                      '&:hover': {
+                                        color: 'error.main',
+                                        bgcolor: 'error.50'
+                                      }
+                                    }}
                                   >
-                                    Create New Attribute
-                                  </Button>
+                                    <DeleteIcon fontSize="small" />
+                                  </IconButton>
                                 </Box>
 
-                                <Box sx={{ mb: 2 }}>
-                                  <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: 'block' }}>
+                                <Box>
+                                  <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: 'block', fontWeight: 500 }}>
                                     Select attributes to configure conditions (optional):
                                   </Typography>
                                   <Autocomplete
@@ -2899,7 +3019,7 @@ export default function EditPolicyPage() {
                                     </Grid>
                                   </Box>
                                 )}
-                              </Box>
+                              </Card>
                             </Box>
                           );
                         })}
@@ -3038,14 +3158,23 @@ export default function EditPolicyPage() {
                           {selectedAdditionalResources.map((resourceId, idx) => {
                             const resource = additionalResources.find(r => r.id === resourceId);
                             const resourceName = resource?.displayName || resource?.name;
-                            const resourceAttrs = selectedAdditionalResourceAttributes[resourceId] || {};
+                            const selectedAttrs = selectedAdditionalResourceAttributesList[resourceId] || [];
+                            const attrValues = selectedAdditionalResourceAttributeValues[resourceId] || {};
 
                             // Get attribute conditions for this resource
-                            const attrConditions = Object.entries(resourceAttrs)
-                              .filter(([_, value]) => value !== '' && value !== null && value !== undefined)
-                              .map(([attrKey, value]) => {
+                            const attrConditions = selectedAttrs
+                              .filter(attr => {
+                                const value = attrValues[attr.id];
+                                return value !== '' && value !== null && value !== undefined;
+                              })
+                              .map((attr, index, array) => {
+                                const value = attrValues[attr.id];
                                 const formattedValue = Array.isArray(value) ? value.join(' or ') : value;
-                                return `${attrKey.toLowerCase()} is ${formattedValue}`;
+                                const condition = `${attr.displayName.toLowerCase()} is ${formattedValue}`;
+                                if (index === array.length - 1 && array.length > 1) {
+                                  return `and ${condition}`;
+                                }
+                                return condition;
                               });
 
                             return (
@@ -3055,9 +3184,7 @@ export default function EditPolicyPage() {
                                 </strong>
                                 {attrConditions.length > 0 && (
                                   <span>
-                                    {' '}(when {attrConditions.map((cond, i, arr) =>
-                                      i === arr.length - 1 && arr.length > 1 ? `and ${cond}` : cond
-                                    ).join(', ')})
+                                    {' '}(when {attrConditions.join(', ')})
                                   </span>
                                 )}
                                 {idx < selectedAdditionalResources.length - 2 && ', '}

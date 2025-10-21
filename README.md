@@ -515,10 +515,20 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 **Built with ❤️ using Next.js, Node.js, and MongoDB**
 
-*Last updated: October 15, 2025*
+*Last updated: October 21, 2025*
 🤖 *Generated and maintained with [Claude Code](https://claude.ai/code)*
 
 ## ⭐ Latest Updates
+
+### Version 1.3.17 - Policy Attribute State Management & Real-Time Dropdown Updates (October 21, 2025)
+- **🔧 Additional Resource Attribute Persistence**: Fixed critical bug where additional resource attributes weren't saving when editing policies - updated handleSubmit to use correct state variables
+- **📊 Policy Detail Page Display**: Additional resource attributes now display correctly in human-readable format after saving policy edits with proper attribute name resolution
+- **⚡ Instant Dropdown Updates**: New attribute values now appear immediately in dropdowns without page refresh across all policy creation and edit steps
+- **🔄 State Synchronization**: Enhanced handleCreateValue to update 4 state arrays in create page and 7 state arrays in edit page for complete UI reactivity
+- **📝 Multi-Step Coverage**: Attribute value creation instantly updates Subject Attributes, Resource Attributes, and Additional Resource Attributes dropdowns
+- **🎯 Edit Page Enhancement**: Improved state management to update selectedAdditionalResourceAttributesList for all resources with the updated attribute
+- **✨ User Experience**: Eliminated manual page refreshes - attribute value changes propagate instantly to all active dropdown components
+- **🚀 Complete Workflow**: Both subject and resource attributes in Step 4 now update instantly ensuring uniform behavior across all attribute types
 
 ### Version 1.3.14 - Comprehensive Dashboard Implementation (October 15, 2025)
 - **📊 Real-Time Data Visualization**: Complete dashboard redesign from static content to dynamic real-time data visualization with live statistics from 8 parallel API endpoints

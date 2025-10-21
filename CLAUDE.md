@@ -37,7 +37,17 @@ When user prompts "deploy", prepare the application for production deployment:
 - **Backend**: `/craft-backend` (Node.js 18+, Express 4.19.2, TypeScript 5.5.4, MongoDB 8.5.2, Mongoose ODM, Azure AD SSO, Advanced Rate Limiting, Redis Caching)
 - **Additional**: Zustand state management, TanStack React Query, Axios HTTP client, React Hook Form, Yup validation, Storybook, ESLint, Prettier
 
-## Latest Features (v1.3.16)
+## Latest Features (v1.3.17)
+- **Additional Resource Attribute Save Fix**: Fixed critical issue where additional resource attribute values weren't being saved when editing policies - updated handleSubmit in edit page to use correct state variables (selectedAdditionalResourceAttributesList and selectedAdditionalResourceAttributeValues)
+- **Policy Detail Page Display Fix**: Additional resource attributes now correctly display in human-readable format on policy detail page after saving edits with proper attribute name to displayName resolution
+- **Instant Attribute Value Dropdown Updates**: Fixed attribute value dropdowns to reflect newly created values immediately without page refresh across all steps in both policy creation and edit flows
+- **Comprehensive State Synchronization**: When creating new attribute values, now updates all 4 state arrays in create page (attributes, selectedAttributes, selectedResourceAttributes, resourceAttributes) and 7 state arrays in edit page for complete UI reactivity
+- **Multi-Step Attribute Value Support**: Attribute value creation now instantly updates dropdowns in Step 4 Subject Attributes, Step 4 Resource Attributes, and Step 5 Additional Resource Attributes
+- **Edit Page State Management Fix**: Enhanced handleCreateValue function to update selectedAdditionalResourceAttributesList for all resources containing the updated attribute ensuring consistent dropdown behavior
+- **Real-Time User Feedback**: Eliminated need for manual page refreshes when adding attribute values - changes propagate instantly to all active dropdown components
+- **Complete Flow Coverage**: Fixed instant updates for both subject attributes and resource attributes in policy creation Step 4, ensuring uniform behavior across all attribute types
+
+## Previous Features (v1.3.16)
 - **Policy Flow Additional Resource Creation Fix**: Fixed policy creation and edit flows (Step 5 - Additional Resources) to use AdditionalResourceCreationDialog instead of ResourceCreationDialog ensuring correct resource type creation
 - **Button Text Clarity Enhancement**: Updated button text from "Create New Resource" to "Create New Additional Resource" in policy workflow Step 5 for better user understanding and workflow clarity
 - **User Attribution System**: Fixed "Created By" and metadata fields across Resources and Additional Resources to display actual user names/emails instead of "System" or user IDs

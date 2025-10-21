@@ -2,7 +2,7 @@
 
 A modern, responsive React-based dashboard for managing the CRAFT (Attribute-Based Access Control) Permission System. Built with Next.js 15, TypeScript, and Material-UI with a professional collapsible sidebar layout.
 
-![Version](https://img.shields.io/badge/version-1.3.15-blue.svg)
+![Version](https://img.shields.io/badge/version-1.3.17-blue.svg)
 ![Next.js](https://img.shields.io/badge/Next.js-15.4.6-black.svg)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.5-blue.svg)
 ![Material-UI](https://img.shields.io/badge/Material--UI-7.3-blue.svg)
@@ -537,7 +537,19 @@ await trackUser('updated', 'user-456', 'John Doe');
 *Last updated: October 15, 2025*
 🤖 *Generated and maintained with [Claude Code](https://claude.ai/code)*
 
-## 🔄 Recent Updates (Version 1.3.15)
+## 🔄 Recent Updates (Version 1.3.17)
+
+### Policy Attribute State Management & Real-Time Dropdown Updates (October 21, 2025)
+- **🔧 Additional Resource Attribute Persistence Fix**: Resolved critical issue where additional resource attribute values weren't being saved when editing policies - fixed `handleSubmit` in edit page (`/app/policies/[id]/edit/page.tsx:1313-1338`) to use correct state variables (`selectedAdditionalResourceAttributesList` and `selectedAdditionalResourceAttributeValues`)
+- **📊 Policy Detail Page Display Restoration**: Additional resource attributes now display correctly in human-readable format on policy detail page after saving edits with proper attribute ID to displayName resolution ensuring accurate policy information presentation
+- **⚡ Instant Attribute Value Dropdown Updates**: Fixed attribute value dropdowns to reflect newly created values immediately without page refresh across all policy creation and edit flow steps for seamless user experience
+- **🔄 Comprehensive State Array Synchronization**: Enhanced `handleCreateValue` function to update all 4 state arrays in create page (`attributes`, `selectedAttributes`, `selectedResourceAttributes`, `resourceAttributes`) and 7 state arrays in edit page for complete UI reactivity
+- **📝 Multi-Step Dropdown Support**: Attribute value creation now instantly updates dropdowns in Step 4 Subject Attributes, Step 4 Resource Attributes, and Step 5 Additional Resource Attributes ensuring consistency across entire policy workflow
+- **🎯 Edit Page State Management Enhancement**: Improved `handleCreateValue` to update `selectedAdditionalResourceAttributesList` for all resources containing the updated attribute preventing stale dropdown data
+- **✨ Real-Time User Feedback**: Eliminated manual page refreshes when adding attribute values - changes propagate instantly to all active dropdown components improving workflow efficiency
+- **🚀 Complete Flow Coverage**: Fixed instant updates for both subject attributes and resource attributes in policy creation Step 4 ensuring uniform behavior across all attribute types and policy steps
+
+## Previous Updates (Version 1.3.15)
 
 ### Additional Resource Attributes Complete Display System (October 18, 2025)
 - **📊 Policy Details Enhancement**: Added comprehensive "Additional Resources (Conditions)" section to policy details page displaying each resource with its configured attributes as professional green-bordered chips
