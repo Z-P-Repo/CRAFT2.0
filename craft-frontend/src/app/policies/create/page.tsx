@@ -130,7 +130,7 @@ interface Attribute {
   description?: string;
   category?: 'subject' | 'resource' | 'action' | 'environment'; // Legacy field for compatibility
   categories?: string[]; // New field - array of categories
-  dataType: 'string' | 'number' | 'boolean' | 'date';
+  dataType: 'string' | 'number' | 'boolean' | 'date' | 'array' | 'object';
   isRequired: boolean;
   isMultiValue: boolean;
   defaultValue?: any;
@@ -251,9 +251,17 @@ export default function CreatePolicyPage() {
   // Cancel confirmation dialog state
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
 
-  // Create value modal (keep existing)
+  // Create value modal - enhanced for different data types
   const [showCreateValue, setShowCreateValue] = useState<string | null>(null);
   const [newValueData, setNewValueData] = useState('');
+  const [newBooleanValue, setNewBooleanValue] = useState<string[]>([]);
+  const [newNumberValue, setNewNumberValue] = useState('');
+  const [newStringValue, setNewStringValue] = useState('');
+  const [newDateValue, setNewDateValue] = useState('');
+  const [newDateInputType, setNewDateInputType] = useState<'single' | 'range' | 'period'>('single');
+  const [newSelectedDays, setNewSelectedDays] = useState<string[]>([]);
+  const [newArrayValue, setNewArrayValue] = useState('');
+  const [newObjectValue, setNewObjectValue] = useState('');
 
   // Fetch dropdown data
   const fetchDropdownData = useCallback(async () => {
@@ -870,25 +878,134 @@ export default function CreatePolicyPage() {
     }
   };
 
+  // Helper function to reset all value input fields
+  const resetValueInputs = () => {
+    setNewValueData('');
+    setNewStringValue('');
+    setNewNumberValue('');
+    setNewBooleanValue([]);
+    setNewDateValue('');
+    setNewArrayValue('');
+    setNewObjectValue('');
+    setNewDateInputType('single');
+    setNewSelectedDays([]);
+  };
+
+  // Helper function to check if value is valid based on data type
+  const isValueValid = (attributeId: string | null): boolean => {
+    if (!attributeId) return false;
+    const attribute = attributes.find(attr => attr.id === attributeId);
+    if (!attribute) return false;
+
+    switch (attribute.dataType) {
+      case 'boolean':
+        return newBooleanValue.length > 0;
+      case 'number':
+        return newNumberValue.trim() !== '' && !isNaN(parseFloat(newNumberValue.trim()));
+      case 'date':
+        return newDateValue.trim() !== '';
+      case 'array':
+        return newArrayValue.trim() !== '';
+      case 'object':
+        return newObjectValue.trim() !== '';
+      case 'string':
+      default:
+        return (newStringValue.trim() !== '' || newValueData.trim() !== '');
+    }
+  };
+
   // Create new value for an attribute
   const handleCreateValue = async (attributeId: string) => {
     try {
       const attribute = attributes.find(attr => attr.id === attributeId);
       if (!attribute) return;
 
-      // Check for duplicate values (case-insensitive)
+      // Get the appropriate value based on dataType
+      let valueToAdd: any;
+      switch (attribute.dataType) {
+        case 'boolean':
+          if (newBooleanValue.length === 0) {
+            snackbar.showError('Please select at least one boolean value');
+            return;
+          }
+          valueToAdd = newBooleanValue[newBooleanValue.length - 1] === 'true';
+          break;
+        case 'number':
+          if (!newNumberValue.trim()) {
+            snackbar.showError('Please enter a number value');
+            return;
+          }
+          valueToAdd = parseFloat(newNumberValue.trim());
+          if (isNaN(valueToAdd)) {
+            snackbar.showError('Please enter a valid number');
+            return;
+          }
+          break;
+        case 'date':
+          if (!newDateValue.trim()) {
+            snackbar.showError('Please select a date value');
+            return;
+          }
+          valueToAdd = newDateValue.trim();
+          break;
+        case 'array':
+          if (!newArrayValue.trim()) {
+            snackbar.showError('Please enter an array value');
+            return;
+          }
+          try {
+            const parsed = JSON.parse(newArrayValue.trim());
+            if (!Array.isArray(parsed)) {
+              snackbar.showError('Please enter a valid JSON array');
+              return;
+            }
+            valueToAdd = parsed;
+          } catch (e) {
+            snackbar.showError('Invalid JSON format for array');
+            return;
+          }
+          break;
+        case 'object':
+          if (!newObjectValue.trim()) {
+            snackbar.showError('Please enter an object value');
+            return;
+          }
+          try {
+            valueToAdd = JSON.parse(newObjectValue.trim());
+            if (Array.isArray(valueToAdd)) {
+              snackbar.showError('Please enter a valid JSON object (not an array)');
+              return;
+            }
+          } catch (e) {
+            snackbar.showError('Invalid JSON format for object');
+            return;
+          }
+          break;
+        case 'string':
+        default:
+          if (!newStringValue.trim() && !newValueData.trim()) {
+            snackbar.showError('Please enter a value');
+            return;
+          }
+          valueToAdd = (newStringValue || newValueData).trim();
+          break;
+      }
+
+      // Check for duplicate values
       const existingValues = attribute.constraints.enumValues || [];
-      const trimmedNewValue = newValueData.trim();
-      const isDuplicate = existingValues.some(existingValue =>
-        existingValue.toString().toLowerCase() === trimmedNewValue.toLowerCase()
-      );
+      const isDuplicate = existingValues.some(existingValue => {
+        if (typeof existingValue === 'object' && typeof valueToAdd === 'object') {
+          return JSON.stringify(existingValue) === JSON.stringify(valueToAdd);
+        }
+        return existingValue.toString().toLowerCase() === valueToAdd.toString().toLowerCase();
+      });
 
       if (isDuplicate) {
-        snackbar.showError(`The value "${trimmedNewValue}" already exists for this attribute`);
+        snackbar.showError(`This value already exists for this attribute`);
         return;
       }
 
-      const updatedEnumValues = [...existingValues, trimmedNewValue];
+      const updatedEnumValues = [...existingValues, valueToAdd];
 
       // Only send the specific fields that need to be updated
       const updatePayload = {
@@ -962,7 +1079,7 @@ export default function CreatePolicyPage() {
 
         snackbar.showSuccess('Value added successfully');
         setShowCreateValue(null);
-        setNewValueData('');
+        resetValueInputs();
 
         // Optionally refresh from API in background
         fetchDropdownData().catch(console.error);
@@ -2403,7 +2520,7 @@ export default function CreatePolicyPage() {
                           onClick={handleCreateAdditionalResourceAttribute}
                           sx={{ fontSize: '0.75rem' }}
                         >
-                          Create New Attribute
+                          Create new additional resource attribute
                         </Button>
                       </Box>
 
@@ -4129,7 +4246,7 @@ export default function CreatePolicyPage() {
               <IconButton
                 onClick={() => {
                   setShowCreateValue(null);
-                  setNewValueData('');
+                  resetValueInputs();
                 }}
                 sx={{
                   color: 'grey.500',
@@ -4143,26 +4260,156 @@ export default function CreatePolicyPage() {
               <Typography variant="body2" color="text.secondary" sx={{ mb: 2.5, lineHeight: 1.5 }}>
                 {showCreateValue && (() => {
                   const attribute = attributes.find(attr => attr.id === showCreateValue);
-                  return `Add a new value to the "${attribute?.displayName || 'selected'}" attribute. This value will be available for selection in policy conditions.`;
+                  return `Add a new value to the "${attribute?.displayName || 'selected'}" attribute (${attribute?.dataType || 'string'} type). This value will be available for selection in policy conditions.`;
                 })()}
               </Typography>
-              <TextField
-                autoFocus
-                fullWidth
-                label="New Value"
-                value={newValueData}
-                onChange={(e) => setNewValueData(e.target.value)}
-                placeholder="Enter the new value"
-                variant="outlined"
-                size="medium"
-                helperText="Enter a descriptive value that will be used in policy conditions"
-                sx={{
-                  mt: 1,
-                  '& .MuiOutlinedInput-root': {
-                    borderRadius: 1.5
-                  }
-                }}
-              />
+
+              {showCreateValue && (() => {
+                const attribute = attributes.find(attr => attr.id === showCreateValue);
+                if (!attribute) return null;
+
+                switch (attribute.dataType) {
+                  case 'boolean':
+                    return (
+                      <FormControl fullWidth>
+                        <InputLabel>Select Boolean Value</InputLabel>
+                        <Select
+                          value={newBooleanValue}
+                          onChange={(e) => setNewBooleanValue([e.target.value as string])}
+                          size="medium"
+                        >
+                          <MenuItem value="true">true</MenuItem>
+                          <MenuItem value="false">false</MenuItem>
+                        </Select>
+                      </FormControl>
+                    );
+
+                  case 'number':
+                    return (
+                      <TextField
+                        autoFocus
+                        fullWidth
+                        label="Number Value"
+                        type="number"
+                        value={newNumberValue}
+                        onChange={(e) => setNewNumberValue(e.target.value)}
+                        placeholder="Enter a number"
+                        variant="outlined"
+                        size="medium"
+                        helperText="Enter a numeric value"
+                        sx={{
+                          '& .MuiOutlinedInput-root': {
+                            borderRadius: 1.5
+                          }
+                        }}
+                      />
+                    );
+
+                  case 'date':
+                    return (
+                      <Box>
+                        <TextField
+                          autoFocus
+                          fullWidth
+                          label="Date and Time Value"
+                          type="datetime-local"
+                          value={newDateValue}
+                          onChange={(e) => setNewDateValue(e.target.value)}
+                          variant="outlined"
+                          size="medium"
+                          InputLabelProps={{ shrink: true }}
+                          helperText="Select a date and time"
+                          sx={{
+                            '& .MuiOutlinedInput-root': {
+                              borderRadius: 1.5
+                            }
+                          }}
+                        />
+                      </Box>
+                    );
+
+                  case 'array':
+                    return (
+                      <TextField
+                        autoFocus
+                        fullWidth
+                        label="Array Value (JSON)"
+                        value={newArrayValue}
+                        onChange={(e) => setNewArrayValue(e.target.value)}
+                        placeholder='["item1", "item2", "item3"]'
+                        variant="outlined"
+                        multiline
+                        rows={3}
+                        size="medium"
+                        helperText="Enter a valid JSON array"
+                        InputProps={{
+                          sx: {
+                            fontFamily: 'Monaco, "Lucida Console", monospace',
+                            fontSize: '0.85rem'
+                          }
+                        }}
+                        sx={{
+                          '& .MuiOutlinedInput-root': {
+                            borderRadius: 1.5
+                          }
+                        }}
+                      />
+                    );
+
+                  case 'object':
+                    return (
+                      <TextField
+                        autoFocus
+                        fullWidth
+                        label="Object Value (JSON)"
+                        value={newObjectValue}
+                        onChange={(e) => setNewObjectValue(e.target.value)}
+                        placeholder='{"key": "value", "name": "example"}'
+                        variant="outlined"
+                        multiline
+                        rows={3}
+                        size="medium"
+                        helperText="Enter a valid JSON object"
+                        InputProps={{
+                          sx: {
+                            fontFamily: 'Monaco, "Lucida Console", monospace',
+                            fontSize: '0.85rem'
+                          }
+                        }}
+                        sx={{
+                          '& .MuiOutlinedInput-root': {
+                            borderRadius: 1.5
+                          }
+                        }}
+                      />
+                    );
+
+                  case 'string':
+                  default:
+                    return (
+                      <TextField
+                        autoFocus
+                        fullWidth
+                        label="String Value"
+                        value={newStringValue || newValueData}
+                        onChange={(e) => {
+                          setNewStringValue(e.target.value);
+                          setNewValueData(e.target.value);
+                        }}
+                        placeholder="Enter a text value"
+                        variant="outlined"
+                        size="medium"
+                        helperText="Enter a descriptive value that will be used in policy conditions"
+                        sx={{
+                          mt: 1,
+                          '& .MuiOutlinedInput-root': {
+                            borderRadius: 1.5
+                          }
+                        }}
+                      />
+                    );
+                }
+              })()}
             </DialogContent>
             <DialogActions sx={{
               px: 3,
@@ -4173,7 +4420,7 @@ export default function CreatePolicyPage() {
               <Button
                 onClick={() => {
                   setShowCreateValue(null);
-                  setNewValueData('');
+                  resetValueInputs();
                 }}
                 variant="outlined"
                 sx={{
@@ -4189,12 +4436,12 @@ export default function CreatePolicyPage() {
               </Button>
               <Button
                 onClick={() => {
-                  if (showCreateValue && newValueData.trim()) {
+                  if (showCreateValue && isValueValid(showCreateValue)) {
                     handleCreateValue(showCreateValue);
                   }
                 }}
                 variant="contained"
-                disabled={!newValueData.trim()}
+                disabled={!isValueValid(showCreateValue)}
                 sx={{
                   bgcolor: 'primary.main',
                   '&:hover': {

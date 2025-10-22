@@ -515,10 +515,22 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 **Built with ❤️ using Next.js, Node.js, and MongoDB**
 
-*Last updated: October 21, 2025*
+*Last updated: October 22, 2025*
 🤖 *Generated and maintained with [Claude Code](https://claude.ai/code)*
 
 ## ⭐ Latest Updates
+
+### Version 1.3.18 - Data-Type-Aware Attribute Value Management & DateTime Support (October 22, 2025)
+- **🎯 Intelligent Value Input Dialogs**: Implemented data-type-aware "Add Value" dialogs that adapt based on attribute type across policy creation and edit flows
+- **🔢 Type-Specific Input Controls**: Boolean attributes show Select dropdown (true/false), Number attributes use numeric input with validation, String attributes use standard text fields
+- **📅 Enhanced Date-Time Support**: Date attributes now use datetime-local input allowing users to select both date and time for precise timestamp values
+- **📝 JSON Input for Complex Types**: Array and object attributes feature multiline textarea with monospace font (Monaco/Lucida Console) for JSON input with real-time validation
+- **✨ Professional UX Design**: All input dialogs include data-type labels, helper text, and appropriate placeholders matching attribute creation flow patterns
+- **🔍 Smart Validation**: Type-specific validation ensuring boolean selections are made, numbers are valid, dates are selected, and JSON is properly formatted
+- **🎨 Consistent Styling**: Uniform dialog design with borderRadius: 1.5, proper spacing, and Material-UI theming across all data types
+- **⚡ State Management**: Enhanced resetValueInputs() and isValueValid() helper functions managing separate state variables for each data type
+- **🚀 Complete Coverage**: Applied consistently to Step 4 (Resource Attributes) and Step 5 (Additional Resource Attributes) in both create and edit flows
+- **✅ Build Verification**: Successfully compiled frontend with all TypeScript validations passing and zero build errors
 
 ### Version 1.3.17 - Policy Attribute State Management & Real-Time Dropdown Updates (October 21, 2025)
 - **🔧 Additional Resource Attribute Persistence**: Fixed critical bug where additional resource attributes weren't saving when editing policies - updated handleSubmit to use correct state variables

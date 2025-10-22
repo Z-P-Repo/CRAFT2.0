@@ -534,10 +534,29 @@ await trackUser('updated', 'user-456', 'John Doe');
 
 ---
 
-*Last updated: October 15, 2025*
+*Last updated: October 22, 2025*
 🤖 *Generated and maintained with [Claude Code](https://claude.ai/code)*
 
-## 🔄 Recent Updates (Version 1.3.17)
+## 🔄 Recent Updates (Version 1.3.18)
+
+### Data-Type-Aware Attribute Value Management & DateTime Support (October 22, 2025)
+- **🎯 Intelligent Value Input System**: Implemented comprehensive data-type-aware "Add Value" dialog system that adapts input controls based on attribute's dataType property across all policy creation and edit workflows
+- **🔢 Boolean Type Support**: Select dropdown with true/false options for boolean attributes ensuring proper value selection with Material-UI Select component
+- **🔢 Number Type Support**: Dedicated numeric TextField with type="number", proper validation preventing non-numeric input, and user-friendly error messages for invalid numbers
+- **📝 String Type Support**: Standard TextField with appropriate placeholder text and helper guidance for descriptive value entry
+- **📅 Enhanced DateTime Input**: Changed date input from type="date" to type="datetime-local" enabling users to select both date and time components for precise timestamp values in date-type attributes
+- **📝 Array Type Support**: Multiline TextField (3 rows) with monospace font (Monaco/"Lucida Console") for JSON array input with placeholder like `["item1", "item2", "item3"]` and JSON validation
+- **📝 Object Type Support**: Multiline TextField (3 rows) with monospace font for JSON object input with placeholder like `{"key": "value", "name": "example"}` and strict object validation preventing arrays
+- **✨ Professional Dialog Design**: Modern modal styling with data-type labels in descriptions showing "(boolean type)", "(number type)", etc., enhanced helper text, and Material-UI compliant layout patterns
+- **🔍 Comprehensive Validation**: Implemented isValueValid() helper function with switch-case logic validating input based on attribute's dataType including JSON parsing for array/object types
+- **⚡ State Reset Management**: Added resetValueInputs() helper clearing all type-specific state variables (newBooleanValue, newNumberValue, newStringValue, newDateValue, newArrayValue, newObjectValue) on dialog close
+- **🎨 Uniform Styling**: Consistent borderRadius: 1.5, proper InputLabelProps for date inputs, helper text for each type, and professional spacing matching attribute creation flow
+- **🚀 Implementation Scope**: Applied to policy create page (`/policies/create/page.tsx:4267-4412`) and edit page (`/policies/[id]/edit/page.tsx:4510-4655`) ensuring feature parity
+- **📍 Multiple Integration Points**: Works across Step 4 Resource Attributes and Step 5 Additional Resource Attributes in both creation and editing workflows
+- **✅ Build Success**: Clean TypeScript compilation with zero errors, successful Next.js build generating all 21 static/dynamic routes
+- **🔄 Complete Attribute Support**: Extended Attribute interface adding 'array' | 'object' to dataType union type for complete type coverage
+
+## Previous Updates (Version 1.3.17)
 
 ### Policy Attribute State Management & Real-Time Dropdown Updates (October 21, 2025)
 - **🔧 Additional Resource Attribute Persistence Fix**: Resolved critical issue where additional resource attribute values weren't being saved when editing policies - fixed `handleSubmit` in edit page (`/app/policies/[id]/edit/page.tsx:1313-1338`) to use correct state variables (`selectedAdditionalResourceAttributesList` and `selectedAdditionalResourceAttributeValues`)

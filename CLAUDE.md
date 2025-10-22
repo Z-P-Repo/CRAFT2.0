@@ -37,7 +37,21 @@ When user prompts "deploy", prepare the application for production deployment:
 - **Backend**: `/craft-backend` (Node.js 18+, Express 4.19.2, TypeScript 5.5.4, MongoDB 8.5.2, Mongoose ODM, Azure AD SSO, Advanced Rate Limiting, Redis Caching)
 - **Additional**: Zustand state management, TanStack React Query, Axios HTTP client, React Hook Form, Yup validation, Storybook, ESLint, Prettier
 
-## Latest Features (v1.3.17)
+## Latest Features (v1.3.18)
+- **Data-Type-Aware Value Input Dialogs**: Implemented intelligent "Add Value" dialogs that adapt input controls based on attribute's dataType across all policy creation and edit workflows
+- **Type-Specific Input Controls**: Boolean (Select dropdown with true/false), Number (numeric TextField with validation), String (standard TextField), Date (datetime-local picker), Array/Object (JSON textarea with monospace font)
+- **Enhanced DateTime Support**: Changed date input from type="date" to type="datetime-local" enabling users to select both date and time components for precise timestamp values
+- **JSON Input Validation**: Multiline textarea (3 rows) with Monaco/Lucida Console font for array/object attributes with real-time JSON parsing validation preventing invalid submissions
+- **Professional Dialog Design**: Modern modal styling with data-type labels showing "(boolean type)", "(number type)", etc., enhanced helper text, and Material-UI compliant layouts
+- **Smart Validation System**: Implemented isValueValid() helper with switch-case logic validating input based on attribute's dataType including JSON parsing for complex types
+- **State Reset Management**: Added resetValueInputs() helper clearing all type-specific state variables (newBooleanValue, newNumberValue, newStringValue, newDateValue, newArrayValue, newObjectValue) on dialog close
+- **Uniform Styling**: Consistent borderRadius 1.5, proper InputLabelProps for date inputs, helper text for each type, and professional spacing matching attribute creation flow
+- **Complete Implementation Scope**: Applied to policy create page (/policies/create/page.tsx:4267-4412) and edit page (/policies/[id]/edit/page.tsx:4510-4655) ensuring feature parity
+- **Multiple Integration Points**: Works across Step 4 Resource Attributes and Step 5 Additional Resource Attributes in both creation and editing workflows
+- **Extended Attribute Interface**: Added 'array' | 'object' to dataType union type for complete type coverage and full TypeScript type safety
+- **Build Success**: Clean TypeScript compilation with zero errors, successful Next.js build generating all 21 static/dynamic routes
+
+## Previous Features (v1.3.17)
 - **Additional Resource Attribute Save Fix**: Fixed critical issue where additional resource attribute values weren't being saved when editing policies - updated handleSubmit in edit page to use correct state variables (selectedAdditionalResourceAttributesList and selectedAdditionalResourceAttributeValues)
 - **Policy Detail Page Display Fix**: Additional resource attributes now correctly display in human-readable format on policy detail page after saving edits with proper attribute name to displayName resolution
 - **Instant Attribute Value Dropdown Updates**: Fixed attribute value dropdowns to reflect newly created values immediately without page refresh across all steps in both policy creation and edit flows
