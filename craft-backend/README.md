@@ -2,7 +2,7 @@
 
 A robust, scalable Node.js backend API for the CRAFT (Attribute-Based Access Control) Permission System. Built with Express.js, TypeScript, MongoDB, and comprehensive security features.
 
-![Version](https://img.shields.io/badge/version-1.3.17-blue.svg)
+![Version](https://img.shields.io/badge/version-1.3.18-blue.svg)
 ![Node.js](https://img.shields.io/badge/Node.js-18+-green.svg)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.5-blue.svg)
 ![Express](https://img.shields.io/badge/Express-4.19-black.svg)
@@ -364,10 +364,18 @@ For support and questions:
 
 ---
 
-*Last updated: October 15, 2025*
+*Last updated: October 22, 2025*
 🤖 *Generated and maintained with [Claude Code](https://claude.ai/code)*
 
-## 🔄 Recent Updates (Version 1.3.15)
+## 🔄 Recent Updates
+
+### Version 1.3.18 - Frontend Enhancements (October 22, 2025)
+- **📝 Note**: Version 1.3.18 includes frontend-only enhancements for data-type-aware attribute value management
+- **Backend Stability**: No backend changes in this release - all systems remain stable and fully compatible
+- **Frontend Support**: Backend continues to provide full API support for enhanced attribute value creation workflows
+- **Build Verification**: Backend TypeScript compilation successful with zero errors
+
+## Previous Updates (Version 1.3.15)
 
 ### Additional Resource Attributes Schema Enhancement (October 18, 2025)
 - **🏷️ Attribute Category Expansion**: Updated Attribute model to support 'additional-resource' as a valid category alongside 'subject' and 'resource' in MongoDB enum validation
