@@ -68,7 +68,6 @@ export default function ResourceCreationDialog({
   const [displayNameError, setDisplayNameError] = useState('');
   const [description, setDescription] = useState('');
   const [resourceType, setResourceType] = useState('');
-  const [dataType, setDataType] = useState('');
   const [isCreating, setIsCreating] = useState(false);
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
 
@@ -101,14 +100,12 @@ export default function ResourceCreationDialog({
         setDisplayName(editingResource.displayName || '');
         setDescription(editingResource.description || '');
         setResourceType(editingResource.type || '');
-        setDataType(editingResource.dataType || '');
         setDisplayNameError('');
       } else {
         // Reset form for new resource
         setDisplayName('');
         setDescription('');
         setResourceType('');
-        setDataType('');
         setDisplayNameError('');
       }
       loadAttributes();
@@ -138,7 +135,7 @@ export default function ResourceCreationDialog({
     if (isCreating) return; // Prevent closing during creation
 
     // Check if form has data and show confirmation
-    if (displayName.trim() || description.trim() || resourceType.trim() || dataType.trim()) {
+    if (displayName.trim() || description.trim() || resourceType.trim()) {
       setCancelDialogOpen(true);
       return;
     }
@@ -147,7 +144,6 @@ export default function ResourceCreationDialog({
     setDisplayName('');
     setDescription('');
     setResourceType('');
-    setDataType('');
     setDisplayNameError('');
     onClose();
   };
@@ -158,7 +154,6 @@ export default function ResourceCreationDialog({
     setDisplayName('');
     setDescription('');
     setResourceType('');
-    setDataType('');
     setDisplayNameError('');
     onClose();
   };
@@ -316,7 +311,6 @@ export default function ResourceCreationDialog({
       displayName: displayName.trim(),
       description: description?.trim() || '',
       type: resourceType || 'file',
-      dataType: dataType || 'string',
       uri: `/${displayName.toLowerCase().replace(/\s+/g, '')}`,
       active: true,
       // Required workspace context for backend validation
@@ -357,7 +351,6 @@ export default function ResourceCreationDialog({
         setDisplayName('');
         setDescription('');
         setResourceType('');
-        setDataType('');
         setDisplayNameError('');
         onClose();
       } else {
@@ -485,52 +478,6 @@ export default function ResourceCreationDialog({
             rows={3}
             disabled={isCreating}
           />
-
-          <FormControl fullWidth disabled={isCreating}>
-            <InputLabel id="data-type-label">Data Type</InputLabel>
-            <Select
-              labelId="data-type-label"
-              id="data-type-select"
-              value={dataType}
-              onChange={(e) => setDataType(e.target.value)}
-              label="Data Type"
-              sx={{
-                pointerEvents: 'auto',
-                cursor: 'pointer',
-                '& .MuiSelect-select': {
-                  cursor: 'pointer',
-                  pointerEvents: 'auto'
-                },
-                '& .MuiOutlinedInput-notchedOutline': {
-                  pointerEvents: 'none'
-                }
-              }}
-              MenuProps={{
-                disablePortal: false,
-                anchorOrigin: {
-                  vertical: 'bottom',
-                  horizontal: 'left',
-                },
-                transformOrigin: {
-                  vertical: 'top',
-                  horizontal: 'left',
-                },
-                PaperProps: {
-                  style: {
-                    maxHeight: 300,
-                    zIndex: 9999,
-                  },
-                },
-              }}
-            >
-              <MenuItem value="string">String</MenuItem>
-              <MenuItem value="number">Number</MenuItem>
-              <MenuItem value="boolean">Boolean</MenuItem>
-              <MenuItem value="date">Date</MenuItem>
-              <MenuItem value="array">Array</MenuItem>
-              <MenuItem value="object">Object</MenuItem>
-            </Select>
-          </FormControl>
 
           <Divider sx={{ my: 1 }} />
 

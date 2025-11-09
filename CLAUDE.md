@@ -37,7 +37,16 @@ When user prompts "deploy", prepare the application for production deployment:
 - **Backend**: `/craft-backend` (Node.js 18+, Express 4.19.2, TypeScript 5.5.4, MongoDB 8.5.2, Mongoose ODM, Azure AD SSO, Advanced Rate Limiting, Redis Caching)
 - **Additional**: Zustand state management, TanStack React Query, Axios HTTP client, React Hook Form, Yup validation, Storybook, ESLint, Prettier
 
-## Latest Features (v1.3.18)
+## Latest Features (v1.3.19)
+- **Resource DataType Field Removal**: Completely removed the unnecessary Data Type field from Resource creation and edit dialogs for cleaner UX
+- **Simplified Resource Forms**: Streamlined ResourceCreationDialog and AdditionalResourceCreationDialog by removing unused dataType state and UI elements
+- **Backend Schema Cleanup**: Verified backend Resource model never used dataType field - only uses resource `type` field (file, document, api, database, service, folder, application)
+- **Clean Build Verification**: Successfully validated Next.js build with all 21 routes compiling without errors after dataType removal
+- **Form State Optimization**: Reduced unnecessary state management by removing dataType from form initialization, reset logic, and API payloads
+- **UI Consistency**: Resources page now shows only essential fields: Resource Name, Resource Type, Description, and Resource Attributes
+- **No Migration Required**: Data Type was never stored in database, existed only in frontend UI - removal required no backend changes
+
+## Previous Features (v1.3.18)
 - **Data-Type-Aware Value Input Dialogs**: Implemented intelligent "Add Value" dialogs that adapt input controls based on attribute's dataType across all policy creation and edit workflows
 - **Type-Specific Input Controls**: Boolean (Select dropdown with true/false), Number (numeric TextField with validation), String (standard TextField), Date (datetime-local picker), Array/Object (JSON textarea with monospace font)
 - **Enhanced DateTime Support**: Changed date input from type="date" to type="datetime-local" enabling users to select both date and time components for precise timestamp values

@@ -520,6 +520,15 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## ⭐ Latest Updates
 
+### Version 1.3.19 - Resource DataType Field Removal & Form Simplification (October 22, 2025)
+- **🧹 Simplified Resource Forms**: Removed unnecessary Data Type field from Resource creation and edit dialogs for cleaner, more intuitive user experience
+- **✨ Frontend Cleanup**: Streamlined ResourceCreationDialog and AdditionalResourceCreationDialog by removing unused dataType state variables and UI elements
+- **🔍 Schema Verification**: Confirmed backend Resource model never used dataType field - only uses resource `type` field (file, document, api, database, service, folder, application)
+- **✅ Build Validation**: Successfully validated Next.js build with all 21 routes compiling without errors after dataType field removal
+- **⚡ State Optimization**: Reduced unnecessary form state management by removing dataType from initialization, reset logic, and API request payloads
+- **🎯 UI Consistency**: Resources page now displays only essential fields: Resource Name, Resource Type, Description, and Resource Attributes
+- **🚀 Zero Migration**: Data Type was never stored in database, existed only in frontend UI - removal required no backend changes or data migrations
+
 ### Version 1.3.18 - Data-Type-Aware Attribute Value Management & DateTime Support (October 22, 2025)
 - **🎯 Intelligent Value Input Dialogs**: Implemented data-type-aware "Add Value" dialogs that adapt based on attribute type across policy creation and edit flows
 - **🔢 Type-Specific Input Controls**: Boolean attributes show Select dropdown (true/false), Number attributes use numeric input with validation, String attributes use standard text fields

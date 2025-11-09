@@ -2,7 +2,7 @@
 
 A robust, scalable Node.js backend API for the CRAFT (Attribute-Based Access Control) Permission System. Built with Express.js, TypeScript, MongoDB, and comprehensive security features.
 
-![Version](https://img.shields.io/badge/version-1.3.18-blue.svg)
+![Version](https://img.shields.io/badge/version-1.3.19-blue.svg)
 ![Node.js](https://img.shields.io/badge/Node.js-18+-green.svg)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.5-blue.svg)
 ![Express](https://img.shields.io/badge/Express-4.19-black.svg)

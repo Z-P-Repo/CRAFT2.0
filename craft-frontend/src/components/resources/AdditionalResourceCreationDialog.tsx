@@ -42,7 +42,6 @@ export default function AdditionalResourceCreationDialog({
   const [displayNameError, setDisplayNameError] = useState('');
   const [description, setDescription] = useState('');
   const [resourceType, setResourceType] = useState('');
-  const [dataType, setDataType] = useState('string');
   const [isCreating, setIsCreating] = useState(false);
 
   // Reset form when dialog opens/closes
@@ -51,7 +50,6 @@ export default function AdditionalResourceCreationDialog({
       setDisplayName('');
       setDescription('');
       setResourceType('');
-      setDataType('string');
       setDisplayNameError('');
     }
   }, [open]);
@@ -61,7 +59,6 @@ export default function AdditionalResourceCreationDialog({
     setDisplayName('');
     setDescription('');
     setResourceType('');
-    setDataType('string');
     setDisplayNameError('');
     onClose();
   };
@@ -230,52 +227,6 @@ export default function AdditionalResourceCreationDialog({
             rows={3}
             disabled={isCreating}
           />
-
-          <FormControl fullWidth disabled={isCreating}>
-            <InputLabel id="data-type-label">Data Type</InputLabel>
-            <Select
-              labelId="data-type-label"
-              id="data-type-select"
-              value={dataType}
-              onChange={(e) => setDataType(e.target.value)}
-              label="Data Type"
-              sx={{
-                pointerEvents: 'auto',
-                cursor: 'pointer',
-                '& .MuiSelect-select': {
-                  cursor: 'pointer',
-                  pointerEvents: 'auto'
-                },
-                '& .MuiOutlinedInput-notchedOutline': {
-                  pointerEvents: 'none'
-                }
-              }}
-              MenuProps={{
-                disablePortal: false,
-                anchorOrigin: {
-                  vertical: 'bottom',
-                  horizontal: 'left',
-                },
-                transformOrigin: {
-                  vertical: 'top',
-                  horizontal: 'left',
-                },
-                PaperProps: {
-                  style: {
-                    maxHeight: 300,
-                    zIndex: 9999,
-                  },
-                },
-              }}
-            >
-              <MenuItem value="string">String</MenuItem>
-              <MenuItem value="number">Number</MenuItem>
-              <MenuItem value="boolean">Boolean</MenuItem>
-              <MenuItem value="date">Date</MenuItem>
-              <MenuItem value="array">Array</MenuItem>
-              <MenuItem value="object">Object</MenuItem>
-            </Select>
-          </FormControl>
         </Box>
       </DialogContent>
 

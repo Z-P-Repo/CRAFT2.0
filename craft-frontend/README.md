@@ -2,7 +2,7 @@
 
 A modern, responsive React-based dashboard for managing the CRAFT (Attribute-Based Access Control) Permission System. Built with Next.js 15, TypeScript, and Material-UI with a professional collapsible sidebar layout.
 
-![Version](https://img.shields.io/badge/version-1.3.17-blue.svg)
+![Version](https://img.shields.io/badge/version-1.3.19-blue.svg)
 ![Next.js](https://img.shields.io/badge/Next.js-15.4.6-black.svg)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.5-blue.svg)
 ![Material-UI](https://img.shields.io/badge/Material--UI-7.3-blue.svg)
