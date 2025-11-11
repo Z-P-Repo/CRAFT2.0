@@ -520,6 +520,27 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## ⭐ Latest Updates
 
+### Version 1.3.21 - Navigation Menu Reorganization & UX Improvements (October 22, 2025)
+- **🎯 Logical Menu Ordering**: Reorganized sidebar navigation menu for improved user experience with intuitive flow - Dashboard, Workspaces, Policies, Subjects, Resources, Actions, Attributes, Users, Activity, Settings
+- **📋 ABAC Components Grouping**: Core ABAC entities (Policies → Subjects → Resources → Actions → Attributes) now grouped consecutively for easier access and better workflow
+- **🧹 Policy Tester Removal**: Removed Policy Tester menu item from sidebar navigation, streamlining the interface and reducing menu clutter
+- **⚡ Code Optimization**: Cleaned up unused TesterIcon import from DashboardLayout component for better code hygiene
+- **📊 Administrative Section**: Moved Activity monitoring and Settings to bottom of menu as administrative/configuration functions, separating them from core ABAC operations
+- **✅ Build Verification**: Successfully validated Next.js build with all 21 routes compiling cleanly without TypeScript errors or warnings
+- **🎨 Enhanced Navigation UX**: Improved menu structure makes it easier for users to locate features based on logical workflow patterns
+
+### Version 1.3.20 - Strict Attribute Scope Enforcement & Category Filtering (October 22, 2025)
+- **🔒 Attribute Scope Separation**: Implemented comprehensive attribute category filtering ensuring Subject attributes only appear in Subject contexts, Resource attributes only in Resource contexts, and Additional Resource attributes only in Additional Resource contexts
+- **🎯 Smart Auto-Selection**: CreateAttributeDialog now intelligently auto-selects the appropriate category based on creation context (Subject page → 'subject', Resource page → 'resource') while allowing user override
+- **🔍 Backend API Filtering**: Enhanced attributes API endpoint to support category query parameter (`GET /attributes?categories=resource`) enabling server-side filtering for improved performance
+- **📊 Database Migration Tool**: Created comprehensive migration script (`npm run migrate:categories`) to analyze and fix attribute category assignments with detailed statistics
+- **✨ Updated Category System**: Replaced outdated 'action' and 'environment' categories with correct 'subject', 'resource', and 'additional-resource' categories aligned with ABAC architecture
+- **🔄 Multi-Category Support**: Maintains backward compatibility for attributes with multiple categories while enforcing proper context-based filtering in all UI components
+- **🛡️ Double-Layer Filtering**: ResourceCreationDialog implements both backend API filtering and frontend safety checks to ensure only resource-category attributes are displayed
+- **✅ Policy Page Verification**: Confirmed policy creation and edit pages already implement proper category filtering using attributeHasCategory() helper throughout all attribute selection interfaces
+- **📈 Clean Migration**: Successfully analyzed database - all 4 attributes properly categorized (1 Subject, 1 Resource, 2 Additional Resource) with zero fixes needed
+- **🚀 Build Success**: Both frontend (21 routes) and backend compile successfully with zero TypeScript errors or warnings
+
 ### Version 1.3.19 - Resource DataType Field Removal & Form Simplification (October 22, 2025)
 - **🧹 Simplified Resource Forms**: Removed unnecessary Data Type field from Resource creation and edit dialogs for cleaner, more intuitive user experience
 - **✨ Frontend Cleanup**: Streamlined ResourceCreationDialog and AdditionalResourceCreationDialog by removing unused dataType state variables and UI elements

@@ -30,13 +30,14 @@ interface CreateAttributeDialogProps {
   onClose: () => void;
   onSubmit: (attributeData: AttributeData) => Promise<void>;
   loading?: boolean;
+  preselectedCategory?: 'subject' | 'resource' | 'additional-resource';
 }
 
 export interface AttributeData {
   name: string;
   displayName: string;
   description: string;
-  category: 'subject' | 'resource' | 'action' | 'environment';
+  category: 'subject' | 'resource' | 'additional-resource';
   dataType: 'string' | 'number' | 'boolean' | 'date';
   isRequired: boolean;
   isMultiValue: boolean;
@@ -47,19 +48,27 @@ const CreateAttributeDialog: React.FC<CreateAttributeDialogProps> = ({
   open,
   onClose,
   onSubmit,
-  loading = false
+  loading = false,
+  preselectedCategory = 'subject'
 }) => {
   const [formData, setFormData] = useState<AttributeData>({
     name: '',
     displayName: '',
     description: '',
-    category: 'subject',
+    category: preselectedCategory,
     dataType: 'string',
     isRequired: false,
     isMultiValue: false,
     enumValues: ['']
   });
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
+
+  // Update category when preselectedCategory changes
+  React.useEffect(() => {
+    if (open && preselectedCategory) {
+      setFormData(prev => ({ ...prev, category: preselectedCategory }));
+    }
+  }, [open, preselectedCategory]);
 
   const handleSubmit = async () => {
     if (!formData.name || !formData.displayName) return;
@@ -73,7 +82,7 @@ const CreateAttributeDialog: React.FC<CreateAttributeDialogProps> = ({
       name: '',
       displayName: '',
       description: '',
-      category: 'subject',
+      category: preselectedCategory,
       dataType: 'string',
       isRequired: false,
       isMultiValue: false,
@@ -83,10 +92,10 @@ const CreateAttributeDialog: React.FC<CreateAttributeDialogProps> = ({
 
   const handleClose = () => {
     // Check if form has data and show confirmation
-    const hasFormData = formData.name.trim() || 
-                       formData.displayName.trim() || 
+    const hasFormData = formData.name.trim() ||
+                       formData.displayName.trim() ||
                        formData.description.trim() ||
-                       formData.category !== 'subject' ||
+                       formData.category !== preselectedCategory ||
                        formData.dataType !== 'string' ||
                        formData.isRequired ||
                        formData.isMultiValue ||
@@ -187,8 +196,7 @@ const CreateAttributeDialog: React.FC<CreateAttributeDialogProps> = ({
               >
                 <MenuItem value="subject">Subject</MenuItem>
                 <MenuItem value="resource">Resource</MenuItem>
-                <MenuItem value="action">Action</MenuItem>
-                <MenuItem value="environment">Environment</MenuItem>
+                <MenuItem value="additional-resource">Additional Resource</MenuItem>
               </Select>
             </FormControl>
           </Grid>

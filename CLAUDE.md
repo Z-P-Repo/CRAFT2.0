@@ -37,7 +37,27 @@ When user prompts "deploy", prepare the application for production deployment:
 - **Backend**: `/craft-backend` (Node.js 18+, Express 4.19.2, TypeScript 5.5.4, MongoDB 8.5.2, Mongoose ODM, Azure AD SSO, Advanced Rate Limiting, Redis Caching)
 - **Additional**: Zustand state management, TanStack React Query, Axios HTTP client, React Hook Form, Yup validation, Storybook, ESLint, Prettier
 
-## Latest Features (v1.3.19)
+## Latest Features (v1.3.21)
+- **Improved Navigation Menu Order**: Reorganized sidebar menu for better logical flow - Dashboard, Workspaces, Policies, Subjects, Resources, Actions, Attributes, Users, Activity, Settings
+- **ABAC Components Grouping**: Core ABAC entities (Policies, Subjects, Resources, Actions, Attributes) now grouped together for intuitive navigation
+- **Policy Tester Removal**: Removed Policy Tester menu item from sidebar navigation for cleaner interface
+- **Streamlined Imports**: Cleaned up unused TesterIcon import from DashboardLayout component
+- **Enhanced User Experience**: Activity and Settings moved to bottom of menu as administrative/monitoring functions
+- **Clean Build Verification**: Successfully validated Next.js build with all 21 routes compiling without errors
+
+## Previous Features (v1.3.20)
+- **Strict Attribute Scope Enforcement**: Implemented comprehensive attribute category filtering ensuring Subject attributes only appear in Subject contexts, Resource attributes only in Resource contexts
+- **Smart Category Auto-Selection**: CreateAttributeDialog now auto-selects category based on creation context with preselectedCategory prop while allowing user override
+- **Backend API Category Filtering**: Enhanced attribute API to support category query parameter filtering (`GET /attributes?categories=resource`) for server-side filtering
+- **Database Migration Script**: Created comprehensive migration script (npm run migrate:categories) to analyze and fix attribute category assignments
+- **Updated Category Options**: Replaced outdated 'action' and 'environment' categories with correct 'subject', 'resource', and 'additional-resource' categories
+- **Multi-Category Support**: Maintains support for attributes with multiple categories while enforcing proper filtering in UI contexts
+- **Resource Dialog Filtering**: ResourceCreationDialog now filters attributes by 'resource' category at API level with frontend double-checking
+- **Policy Page Verification**: Confirmed policy create and edit pages properly filter attributes using attributeHasCategory() helper function
+- **Clean Migration Results**: Successfully migrated database with 4 attributes properly distributed (1 Subject, 1 Resource, 2 Additional Resource)
+- **Zero Build Errors**: Both frontend and backend compile successfully with all 21 routes generated correctly
+
+## Previous Features (v1.3.19)
 - **Resource DataType Field Removal**: Completely removed the unnecessary Data Type field from Resource creation and edit dialogs for cleaner UX
 - **Simplified Resource Forms**: Streamlined ResourceCreationDialog and AdditionalResourceCreationDialog by removing unused dataType state and UI elements
 - **Backend Schema Cleanup**: Verified backend Resource model never used dataType field - only uses resource `type` field (file, document, api, database, service, folder, application)

@@ -1,6 +1,6 @@
 {
   "name": "craft-backend",
-  "version": "1.3.19",
+  "version": "1.3.21",
   "description": "CRAFT ABAC Permission System - Express.js Backend API",
   "main": "dist/server.js",
   "scripts": {
@@ -17,6 +17,7 @@
     "seed": "tsx src/scripts/seed.ts",
     "migrate": "tsx src/scripts/migrate.ts",
     "migrate:hierarchy": "tsx src/scripts/migrate-to-hierarchy.ts",
+    "migrate:categories": "tsx src/scripts/migrate-attribute-categories.ts",
     "docker:build": "docker build -t craft-backend .",
     "docker:run": "docker run -p 3001:3001 craft-backend"
   },

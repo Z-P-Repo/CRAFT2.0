@@ -29,7 +29,6 @@ import {
   Folder as FolderIcon,
   FlashOn as ActionIcon,
   Settings as AttributeIcon,
-  BugReport as TesterIcon,
   AccountCircle,
   ExitToApp as LogoutIcon,
   ChevronLeft as ChevronLeftIcon,
@@ -52,15 +51,14 @@ interface DashboardLayoutProps {
 const menuItems = [
   { text: 'Dashboard', icon: DashboardIcon, path: '/dashboard', roles: ['basic', 'admin', 'super_admin'] },
   { text: 'Workspaces', icon: WorkspaceIcon, path: '/workspaces', roles: ['basic', 'admin', 'super_admin'] },
-  { text: 'Activity', icon: TimelineIcon, path: '/activity', roles: ['basic', 'admin', 'super_admin'] },
   { text: 'Policies', icon: SecurityIcon, path: '/policies', roles: ['basic', 'admin', 'super_admin'] },
   { text: 'Subjects', icon: PeopleIcon, path: '/subjects', roles: ['basic', 'admin', 'super_admin'] },
   { text: 'Resources', icon: FolderIcon, path: '/resources', roles: ['basic', 'admin', 'super_admin'] },
   { text: 'Actions', icon: ActionIcon, path: '/actions', roles: ['basic', 'admin', 'super_admin'] },
   { text: 'Attributes', icon: AttributeIcon, path: '/attributes', roles: ['basic', 'admin', 'super_admin'] },
   { text: 'Users', icon: AccountCircle, path: '/users', roles: ['admin', 'super_admin'] },
+  { text: 'Activity', icon: TimelineIcon, path: '/activity', roles: ['basic', 'admin', 'super_admin'] },
   { text: 'Settings', icon: SetupIcon, path: '/settings', roles: ['admin', 'super_admin'] },
-  { text: 'Policy Tester', icon: TesterIcon, path: '/tester', roles: ['admin', 'super_admin'] },
 ];
 
 export default function DashboardLayout({ children }: DashboardLayoutProps) {

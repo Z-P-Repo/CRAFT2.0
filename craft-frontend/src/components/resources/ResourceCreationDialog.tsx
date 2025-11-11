@@ -118,11 +118,15 @@ export default function ResourceCreationDialog({
 
   const loadAttributes = async () => {
     try {
-      const response = await apiClient.get('/attributes');
+      const response = await apiClient.get('/attributes', {
+        params: {
+          categories: 'resource' // Filter by resource category at API level
+        }
+      });
       if (response.success) {
-        // Filter for resource category attributes
+        // Attributes are already filtered by backend, but double-check for safety
         const resourceAttributes = response.data.filter((attr: any) =>
-          attr.categories.includes('resource')
+          attr.categories && attr.categories.includes('resource')
         );
         setAttributes(resourceAttributes);
       }
