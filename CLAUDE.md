@@ -37,7 +37,21 @@ When user prompts "deploy", prepare the application for production deployment:
 - **Backend**: `/craft-backend` (Node.js 18+, Express 4.19.2, TypeScript 5.5.4, MongoDB 8.5.2, Mongoose ODM, Azure AD SSO, Advanced Rate Limiting, Redis Caching)
 - **Additional**: Zustand state management, TanStack React Query, Axios HTTP client, React Hook Form, Yup validation, Storybook, ESLint, Prettier
 
-## Latest Features (v1.3.21)
+## Latest Features (v1.3.22)
+- **Global Additional Resource Attribute Model**: Complete redesign of Step 5 (Additional Resources) in both policy creation and edit flows to use global attribute model matching Step 4 architecture
+- **Unified Attribute Flow**: Additional resource attributes now work exactly like resource attributes - same values apply to all selected additional resources for consistency
+- **Step 5 UI Redesign**: Left column (5-width) displays Available Additional Resources dropdown, right column (7-width) shows global attribute selection dropdown with attribute value configuration cards
+- **Professional Autocomplete Selection**: Advanced attribute dropdown with search/filter by name, description, type, and category with visual indicators (color dots, "Req" chips for required attributes)
+- **Data-Type-Specific Input Cards**: Individual cards for each selected attribute with appropriate input controls - boolean (Switch), number (TextField with min/max), string (TextField), enum (Select/Autocomplete)
+- **Create New Attribute Integration**: "Create New Additional Resource Attribute" button pre-selects 'additional-resource' category for seamless attribute creation workflow
+- **Global Handler Functions**: Implemented handleGlobalAdditionalResourceAttributeDropdownSelection, handleGlobalAdditionalResourceAttributeValueSelection, and handleRemoveGlobalAdditionalResourceAttribute
+- **Updated Submission Logic**: Both submitPolicy (create) and handleSubmit (edit) now use global attribute model ensuring same attributes/values apply to all additional resources
+- **Policy Summary Fix**: Fixed Step 6 (Review & Create) human-readable policy statement to correctly display additional resource attributes and values using global model
+- **Feature Parity**: Complete consistency between policy creation and edit flows with identical UI patterns, state management, and submission logic
+- **Reduced Bundle Size**: Edit page optimized from 15.3 kB to 14.9 kB through efficient component reuse and streamlined state management
+- **Clean Build Success**: Zero TypeScript errors, successful Next.js compilation of all 21 routes with full type safety validation
+
+## Previous Features (v1.3.21)
 - **Improved Navigation Menu Order**: Reorganized sidebar menu for better logical flow - Dashboard, Workspaces, Policies, Subjects, Resources, Actions, Attributes, Users, Activity, Settings
 - **ABAC Components Grouping**: Core ABAC entities (Policies, Subjects, Resources, Actions, Attributes) now grouped together for intuitive navigation
 - **Policy Tester Removal**: Removed Policy Tester menu item from sidebar navigation for cleaner interface

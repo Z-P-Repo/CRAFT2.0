@@ -1,6 +1,6 @@
 {
   "name": "craft-backend",
-  "version": "1.3.21",
+  "version": "1.3.22",
   "description": "CRAFT ABAC Permission System - Express.js Backend API",
   "main": "dist/server.js",
   "scripts": {

@@ -520,6 +520,20 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## ⭐ Latest Updates
 
+### Version 1.3.22 - Global Additional Resource Attribute Model & UI Redesign (January 14, 2025)
+- **🎯 Global Attribute Model**: Complete redesign of Step 5 (Additional Resources) in policy creation and edit flows to match Step 4 architecture using global attribute model
+- **🔄 Unified Workflow**: Additional resource attributes now work exactly like resource attributes - same values apply to all selected additional resources ensuring consistency
+- **🎨 Step 5 UI Overhaul**: Two-column layout with Available Additional Resources dropdown (left, 5-width) and global attribute selection with configuration cards (right, 7-width)
+- **🔍 Professional Autocomplete**: Advanced attribute dropdown with intelligent search/filter by name, description, type, and category featuring visual indicators (color dots, "Req" chips)
+- **📋 Smart Input Cards**: Individual cards for each selected attribute with data-type-specific controls - boolean (Switch), number (TextField with min/max), string (TextField), enum (Select/Autocomplete)
+- **➕ Seamless Attribute Creation**: "Create New Additional Resource Attribute" button automatically pre-selects 'additional-resource' category for streamlined workflow
+- **⚙️ Advanced State Management**: Implemented global handler functions (handleGlobalAdditionalResourceAttributeDropdownSelection, handleGlobalAdditionalResourceAttributeValueSelection, handleRemoveGlobalAdditionalResourceAttribute)
+- **💾 Updated Submission Logic**: Both submitPolicy (create) and handleSubmit (edit) now use global attribute model ensuring attribute/value consistency across all additional resources
+- **📝 Policy Summary Fix**: Fixed Step 6 (Review & Create) human-readable statement to correctly display additional resource attributes and values using new global model
+- **✨ Complete Feature Parity**: Identical UI patterns, state management, and submission logic between policy creation and edit flows for consistent user experience
+- **📦 Bundle Optimization**: Edit page reduced from 15.3 kB to 14.9 kB through efficient component reuse and streamlined state architecture
+- **✅ Clean Build**: Zero TypeScript errors, successful Next.js compilation of all 21 routes with full type safety validation
+
 ### Version 1.3.21 - Navigation Menu Reorganization & UX Improvements (October 22, 2025)
 - **🎯 Logical Menu Ordering**: Reorganized sidebar navigation menu for improved user experience with intuitive flow - Dashboard, Workspaces, Policies, Subjects, Resources, Actions, Attributes, Users, Activity, Settings
 - **📋 ABAC Components Grouping**: Core ABAC entities (Policies → Subjects → Resources → Actions → Attributes) now grouped consecutively for easier access and better workflow
