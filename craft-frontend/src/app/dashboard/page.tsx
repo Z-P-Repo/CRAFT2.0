@@ -29,7 +29,6 @@ import {
   PersonAdd as UserIcon,
   TrendingUp,
   Add as AddIcon,
-  Refresh as RefreshIcon,
   CheckCircle as CheckIcon,
   Cancel as CancelIcon,
   Schedule as DraftIcon,
@@ -361,13 +360,6 @@ export default function DashboardPage() {
                   {currentWorkspace ? `${currentWorkspace.displayName || currentWorkspace.name}` : 'CRAFT Permission System'} Dashboard
                 </Typography>
               </Box>
-            </Box>
-            <Box sx={{ display: 'flex', gap: 1 }}>
-              <Tooltip title="Refresh Data">
-                <IconButton onClick={loadDashboardData} sx={{ color: 'white' }}>
-                  <RefreshIcon />
-                </IconButton>
-              </Tooltip>
             </Box>
           </Box>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>

@@ -49,6 +49,9 @@ When user prompts "deploy", prepare the application for production deployment:
 - **Policy Summary Fix**: Fixed Step 6 (Review & Create) human-readable policy statement to correctly display additional resource attributes and values using global model
 - **Feature Parity**: Complete consistency between policy creation and edit flows with identical UI patterns, state management, and submission logic
 - **Reduced Bundle Size**: Edit page optimized from 15.3 kB to 14.9 kB through efficient component reuse and streamlined state management
+- **Dashboard UI Cleanup**: Removed refresh icon and functionality from welcome banner for cleaner, more focused interface
+- **Smart Policy Sorting**: Policies page now defaults to sort by created date (newest first) for better chronological view of recent policy changes
+- **Comprehensive Documentation**: Created detailed 350-line technical documentation covering all modules, features, workflows, and architecture for developer reference
 - **Clean Build Success**: Zero TypeScript errors, successful Next.js compilation of all 21 routes with full type safety validation
 
 ## Previous Features (v1.3.21)

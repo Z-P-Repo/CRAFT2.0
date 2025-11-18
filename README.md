@@ -532,6 +532,9 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - **📝 Policy Summary Fix**: Fixed Step 6 (Review & Create) human-readable statement to correctly display additional resource attributes and values using new global model
 - **✨ Complete Feature Parity**: Identical UI patterns, state management, and submission logic between policy creation and edit flows for consistent user experience
 - **📦 Bundle Optimization**: Edit page reduced from 15.3 kB to 14.9 kB through efficient component reuse and streamlined state architecture
+- **🧹 Dashboard UI Cleanup**: Removed refresh icon and functionality from welcome banner for cleaner, more focused dashboard interface
+- **📅 Smart Policy Sorting**: Policies page now defaults to sort by created date (newest first) providing better chronological view of recent policy changes
+- **📚 Comprehensive Documentation**: Created detailed 350-line technical documentation (DOCUMENTATION.md) covering all modules, features, workflows, API architecture, and system design
 - **✅ Clean Build**: Zero TypeScript errors, successful Next.js compilation of all 21 routes with full type safety validation
 
 ### Version 1.3.21 - Navigation Menu Reorganization & UX Improvements (October 22, 2025)

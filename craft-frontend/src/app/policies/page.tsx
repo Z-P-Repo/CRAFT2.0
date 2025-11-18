@@ -148,8 +148,8 @@ export default function PoliciesPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState<string[]>([]);
   const [filterEffect, setFilterEffect] = useState<string[]>([]);
-  const [sortBy, setSortBy] = useState('name');
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+  const [sortBy, setSortBy] = useState('createdAt');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   
   // Delete confirmation dialog
   const [deleteOpen, setDeleteOpen] = useState(false);
