@@ -25,6 +25,11 @@ import {
   Accordion,
   AccordionSummary,
   AccordionDetails,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Tooltip,
 } from '@mui/material';
 import {
   ArrowBack as ArrowBackIcon,
@@ -39,6 +44,9 @@ import {
   Info as InfoIcon,
   CheckCircle as CheckCircleIcon,
   Cancel as CancelIcon,
+  Code as CodeIcon,
+  ContentCopy as ContentCopyIcon,
+  Check as CheckIcon,
 } from '@mui/icons-material';
 import { useRouter, useParams } from 'next/navigation';
 import DashboardLayout from '@/components/layout/DashboardLayout';
@@ -181,6 +189,11 @@ export default function PolicyViewPage() {
   const [resources, setResources] = useState<ResourceObject[]>([]);
   const [additionalResources, setAdditionalResources] = useState<AdditionalResource[]>([]);
   const [attributes, setAttributes] = useState<Attribute[]>([]);
+
+  // REGO code dialog state
+  const [regoDialogOpen, setRegoDialogOpen] = useState(false);
+  const [regoCode, setRegoCode] = useState('');
+  const [copied, setCopied] = useState(false);
 
   // Load lookup data for human-readable formatting
   const loadLookupData = async () => {
@@ -401,6 +414,241 @@ export default function PolicyViewPage() {
     return sentence;
   };
 
+  // Function to generate REGO code from policy
+  const generateRegoCode = (): string => {
+    if (!policy) return '';
+
+    const packageName = `craft.policies.${policy.name.toLowerCase().replace(/\s+/g, '_')}`;
+    let rego = `# REGO Policy: ${policy.name}\n`;
+    rego += `# Description: ${policy.description || 'No description'}\n`;
+    rego += `# Effect: ${policy.effect}\n`;
+    rego += `# Status: ${policy.status}\n`;
+    rego += `# Generated: ${new Date().toISOString()}\n\n`;
+    rego += `package ${packageName}\n\n`;
+    rego += `import future.keywords.if\n`;
+    rego += `import future.keywords.in\n\n`;
+
+    // Default decision
+    rego += `default allow = false\n\n`;
+
+    // Main allow rule
+    rego += `# Main authorization rule\n`;
+    rego += `allow {\n`;
+
+    // Subject conditions
+    if (policy.rules.length > 0 && policy.rules[0].subject) {
+      const subject = policy.rules[0].subject;
+      const subjectName = getSubjectDisplayName(subject.type);
+      
+      rego += `    # Subject: ${subjectName}\n`;
+      rego += `    input.subject.type == "${subject.type}"\n`;
+
+      // Subject attributes
+      if (subject.attributes && subject.attributes.length > 0) {
+        subject.attributes.forEach(attr => {
+          const attrDisplayName = getAttributeDisplayName(attr.name);
+          rego += `    # ${attrDisplayName} ${formatOperatorText(attr.operator || 'equals')} ${Array.isArray(attr.value) ? attr.value.join(', ') : attr.value}\n`;
+          
+          switch (attr.operator) {
+            case 'equals':
+              rego += `    input.subject.${attr.name} == ${JSON.stringify(attr.value)}\n`;
+              break;
+            case 'not_equals':
+              rego += `    input.subject.${attr.name} != ${JSON.stringify(attr.value)}\n`;
+              break;
+            case 'contains':
+              rego += `    contains(input.subject.${attr.name}, ${JSON.stringify(attr.value)})\n`;
+              break;
+            case 'in':
+              rego += `    input.subject.${attr.name} in ${JSON.stringify(attr.value)}\n`;
+              break;
+            case 'not_in':
+              rego += `    not input.subject.${attr.name} in ${JSON.stringify(attr.value)}\n`;
+              break;
+            case 'includes':
+              rego += `    ${JSON.stringify(attr.value)} in input.subject.${attr.name}\n`;
+              break;
+            case 'not_includes':
+              rego += `    not ${JSON.stringify(attr.value)} in input.subject.${attr.name}\n`;
+              break;
+            case 'greater_than':
+              rego += `    input.subject.${attr.name} > ${attr.value}\n`;
+              break;
+            case 'less_than':
+              rego += `    input.subject.${attr.name} < ${attr.value}\n`;
+              break;
+            case 'greater_than_or_equal':
+              rego += `    input.subject.${attr.name} >= ${attr.value}\n`;
+              break;
+            case 'less_than_or_equal':
+              rego += `    input.subject.${attr.name} <= ${attr.value}\n`;
+              break;
+            default:
+              rego += `    input.subject.${attr.name} == ${JSON.stringify(attr.value)}\n`;
+          }
+        });
+      }
+    }
+
+    // Action conditions
+    if (policy.actions && policy.actions.length > 0) {
+      rego += `\n    # Actions\n`;
+      if (policy.actions.length === 1) {
+        const actionName = getActionDisplayName(policy.actions[0]);
+        rego += `    input.action == "${policy.actions[0]}"  # ${actionName}\n`;
+      } else {
+        rego += `    input.action in [${policy.actions.map(a => `"${a}"`).join(', ')}]\n`;
+      }
+    }
+
+    // Resource conditions
+    if (policy.resources && policy.resources.length > 0) {
+      rego += `\n    # Resources\n`;
+      if (policy.resources.length === 1) {
+        const resourceName = getResourceDisplayName(policy.resources[0]);
+        rego += `    input.resource.type == "${policy.resources[0]}"  # ${resourceName}\n`;
+      } else {
+        rego += `    input.resource.type in [${policy.resources.map(r => `"${r}"`).join(', ')}]\n`;
+      }
+
+      // Resource attributes
+      if (policy.rules.length > 0 && policy.rules[0].object && policy.rules[0].object.attributes.length > 0) {
+        policy.rules[0].object.attributes.forEach(attr => {
+          const attrDisplayName = getAttributeDisplayName(attr.name);
+          rego += `    # ${attrDisplayName} ${formatOperatorText(attr.operator || 'equals')} ${Array.isArray(attr.value) ? attr.value.join(', ') : attr.value}\n`;
+          
+          switch (attr.operator) {
+            case 'equals':
+              rego += `    input.resource.${attr.name} == ${JSON.stringify(attr.value)}\n`;
+              break;
+            case 'not_equals':
+              rego += `    input.resource.${attr.name} != ${JSON.stringify(attr.value)}\n`;
+              break;
+            case 'contains':
+              rego += `    contains(input.resource.${attr.name}, ${JSON.stringify(attr.value)})\n`;
+              break;
+            case 'in':
+              rego += `    input.resource.${attr.name} in ${JSON.stringify(attr.value)}\n`;
+              break;
+            case 'not_in':
+              rego += `    not input.resource.${attr.name} in ${JSON.stringify(attr.value)}\n`;
+              break;
+            case 'includes':
+              rego += `    ${JSON.stringify(attr.value)} in input.resource.${attr.name}\n`;
+              break;
+            case 'not_includes':
+              rego += `    not ${JSON.stringify(attr.value)} in input.resource.${attr.name}\n`;
+              break;
+            case 'greater_than':
+              rego += `    input.resource.${attr.name} > ${attr.value}\n`;
+              break;
+            case 'less_than':
+              rego += `    input.resource.${attr.name} < ${attr.value}\n`;
+              break;
+            case 'greater_than_or_equal':
+              rego += `    input.resource.${attr.name} >= ${attr.value}\n`;
+              break;
+            case 'less_than_or_equal':
+              rego += `    input.resource.${attr.name} <= ${attr.value}\n`;
+              break;
+            default:
+              rego += `    input.resource.${attr.name} == ${JSON.stringify(attr.value)}\n`;
+          }
+        });
+      }
+    }
+
+    // Additional resource conditions
+    if (policy.additionalResources && policy.additionalResources.length > 0) {
+      rego += `\n    # Additional Conditions\n`;
+      policy.additionalResources.forEach(res => {
+        const resourceName = getAdditionalResourceDisplayName(res.id);
+        rego += `    # ${resourceName}\n`;
+        
+        if (res.attributes && res.attributes.length > 0) {
+          res.attributes.forEach(attr => {
+            const attrDisplayName = getAttributeDisplayName(attr.name);
+            rego += `    # ${attrDisplayName} ${formatOperatorText(attr.operator || 'equals')} ${Array.isArray(attr.value) ? attr.value.join(', ') : attr.value}\n`;
+            
+            switch (attr.operator) {
+              case 'equals':
+                rego += `    input.context.${attr.name} == ${JSON.stringify(attr.value)}\n`;
+                break;
+              case 'not_equals':
+                rego += `    input.context.${attr.name} != ${JSON.stringify(attr.value)}\n`;
+                break;
+              case 'contains':
+                rego += `    contains(input.context.${attr.name}, ${JSON.stringify(attr.value)})\n`;
+                break;
+              case 'in':
+                rego += `    input.context.${attr.name} in ${JSON.stringify(attr.value)}\n`;
+                break;
+              case 'not_in':
+                rego += `    not input.context.${attr.name} in ${JSON.stringify(attr.value)}\n`;
+                break;
+              case 'includes':
+                rego += `    ${JSON.stringify(attr.value)} in input.context.${attr.name}\n`;
+                break;
+              case 'not_includes':
+                rego += `    not ${JSON.stringify(attr.value)} in input.context.${attr.name}\n`;
+                break;
+              case 'greater_than':
+                rego += `    input.context.${attr.name} > ${attr.value}\n`;
+                break;
+              case 'less_than':
+                rego += `    input.context.${attr.name} < ${attr.value}\n`;
+                break;
+              case 'greater_than_or_equal':
+                rego += `    input.context.${attr.name} >= ${attr.value}\n`;
+                break;
+              case 'less_than_or_equal':
+                rego += `    input.context.${attr.name} <= ${attr.value}\n`;
+                break;
+              default:
+                rego += `    input.context.${attr.name} == ${JSON.stringify(attr.value)}\n`;
+            }
+          });
+        }
+      });
+    }
+
+    rego += `}\n\n`;
+
+    // Add deny rule if effect is Deny
+    if (policy.effect === 'Deny') {
+      rego += `# Deny rule (inverted logic)\n`;
+      rego += `deny {\n`;
+      rego += `    allow\n`;
+      rego += `}\n\n`;
+      rego += `# Final decision\n`;
+      rego += `decision = "deny" if deny else "allow"\n`;
+    } else {
+      rego += `# Final decision\n`;
+      rego += `decision = "allow" if allow else "deny"\n`;
+    }
+
+    return rego;
+  };
+
+  // Handle Generate REGO button click
+  const handleGenerateRego = () => {
+    const code = generateRegoCode();
+    setRegoCode(code);
+    setRegoDialogOpen(true);
+    setCopied(false);
+  };
+
+  // Handle copy to clipboard
+  const handleCopyRego = async () => {
+    try {
+      await navigator.clipboard.writeText(regoCode);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (error) {
+      console.error('Failed to copy:', error);
+    }
+  };
+
   // Function to highlight key elements in policy description with clean, elegant styling
   const highlightPolicyElements = (description: string) => {
     let highlightedText = description;
@@ -604,6 +852,20 @@ export default function PolicyViewPage() {
                 onClick={() => router.push(`/policies/${policy.id}/edit`)}
               >
                 Edit Policy
+              </Button>
+              <Button
+                variant="contained"
+                startIcon={<CodeIcon />}
+                onClick={handleGenerateRego}
+                sx={{
+                  background: 'linear-gradient(45deg, #667eea 30%, #764ba2 90%)',
+                  color: 'white',
+                  '&:hover': {
+                    background: 'linear-gradient(45deg, #5568d3 30%, #63408a 90%)',
+                  }
+                }}
+              >
+                Generate REGO
               </Button>
             </Box>
           </Box>
@@ -1045,6 +1307,127 @@ export default function PolicyViewPage() {
             </Grid>
           </Box>
         </Card>
+
+        {/* REGO Code Dialog */}
+        <Dialog
+          open={regoDialogOpen}
+          onClose={() => setRegoDialogOpen(false)}
+          maxWidth="lg"
+          fullWidth
+          PaperProps={{
+            sx: {
+              borderRadius: 2,
+              maxHeight: '90vh'
+            }
+          }}
+        >
+          <DialogTitle sx={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            borderBottom: '1px solid',
+            borderColor: 'divider',
+            pb: 2
+          }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <CodeIcon sx={{ color: '#667eea' }} />
+              <Typography variant="h6" component="span">
+                REGO Policy Code
+              </Typography>
+            </Box>
+            <Tooltip title={copied ? 'Copied!' : 'Copy to clipboard'}>
+              <Button
+                variant="outlined"
+                size="small"
+                startIcon={copied ? <CheckIcon /> : <ContentCopyIcon />}
+                onClick={handleCopyRego}
+                sx={{
+                  borderColor: copied ? 'success.main' : 'primary.main',
+                  color: copied ? 'success.main' : 'primary.main',
+                  '&:hover': {
+                    borderColor: copied ? 'success.dark' : 'primary.dark',
+                    backgroundColor: copied ? 'success.50' : 'primary.50',
+                  }
+                }}
+              >
+                {copied ? 'Copied!' : 'Copy Code'}
+              </Button>
+            </Tooltip>
+          </DialogTitle>
+          
+          <DialogContent sx={{ p: 0 }}>
+            <Box
+              component="pre"
+              sx={{
+                m: 0,
+                p: 3,
+                backgroundColor: '#1e1e1e',
+                color: '#d4d4d4',
+                fontFamily: '"Fira Code", "Courier New", monospace',
+                fontSize: '0.875rem',
+                lineHeight: 1.6,
+                overflow: 'auto',
+                maxHeight: 'calc(90vh - 180px)',
+                '&::-webkit-scrollbar': {
+                  width: '8px',
+                  height: '8px',
+                },
+                '&::-webkit-scrollbar-track': {
+                  backgroundColor: '#2d2d2d',
+                },
+                '&::-webkit-scrollbar-thumb': {
+                  backgroundColor: '#555',
+                  borderRadius: '4px',
+                  '&:hover': {
+                    backgroundColor: '#666',
+                  },
+                },
+              }}
+            >
+              <code style={{
+                display: 'block',
+                whiteSpace: 'pre',
+                wordWrap: 'normal',
+              }}>
+                {regoCode}
+              </code>
+            </Box>
+          </DialogContent>
+
+          <DialogActions sx={{
+            borderTop: '1px solid',
+            borderColor: 'divider',
+            p: 2,
+            gap: 1
+          }}>
+            <Typography variant="caption" color="text.secondary" sx={{ flex: 1 }}>
+              Generated from policy: <strong>{policy?.name}</strong>
+            </Typography>
+            <Button
+              onClick={() => setRegoDialogOpen(false)}
+              variant="outlined"
+            >
+              Close
+            </Button>
+            <Button
+              onClick={handleCopyRego}
+              variant="contained"
+              startIcon={copied ? <CheckIcon /> : <ContentCopyIcon />}
+              sx={{
+                background: copied 
+                  ? 'linear-gradient(45deg, #4caf50 30%, #66bb6a 90%)'
+                  : 'linear-gradient(45deg, #667eea 30%, #764ba2 90%)',
+                '&:hover': {
+                  background: copied
+                    ? 'linear-gradient(45deg, #388e3c 30%, #4caf50 90%)'
+                    : 'linear-gradient(45deg, #5568d3 30%, #63408a 90%)',
+                }
+              }}
+            >
+              {copied ? 'Copied!' : 'Copy to Clipboard'}
+            </Button>
+          </DialogActions>
+        </Dialog>
       </DashboardLayout>
     </ProtectedRoute>
   );
