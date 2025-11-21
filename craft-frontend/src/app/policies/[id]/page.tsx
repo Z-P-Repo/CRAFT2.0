@@ -102,8 +102,8 @@ interface PolicyRule {
 
 interface PolicyAttribute {
   name: string;
-  operator: 'equals' | 'contains' | 'in' | 'not_equals' | 'not_contains' | 'not_in';
-  value: string | string[];
+  operator: 'equals' | 'contains' | 'in' | 'not_equals' | 'not_contains' | 'not_in' | 'includes' | 'not_includes' | 'greater_than' | 'less_than' | 'greater_than_or_equal' | 'less_than_or_equal';
+  value: string | string[] | number;
 }
 
 interface PolicyCondition {
