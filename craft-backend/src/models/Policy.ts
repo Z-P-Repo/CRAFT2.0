@@ -4,13 +4,13 @@ import { IResourceState, IResourceDependency } from './Resource';
 // Policy Rule interfaces
 export interface IPolicyAttribute {
   name: string;
-  operator: 'equals' | 'contains' | 'in' | 'not_equals' | 'not_contains' | 'not_in';
-  value: string | string[];
+  operator: 'equals' | 'contains' | 'in' | 'not_equals' | 'not_contains' | 'not_in' | 'includes' | 'not_includes' | 'greater_than' | 'less_than' | 'greater_than_or_equal' | 'less_than_or_equal';
+  value: string | string[] | number;
 }
 
 export interface IPolicyCondition {
   field: string;
-  operator: 'equals' | 'contains' | 'greater_than' | 'less_than' | 'in' | 'not_in';
+  operator: 'equals' | 'contains' | 'greater_than' | 'less_than' | 'greater_than_or_equal' | 'less_than_or_equal' | 'in' | 'not_in' | 'includes' | 'not_includes';
   value: string | number | string[];
 }
 
@@ -148,8 +148,8 @@ const PolicyAttributeSchema = new Schema<IPolicyAttribute>({
   operator: {
     type: String,
     enum: {
-      values: ['equals', 'contains', 'in', 'not_equals', 'not_contains', 'not_in'],
-      message: 'Operator must be one of: equals, contains, in, not_equals, not_contains, not_in',
+      values: ['equals', 'contains', 'in', 'not_equals', 'not_contains', 'not_in', 'includes', 'not_includes', 'greater_than', 'less_than', 'greater_than_or_equal', 'less_than_or_equal'],
+      message: 'Operator must be one of: equals, contains, in, not_equals, not_contains, not_in, includes, not_includes, greater_than, less_than, greater_than_or_equal, less_than_or_equal',
     },
     required: true,
   },
@@ -168,8 +168,8 @@ const PolicyConditionSchema = new Schema<IPolicyCondition>({
   operator: {
     type: String,
     enum: {
-      values: ['equals', 'contains', 'greater_than', 'less_than', 'in', 'not_in'],
-      message: 'Operator must be one of: equals, contains, greater_than, less_than, in, not_in',
+      values: ['equals', 'contains', 'greater_than', 'less_than', 'greater_than_or_equal', 'less_than_or_equal', 'in', 'not_in', 'includes', 'not_includes'],
+      message: 'Operator must be one of: equals, contains, greater_than, less_than, greater_than_or_equal, less_than_or_equal, in, not_in, includes, not_includes',
     },
     required: true,
   },

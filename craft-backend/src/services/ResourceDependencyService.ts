@@ -258,6 +258,44 @@ export class ResourceDependencyService {
           message: `Value '${actualValue}' is not less than '${expectedValue}'`
         };
 
+      case 'greater_than_or_equal':
+        return {
+          success: Number(actualValue) >= Number(expectedValue),
+          message: `Value '${actualValue}' is not greater than or equal to '${expectedValue}'`
+        };
+
+      case 'less_than_or_equal':
+        return {
+          success: Number(actualValue) <= Number(expectedValue),
+          message: `Value '${actualValue}' is not less than or equal to '${expectedValue}'`
+        };
+
+      case 'includes':
+        // For array actualValue, check if it includes the expectedValue
+        if (Array.isArray(actualValue)) {
+          return {
+            success: actualValue.includes(expectedValue),
+            message: `Array does not include '${expectedValue}'`
+          };
+        }
+        return {
+          success: false,
+          message: `Value '${actualValue}' is not an array`
+        };
+
+      case 'not_includes':
+        // For array actualValue, check if it does not include the expectedValue
+        if (Array.isArray(actualValue)) {
+          return {
+            success: !actualValue.includes(expectedValue),
+            message: `Array should not include '${expectedValue}'`
+          };
+        }
+        return {
+          success: false,
+          message: `Value '${actualValue}' is not an array`
+        };
+
       default:
         return {
           success: false,

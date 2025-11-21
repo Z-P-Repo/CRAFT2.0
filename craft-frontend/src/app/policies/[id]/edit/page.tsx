@@ -113,7 +113,7 @@ interface PolicyRule {
 
 interface PolicyAttribute {
   name: string;
-  operator: 'equals' | 'contains' | 'in' | 'not_equals' | 'not_contains' | 'not_in';
+  operator: 'equals' | 'contains' | 'in' | 'not_equals' | 'not_contains' | 'not_in' | 'includes' | 'not_includes';
   value: string | string[];
 }
 
@@ -235,6 +235,71 @@ const attributeHasCategory = (attribute: Attribute, categoryToCheck: string): bo
   return false;
 };
 
+// Get available operators based on data type
+const getOperatorsForDataType = (dataType: string): Array<{ value: string; label: string }> => {
+  if (dataType === 'array') {
+    return [
+      { value: 'includes', label: 'Includes' },
+      { value: 'not_includes', label: 'Not Includes' },
+    ];
+  }
+  
+  if (dataType === 'number') {
+    return [
+      { value: 'equals', label: 'Equals' },
+      { value: 'not_equals', label: 'Not Equals' },
+      { value: 'greater_than', label: 'Greater Than' },
+      { value: 'less_than', label: 'Less Than' },
+      { value: 'greater_than_or_equal', label: 'Greater Than or Equals' },
+      { value: 'less_than_or_equal', label: 'Less Than or Equals' },
+    ];
+  }
+  
+  if (dataType === 'string') {
+    return [
+      { value: 'equals', label: 'Equals' },
+      { value: 'not_equals', label: 'Not Equals' },
+      { value: 'contains', label: 'Contains' },
+    ];
+  }
+  
+  // For other types, return default operators
+  return [
+    { value: 'equals', label: 'Equals' },
+    { value: 'not_equals', label: 'Not Equals' },
+  ];
+};
+
+// Format operator for human-readable display
+const formatOperatorText = (operator: string): string => {
+  switch (operator) {
+    case 'includes':
+      return 'includes';
+    case 'not_includes':
+      return 'does not include';
+    case 'equals':
+      return 'is';
+    case 'not_equals':
+      return 'is not';
+    case 'contains':
+      return 'contains';
+    case 'in':
+      return 'is one of';
+    case 'not_in':
+      return 'is not one of';
+    case 'greater_than':
+      return 'is greater than';
+    case 'less_than':
+      return 'is less than';
+    case 'greater_than_or_equal':
+      return 'is greater than or equal to';
+    case 'less_than_or_equal':
+      return 'is less than or equal to';
+    default:
+      return 'is';
+  }
+};
+
 export default function EditPolicyPage() {
   const router = useRouter();
   const params = useParams();
@@ -313,8 +378,11 @@ export default function EditPolicyPage() {
 
   const [selectedAttributes, setSelectedAttributes] = useState<Attribute[]>([]);
   const [selectedSubjectAttributes, setSelectedSubjectAttributes] = useState<{ [key: string]: any }>({});
+  const [selectedSubjectAttributeOperators, setSelectedSubjectAttributeOperators] = useState<{ [key: string]: string }>({});
   const [selectedResourceAttributes, setSelectedResourceAttributes] = useState<Attribute[]>([]);
   const [selectedResourceAttributeValues, setSelectedResourceAttributeValues] = useState<{ [key: string]: any }>({});
+  const [selectedResourceAttributeOperators, setSelectedResourceAttributeOperators] = useState<{ [key: string]: string }>({});
+  const [globalAdditionalResourceAttributeOperators, setGlobalAdditionalResourceAttributeOperators] = useState<{ [attributeId: string]: string }>({});
 
   // Dropdown data
   const [subjects, setSubjects] = useState<Subject[]>([]);
@@ -386,22 +454,32 @@ export default function EditPolicyPage() {
     if (originalPolicy && attributes.length > 0 && originalPolicy.rules.length > 0) {
       const firstRule = originalPolicy.rules[0];
       const subjectAttrs: { [key: string]: any } = {};
+      const subjectOps: { [key: string]: string } = {};
 
       firstRule?.subject?.attributes?.forEach((attr: any) => {
         // Try to find the attribute in the loaded attributes list to get the correct ID
         const attributeObj = attributes.find(a => a.name === attr.name || a.id === attr.name);
         if (attributeObj) {
           subjectAttrs[attributeObj.id] = attr.value;
+          // Store the operator if present
+          if (attr.operator) {
+            subjectOps[attributeObj.id] = attr.operator;
+          }
         } else {
           // Fallback to using the name if no matching attribute found
           subjectAttrs[attr.name] = attr.value;
+          if (attr.operator) {
+            subjectOps[attr.name] = attr.operator;
+          }
         }
       });
 
       setSelectedSubjectAttributes(subjectAttrs);
+      setSelectedSubjectAttributeOperators(subjectOps);
 
       // Also initialize resource attributes from the first rule
       const resourceAttrs: { [key: string]: any } = {};
+      const resourceOps: { [key: string]: string } = {};
 
       firstRule?.object?.attributes?.forEach((attr: any) => {
         // Try to find the attribute in the loaded attributes list to get the correct ID
@@ -409,13 +487,21 @@ export default function EditPolicyPage() {
           attributes.find(a => a.name === attr.name || a.id === attr.name);
         if (attributeObj) {
           resourceAttrs[attributeObj.id] = attr.value;
+          // Store the operator if present
+          if (attr.operator) {
+            resourceOps[attributeObj.id] = attr.operator;
+          }
         } else {
           // Fallback to using the name if no matching attribute found
           resourceAttrs[attr.name] = attr.value;
+          if (attr.operator) {
+            resourceOps[attr.name] = attr.operator;
+          }
         }
       });
 
       setSelectedResourceAttributeValues(resourceAttrs);
+      setSelectedResourceAttributeOperators(resourceOps);
     }
   }, [originalPolicy, attributes, resourceAttributes]);
 
@@ -441,7 +527,7 @@ export default function EditPolicyPage() {
     }
   }, [resourceAttributes, selectedResourceAttributeValues]);
 
-  // Initialize additional resource attributes when policy and attributes are loaded
+  // Initialize additional resource attributes when policy and attributes are loaded (OLD MODEL - for backward compatibility)
   useEffect(() => {
     if (originalPolicy && additionalResourceAttributes.length > 0 &&
         originalPolicy.additionalResources && Array.isArray(originalPolicy.additionalResources)) {
@@ -488,6 +574,50 @@ export default function EditPolicyPage() {
       }
       if (Object.keys(attributeValues).length > 0) {
         setSelectedAdditionalResourceAttributeValues(attributeValues);
+      }
+    }
+  }, [originalPolicy, additionalResourceAttributes]);
+
+  // Initialize GLOBAL additional resource attributes (NEW MODEL - used in submission)
+  useEffect(() => {
+    if (originalPolicy && additionalResourceAttributes.length > 0 &&
+        originalPolicy.additionalResources && Array.isArray(originalPolicy.additionalResources) &&
+        originalPolicy.additionalResources.length > 0) {
+      console.log('Initializing GLOBAL additional resource attributes from policy');
+
+      // Use the first additional resource's attributes as the global model
+      // (since all additional resources share the same attributes in the global model)
+      const firstAdditionalResource = originalPolicy.additionalResources[0];
+      
+      if (firstAdditionalResource.attributes && Array.isArray(firstAdditionalResource.attributes)) {
+        const globalAttrs: Attribute[] = [];
+        const globalValues: { [attributeId: string]: any } = {};
+        const globalOps: { [attributeId: string]: string } = {};
+
+        firstAdditionalResource.attributes.forEach((attr: any) => {
+          const attributeObj = additionalResourceAttributes.find(a =>
+            a.name === attr.name || a.id === attr.name
+          );
+
+          if (attributeObj) {
+            globalAttrs.push(attributeObj);
+            globalValues[attributeObj.id] = attr.value;
+            // Store the operator if present
+            if (attr.operator) {
+              globalOps[attributeObj.id] = attr.operator;
+            }
+          }
+        });
+
+        console.log('Initialized global additional resource attributes:', globalAttrs);
+        console.log('Initialized global additional resource values:', globalValues);
+        console.log('Initialized global additional resource operators:', globalOps);
+
+        if (globalAttrs.length > 0) {
+          setGlobalAdditionalResourceAttributesList(globalAttrs);
+          setGlobalAdditionalResourceAttributeValues(globalValues);
+          setGlobalAdditionalResourceAttributeOperators(globalOps);
+        }
       }
     }
   }, [originalPolicy, additionalResourceAttributes]);
@@ -1468,9 +1598,24 @@ export default function EditPolicyPage() {
               const attribute = attributes.find(attr => attr.id === attrId);
               if (!attribute) return null;
 
+              // Determine operator based on attribute data type and user selection
+              let operator = 'equals';
+              if (attribute.dataType === 'array') {
+                // Use the selected operator for array types (includes or not_includes)
+                operator = selectedSubjectAttributeOperators[attrId] || 'includes';
+              } else if (attribute.dataType === 'number') {
+                // Use the selected operator for number types (equals, greater_than, etc.)
+                operator = selectedSubjectAttributeOperators[attrId] || 'equals';
+              } else if (attribute.dataType === 'string') {
+                // Use the selected operator for string types (equals, contains, etc.)
+                operator = selectedSubjectAttributeOperators[attrId] || 'equals';
+              } else if (Array.isArray(value)) {
+                operator = 'in';
+              }
+
               return {
                 name: attribute.name,
-                operator: Array.isArray(value) ? 'in' : 'equals',
+                operator: operator,
                 value: value
               };
             })
@@ -1483,9 +1628,24 @@ export default function EditPolicyPage() {
               const attribute = attributes.find(attr => attr.id === attrId);
               if (!attribute) return null;
 
+              // Determine operator based on attribute data type and user selection
+              let operator = 'equals';
+              if (attribute.dataType === 'array') {
+                // Use the selected operator for array types (includes or not_includes)
+                operator = selectedResourceAttributeOperators[attrId] || 'includes';
+              } else if (attribute.dataType === 'number') {
+                // Use the selected operator for number types (equals, greater_than, etc.)
+                operator = selectedResourceAttributeOperators[attrId] || 'equals';
+              } else if (attribute.dataType === 'string') {
+                // Use the selected operator for string types (equals, contains, etc.)
+                operator = selectedResourceAttributeOperators[attrId] || 'equals';
+              } else if (Array.isArray(value)) {
+                operator = 'in';
+              }
+
               return {
                 name: attribute.name,
-                operator: Array.isArray(value) ? 'in' : 'equals',
+                operator: operator,
                 value: value
               };
             })
@@ -1534,9 +1694,24 @@ export default function EditPolicyPage() {
                   return null;
                 }
 
+                // Determine operator based on attribute data type and user selection
+                let operator = 'equals';
+                if (attribute.dataType === 'array') {
+                  // Use the selected operator for array types (includes or not_includes)
+                  operator = globalAdditionalResourceAttributeOperators[attribute.id] || 'includes';
+                } else if (attribute.dataType === 'number') {
+                  // Use the selected operator for number types (equals, greater_than, etc.)
+                  operator = globalAdditionalResourceAttributeOperators[attribute.id] || 'equals';
+                } else if (attribute.dataType === 'string') {
+                  // Use the selected operator for string types (equals, contains, etc.)
+                  operator = globalAdditionalResourceAttributeOperators[attribute.id] || 'equals';
+                } else if (Array.isArray(value)) {
+                  operator = 'in';
+                }
+
                 return {
                   name: attribute.name,
-                  operator: Array.isArray(value) ? 'in' : 'equals',
+                  operator: operator,
                   value: value
                 };
               })
@@ -1880,6 +2055,31 @@ export default function EditPolicyPage() {
                                       <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 1, lineHeight: 1.3 }}>
                                         {attribute.description}
                                       </Typography>
+                                    )}
+
+                                    {/* Operator Selection for Array, Number, and String Data Types */}
+                                    {(attribute.dataType === 'array' || attribute.dataType === 'number' || attribute.dataType === 'string') && (
+                                      <FormControl fullWidth size="small" sx={{ mb: 1.5 }}>
+                                        <Typography variant="caption" color="text.secondary" sx={{ mb: 0.5, display: 'block', fontSize: '0.7rem' }}>
+                                          Condition
+                                        </Typography>
+                                        <Select
+                                          value={selectedSubjectAttributeOperators[attribute.id] || (attribute.dataType === 'array' ? 'includes' : 'equals')}
+                                          onChange={(e) => {
+                                            setSelectedSubjectAttributeOperators(prev => ({
+                                              ...prev,
+                                              [attribute.id]: e.target.value
+                                            }));
+                                          }}
+                                          sx={{ bgcolor: 'grey.50', fontSize: '0.8rem' }}
+                                        >
+                                          {getOperatorsForDataType(attribute.dataType).map((op) => (
+                                            <MenuItem key={op.value} value={op.value} sx={{ fontSize: '0.8rem' }}>
+                                              {op.label}
+                                            </MenuItem>
+                                          ))}
+                                        </Select>
+                                      </FormControl>
                                     )}
 
                                     {((attribute.dataType === 'string' || (attribute.dataType as string) === 'array') && attribute.constraints.enumValues) ? (
@@ -2447,6 +2647,31 @@ export default function EditPolicyPage() {
                                       {attribute.description || `Configure ${attribute.displayName.toLowerCase()} condition`}
                                     </Typography>
 
+                                    {/* Operator Selection for Array, Number, and String Data Types */}
+                                    {(attribute.dataType === 'array' || attribute.dataType === 'number' || attribute.dataType === 'string') && (
+                                      <FormControl fullWidth size="small" sx={{ mb: 1.5 }}>
+                                        <Typography variant="caption" color="text.secondary" sx={{ mb: 0.5, display: 'block', fontSize: '0.7rem' }}>
+                                          Condition
+                                        </Typography>
+                                        <Select
+                                          value={selectedResourceAttributeOperators[attribute.id] || (attribute.dataType === 'array' ? 'includes' : 'equals')}
+                                          onChange={(e) => {
+                                            setSelectedResourceAttributeOperators(prev => ({
+                                              ...prev,
+                                              [attribute.id]: e.target.value
+                                            }));
+                                          }}
+                                          sx={{ bgcolor: 'grey.50', fontSize: '0.8rem' }}
+                                        >
+                                          {getOperatorsForDataType(attribute.dataType).map((op) => (
+                                            <MenuItem key={op.value} value={op.value} sx={{ fontSize: '0.8rem' }}>
+                                              {op.label}
+                                            </MenuItem>
+                                          ))}
+                                        </Select>
+                                      </FormControl>
+                                    )}
+
                                     {attribute.constraints.enumValues && attribute.constraints.enumValues.length > 0 ? (
                                       attribute.isMultiValue ? (
                                         <Autocomplete
@@ -2938,6 +3163,31 @@ export default function EditPolicyPage() {
                                                 </Typography>
                                               )}
 
+                                              {/* Operator Selection for Array and Number Data Types */}
+                                              {(attribute.dataType === 'array' || attribute.dataType === 'number') && (
+                                                <FormControl fullWidth size="small" sx={{ mb: 1.5 }}>
+                                                  <Typography variant="caption" color="text.secondary" sx={{ mb: 0.5, display: 'block', fontSize: '0.7rem' }}>
+                                                    Condition
+                                                  </Typography>
+                                                  <Select
+                                                    value={globalAdditionalResourceAttributeOperators[attribute.id] || (attribute.dataType === 'array' ? 'includes' : 'equals')}
+                                                    onChange={(e) => {
+                                                      setGlobalAdditionalResourceAttributeOperators(prev => ({
+                                                        ...prev,
+                                                        [attribute.id]: e.target.value
+                                                      }));
+                                                    }}
+                                                    sx={{ bgcolor: 'grey.50', fontSize: '0.8rem' }}
+                                                  >
+                                                    {getOperatorsForDataType(attribute.dataType).map((op) => (
+                                                      <MenuItem key={op.value} value={op.value} sx={{ fontSize: '0.8rem' }}>
+                                                        {op.label}
+                                                      </MenuItem>
+                                                    ))}
+                                                  </Select>
+                                                </FormControl>
+                                              )}
+
                                               {attribute.constraints.enumValues && attribute.constraints.enumValues.length > 0 ? (
                                                 <Box>
                                                   {attribute.isMultiValue ? (
@@ -3186,8 +3436,23 @@ export default function EditPolicyPage() {
                             .map(([attrId, value], index, array) => {
                               const attr = attributes.find(a => a.id === attrId);
                               if (!attr) return '';
+                              
+                              // Get the operator for this attribute
+                              let operator = 'equals';
+                              if (attr.dataType === 'array') {
+                                operator = selectedSubjectAttributeOperators[attrId] || 'includes';
+                              } else if (attr.dataType === 'number') {
+                                operator = selectedSubjectAttributeOperators[attrId] || 'equals';
+                              } else if (attr.dataType === 'string') {
+                                operator = selectedSubjectAttributeOperators[attrId] || 'equals';
+                              } else if (Array.isArray(value)) {
+                                operator = 'in';
+                              }
+                              
+                              const operatorText = formatOperatorText(operator);
                               const formattedValue = Array.isArray(value) ? value.join(' or ') : value;
-                              const condition = `${attr.displayName.toLowerCase()} is ${formattedValue}`;
+                              const condition = `${attr.displayName.toLowerCase()} ${operatorText} ${formattedValue}`;
+                              
                               if (index === array.length - 1 && array.length > 1) {
                                 return `and ${condition}`;
                               }
@@ -3224,8 +3489,23 @@ export default function EditPolicyPage() {
                             .map(([attrId, value], index, array) => {
                               const attr = resourceAttributes.find(a => a.id === attrId);
                               if (!attr) return '';
+                              
+                              // Get the operator for this attribute
+                              let operator = 'equals';
+                              if (attr.dataType === 'array') {
+                                operator = selectedResourceAttributeOperators[attrId] || 'includes';
+                              } else if (attr.dataType === 'number') {
+                                operator = selectedResourceAttributeOperators[attrId] || 'equals';
+                              } else if (attr.dataType === 'string') {
+                                operator = selectedResourceAttributeOperators[attrId] || 'equals';
+                              } else if (Array.isArray(value)) {
+                                operator = 'in';
+                              }
+                              
+                              const operatorText = formatOperatorText(operator);
                               const formattedValue = Array.isArray(value) ? value.join(' or ') : value;
-                              const condition = `${attr.displayName.toLowerCase()} is ${formattedValue}`;
+                              const condition = `${attr.displayName.toLowerCase()} ${operatorText} ${formattedValue}`;
+                              
                               if (index === array.length - 1 && array.length > 1) {
                                 return `and ${condition}`;
                               }
@@ -3242,24 +3522,35 @@ export default function EditPolicyPage() {
                           {selectedAdditionalResources.map((resourceId, idx) => {
                             const resource = additionalResources.find(r => r.id === resourceId);
                             const resourceName = resource?.displayName || resource?.name;
-                            const selectedAttrs = selectedAdditionalResourceAttributesList[resourceId] || [];
-                            const attrValues = selectedAdditionalResourceAttributeValues[resourceId] || {};
 
-                            // Get attribute conditions for this resource
-                            const attrConditions = selectedAttrs
-                              .filter(attr => {
-                                const value = attrValues[attr.id];
-                                return value !== '' && value !== null && value !== undefined;
-                              })
-                              .map((attr, index, array) => {
-                                const value = attrValues[attr.id];
+                            // Use global attribute model - same attributes apply to all additional resources
+                            const attrConditions = globalAdditionalResourceAttributesList
+                              .map((attribute, index, array) => {
+                                const value = globalAdditionalResourceAttributeValues[attribute.id];
+                                if (!value || value === '' || value === null || value === undefined) return '';
+                                
+                                // Get the operator for this attribute
+                                let operator = 'equals';
+                                if (attribute.dataType === 'array') {
+                                  operator = globalAdditionalResourceAttributeOperators[attribute.id] || 'includes';
+                                } else if (attribute.dataType === 'number') {
+                                  operator = globalAdditionalResourceAttributeOperators[attribute.id] || 'equals';
+                                } else if (attribute.dataType === 'string') {
+                                  operator = globalAdditionalResourceAttributeOperators[attribute.id] || 'equals';
+                                } else if (Array.isArray(value)) {
+                                  operator = 'in';
+                                }
+                                
+                                const operatorText = formatOperatorText(operator);
                                 const formattedValue = Array.isArray(value) ? value.join(' or ') : value;
-                                const condition = `${attr.displayName.toLowerCase()} is ${formattedValue}`;
+                                const condition = `${attribute.displayName.toLowerCase()} ${operatorText} ${formattedValue}`;
+                                
                                 if (index === array.length - 1 && array.length > 1) {
                                   return `and ${condition}`;
                                 }
                                 return condition;
-                              });
+                              })
+                              .filter(Boolean);
 
                             return (
                               <React.Fragment key={resourceId}>

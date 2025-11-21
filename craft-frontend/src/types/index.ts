@@ -206,7 +206,7 @@ export interface AttributeDefinition {
 
 export interface PolicyRule {
   field: string;
-  operator: 'equals' | 'not_equals' | 'contains' | 'not_contains' | 'greater_than' | 'less_than' | 'in' | 'not_in' | 'time_between' | 'day_of_week' | 'requires_approval' | 'requires_ticket';
+  operator: 'equals' | 'not_equals' | 'contains' | 'not_contains' | 'greater_than' | 'less_than' | 'greater_than_or_equal' | 'less_than_or_equal' | 'in' | 'not_in' | 'includes' | 'not_includes' | 'time_between' | 'day_of_week' | 'requires_approval' | 'requires_ticket';
   value: any;
   logicalOperator?: 'AND' | 'OR';
   metadata?: {

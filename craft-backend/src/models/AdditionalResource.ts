@@ -13,7 +13,7 @@ export interface IAdditionalResourceDependency {
 // Evaluation rule for complex conditions
 export interface IEvaluationRule {
   field: string; // Field to evaluate
-  operator: 'equals' | 'not_equals' | 'in' | 'not_in' | 'contains' | 'greater_than' | 'less_than' | 'between';
+  operator: 'equals' | 'not_equals' | 'in' | 'not_in' | 'contains' | 'greater_than' | 'less_than' | 'greater_than_or_equal' | 'less_than_or_equal' | 'between' | 'includes' | 'not_includes';
   value: any; // Expected value(s)
   caseInsensitive?: boolean; // For string comparisons
 }
@@ -76,8 +76,8 @@ const EvaluationRuleSchema = new Schema<IEvaluationRule>({
   operator: {
     type: String,
     enum: {
-      values: ['equals', 'not_equals', 'in', 'not_in', 'contains', 'greater_than', 'less_than', 'between'],
-      message: 'Operator must be one of: equals, not_equals, in, not_in, contains, greater_than, less_than, between',
+      values: ['equals', 'not_equals', 'in', 'not_in', 'contains', 'greater_than', 'less_than', 'greater_than_or_equal', 'less_than_or_equal', 'between', 'includes', 'not_includes'],
+      message: 'Operator must be one of: equals, not_equals, in, not_in, contains, greater_than, less_than, greater_than_or_equal, less_than_or_equal, between, includes, not_includes',
     },
     required: true,
   },
@@ -368,11 +368,25 @@ AdditionalResourceSchema.methods.evaluate = function(this: IAdditionalResource, 
         return typeof fieldValue === 'string' && typeof rule.value === 'string' &&
                fieldValue.toLowerCase().includes(rule.value.toLowerCase());
 
+      case 'includes':
+        // For array fieldValue, check if it includes the rule.value
+        return Array.isArray(fieldValue) && fieldValue.includes(rule.value);
+
+      case 'not_includes':
+        // For array fieldValue, check if it does not include the rule.value
+        return Array.isArray(fieldValue) && !fieldValue.includes(rule.value);
+
       case 'greater_than':
         return fieldValue > rule.value;
 
       case 'less_than':
         return fieldValue < rule.value;
+
+      case 'greater_than_or_equal':
+        return fieldValue >= rule.value;
+
+      case 'less_than_or_equal':
+        return fieldValue <= rule.value;
 
       case 'between':
         return Array.isArray(rule.value) && rule.value.length === 2 &&

@@ -136,6 +136,36 @@ interface AdditionalResource {
   name: string;
 }
 
+// Format operator for human-readable display
+const formatOperatorText = (operator: string): string => {
+  switch (operator) {
+    case 'includes':
+      return 'includes';
+    case 'not_includes':
+      return 'does not include';
+    case 'equals':
+      return 'is';
+    case 'not_equals':
+      return 'is not';
+    case 'contains':
+      return 'contains';
+    case 'in':
+      return 'is one of';
+    case 'not_in':
+      return 'is not one of';
+    case 'greater_than':
+      return 'is greater than';
+    case 'less_than':
+      return 'is less than';
+    case 'greater_than_or_equal':
+      return 'is greater than or equal to';
+    case 'less_than_or_equal':
+      return 'is less than or equal to';
+    default:
+      return 'is';
+  }
+};
+
 export default function PolicyViewPage() {
   const router = useRouter();
   const params = useParams();
@@ -272,8 +302,9 @@ export default function PolicyViewPage() {
       const conditions = policy.rules[0].subject.attributes
         .filter(attr => attr.value !== '' && attr.value !== null && attr.value !== undefined)
         .map((attr, index, array) => {
+          const operatorText = formatOperatorText(attr.operator || 'equals');
           const formattedValue = Array.isArray(attr.value) ? attr.value.join(' or ') : attr.value;
-          const condition = `${getAttributeDisplayName(attr.name).toLowerCase()} is ${formattedValue}`;
+          const condition = `${getAttributeDisplayName(attr.name).toLowerCase()} ${operatorText} ${formattedValue}`;
           if (index === array.length - 1 && array.length > 1) {
             return `and ${condition}`;
           }
@@ -315,8 +346,9 @@ export default function PolicyViewPage() {
       const conditions = policy.rules[0].object.attributes
         .filter(attr => attr.value !== '' && attr.value !== null && attr.value !== undefined)
         .map((attr, index, array) => {
+          const operatorText = formatOperatorText(attr.operator || 'equals');
           const formattedValue = Array.isArray(attr.value) ? attr.value.join(' or ') : attr.value;
-          const condition = `${getAttributeDisplayName(attr.name).toLowerCase()} is ${formattedValue}`;
+          const condition = `${getAttributeDisplayName(attr.name).toLowerCase()} ${operatorText} ${formattedValue}`;
           if (index === array.length - 1 && array.length > 1) {
             return `and ${condition}`;
           }
@@ -341,8 +373,9 @@ export default function PolicyViewPage() {
           const conditions = res.attributes
             .filter(attr => attr.value !== '' && attr.value !== null && attr.value !== undefined)
             .map((attr, index, array) => {
+              const operatorText = formatOperatorText(attr.operator || 'equals');
               const formattedValue = Array.isArray(attr.value) ? attr.value.join(' or ') : attr.value;
-              const condition = `${getAttributeDisplayName(attr.name).toLowerCase()} is ${formattedValue}`;
+              const condition = `${getAttributeDisplayName(attr.name).toLowerCase()} ${operatorText} ${formattedValue}`;
               if (index === array.length - 1 && array.length > 1) {
                 return `and ${condition}`;
               }
@@ -628,16 +661,20 @@ export default function PolicyViewPage() {
                                 <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 500, fontSize: '0.65rem' }}>
                                   Attributes:
                                 </Typography>
-                                {rule.subject.attributes.map((attr, i) => (
-                                  <Box key={i} sx={{ mt: 0.3 }}>
-                                    <Chip
-                                      label={`${getAttributeDisplayName(attr.name)}: ${Array.isArray(attr.value) ? attr.value.join(', ') : attr.value}`}
-                                      size="small"
-                                      variant="outlined"
-                                      sx={{ fontSize: '0.65rem', height: '20px' }}
-                                    />
-                                  </Box>
-                                ))}
+                                {rule.subject.attributes.map((attr, i) => {
+                                  const operatorText = formatOperatorText(attr.operator || 'equals');
+                                  const formattedValue = Array.isArray(attr.value) ? attr.value.join(', ') : attr.value;
+                                  return (
+                                    <Box key={i} sx={{ mt: 0.3 }}>
+                                      <Chip
+                                        label={`${getAttributeDisplayName(attr.name)} ${operatorText} ${formattedValue}`}
+                                        size="small"
+                                        variant="outlined"
+                                        sx={{ fontSize: '0.65rem', height: '20px' }}
+                                      />
+                                    </Box>
+                                  );
+                                })}
                               </Box>
                             )}
                           </Box>
@@ -681,16 +718,20 @@ export default function PolicyViewPage() {
                                 <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 500, fontSize: '0.65rem' }}>
                                   Attributes:
                                 </Typography>
-                                {rule.object.attributes.map((attr, i) => (
-                                  <Box key={i} sx={{ mt: 0.3 }}>
-                                    <Chip
-                                      label={`${getAttributeDisplayName(attr.name)}: ${Array.isArray(attr.value) ? attr.value.join(', ') : attr.value}`}
-                                      size="small"
-                                      variant="outlined"
-                                      sx={{ fontSize: '0.65rem', height: '20px' }}
-                                    />
-                                  </Box>
-                                ))}
+                                {rule.object.attributes.map((attr, i) => {
+                                  const operatorText = formatOperatorText(attr.operator || 'equals');
+                                  const formattedValue = Array.isArray(attr.value) ? attr.value.join(', ') : attr.value;
+                                  return (
+                                    <Box key={i} sx={{ mt: 0.3 }}>
+                                      <Chip
+                                        label={`${getAttributeDisplayName(attr.name)} ${operatorText} ${formattedValue}`}
+                                        size="small"
+                                        variant="outlined"
+                                        sx={{ fontSize: '0.65rem', height: '20px' }}
+                                      />
+                                    </Box>
+                                  );
+                                })}
                               </Box>
                             )}
                           </Box>
