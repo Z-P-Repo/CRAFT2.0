@@ -205,9 +205,19 @@ export default function ResourceCreationDialog({
       return;
     }
 
+    // Check if required workspace context is available
+    if (!currentWorkspace || !currentApplication || !currentEnvironment) {
+      snackbar.showError('Please select a workspace, application, and environment before creating an attribute.');
+      return;
+    }
+
     setIsCreatingAttribute(true);
 
+    // Generate unique ID for the attribute
+    const attributeId = `attr_${attributeDisplayName.toLowerCase().replace(/\s+/g, '_')}_${Date.now()}`;
+
     const attributeData = {
+      id: attributeId,
       name: attributeDisplayName.toLowerCase().replace(/\s+/g, '_'),
       displayName: attributeDisplayName.trim(),
       description: attributeDescription?.trim() || '',
@@ -217,6 +227,10 @@ export default function ResourceCreationDialog({
       isMultiValue: false,
       defaultValue: null,
       validationRules: attributePermittedValues ? { permittedValues: attributePermittedValues.split(',').map(v => v.trim()) } : {},
+      // Required workspace context for backend validation
+      workspaceId: currentWorkspace._id,
+      applicationId: currentApplication._id,
+      environmentId: currentEnvironment._id,
       metadata: {
         createdBy: 'User',
         owner: 'User',
