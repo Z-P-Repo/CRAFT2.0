@@ -14,17 +14,14 @@ import {
   CircularProgress,
   Divider,
 } from '@mui/material';
-import { Login as LoginIcon, Microsoft as MicrosoftIcon } from '@mui/icons-material';
+import { Login as LoginIcon } from '@mui/icons-material';
 import { useAuth } from '@/contexts/AuthContext';
 import { useApiSnackbar } from '@/contexts/SnackbarContext';
-import azureAdService from '@/lib/azureAdService';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isAzureAdSubmitting, setIsAzureAdSubmitting] = useState(false);
-  const [azureAdEnabled, setAzureAdEnabled] = useState(false);
   const [mounted, setMounted] = useState(false);
   const { login, isAuthenticated, isLoading, clearError } = useAuth();
   const snackbar = useApiSnackbar();
@@ -32,35 +29,6 @@ export default function LoginPage() {
 
   useEffect(() => {
     setMounted(true);
-    
-    // Initialize Azure AD and check if it's enabled
-    const initializeAzureAd = async () => {
-      try {
-        console.log('🔍 Checking Azure AD configuration...');
-        const isConfigured = azureAdService.isConfigured();
-        console.log('✓ Azure AD isConfigured:', isConfigured);
-
-        if (isConfigured) {
-          await azureAdService.initialize();
-          console.log('✓ Azure AD initialized');
-
-          const config = await azureAdService.getBackendConfig();
-          console.log('✓ Backend config:', config);
-
-          const enabled = config?.enabled || false;
-          console.log('✓ Setting azureAdEnabled to:', enabled);
-          setAzureAdEnabled(enabled);
-        } else {
-          console.log('✗ Azure AD not configured');
-          setAzureAdEnabled(false);
-        }
-      } catch (error) {
-        console.error('❌ Failed to initialize Azure AD:', error);
-        setAzureAdEnabled(false);
-      }
-    };
-
-    initializeAzureAd();
   }, []);
 
   useEffect(() => {
@@ -98,25 +66,6 @@ export default function LoginPage() {
     }
   };
 
-  const handleAzureAdLogin = async () => {
-    if (!azureAdService.isConfigured()) {
-      snackbar.showError('Azure AD is not configured');
-      return;
-    }
-
-    setIsAzureAdSubmitting(true);
-    
-    try {
-      // Use redirect method for Azure AD login
-      await azureAdService.loginRedirect();
-    } catch (error: any) {
-      console.error('Azure AD login error:', error);
-      snackbar.showError(
-        error?.message || 'Azure AD login failed. Please try again.'
-      );
-      setIsAzureAdSubmitting(false);
-    }
-  };
 
   // Show loading while checking auth or during redirect
   if (!mounted || isLoading || (mounted && isAuthenticated)) {
@@ -202,42 +151,11 @@ export default function LoginPage() {
               fullWidth
               variant="contained"
               sx={{ mt: 3, mb: 2, py: 1.5 }}
-              disabled={isSubmitting || !email || !password || isAzureAdSubmitting}
+              disabled={isSubmitting || !email || !password}
               startIcon={isSubmitting ? <CircularProgress size={20} /> : <LoginIcon />}
             >
               {isSubmitting ? 'Signing In...' : 'Sign In'}
             </Button>
-
-            {/* Azure AD SSO Button - Debug: azureAdEnabled = {String(azureAdEnabled)} */}
-            {azureAdEnabled && (
-              <>
-                <Divider sx={{ my: 3 }}>
-                  <Typography variant="body2" color="text.secondary">
-                    OR
-                  </Typography>
-                </Divider>
-
-                <Button
-                  onClick={handleAzureAdLogin}
-                  fullWidth
-                  variant="outlined"
-                  sx={{ 
-                    mb: 3, 
-                    py: 1.5,
-                    borderColor: '#0078d4',
-                    color: '#0078d4',
-                    '&:hover': {
-                      borderColor: '#106ebe',
-                      backgroundColor: 'rgba(16, 110, 190, 0.04)',
-                    }
-                  }}
-                  disabled={isSubmitting || isAzureAdSubmitting}
-                  startIcon={isAzureAdSubmitting ? <CircularProgress size={20} /> : <MicrosoftIcon />}
-                >
-                  {isAzureAdSubmitting ? 'Redirecting...' : 'Sign in with Microsoft'}
-                </Button>
-              </>
-            )}
 
             <Divider sx={{ my: 3 }} />
 

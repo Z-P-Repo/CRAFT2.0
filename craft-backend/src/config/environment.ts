@@ -45,13 +45,6 @@ const envSchema = Joi.object({
   SMTP_PORT: Joi.number().default(587),
   SMTP_USER: Joi.string().optional(),
   SMTP_PASS: Joi.string().optional(),
-  
-  // Azure AD SSO
-  AZURE_AD_CLIENT_ID: Joi.string().optional(),
-  AZURE_AD_CLIENT_SECRET: Joi.string().optional(),
-  AZURE_AD_TENANT_ID: Joi.string().optional(),
-  AZURE_AD_AUTHORITY: Joi.string().optional(),
-  AZURE_AD_REDIRECT_URI: Joi.string().optional(),
 }).unknown();
 
 const { error, value: envVars } = envSchema.validate(process.env);
@@ -107,22 +100,6 @@ export const config = {
     port: envVars.SMTP_PORT,
     user: envVars.SMTP_USER,
     pass: envVars.SMTP_PASS,
-  },
-  
-  azureAd: {
-    clientId: envVars.AZURE_AD_CLIENT_ID,
-    clientSecret: envVars.AZURE_AD_CLIENT_SECRET,
-    tenantId: envVars.AZURE_AD_TENANT_ID,
-    authority: envVars.AZURE_AD_AUTHORITY || `https://login.microsoftonline.com/${envVars.AZURE_AD_TENANT_ID}`,
-    redirectUri: envVars.AZURE_AD_REDIRECT_URI || `${envVars.FRONTEND_URL}/auth/callback`,
-    enabled: !!(
-      envVars.AZURE_AD_CLIENT_ID &&
-      envVars.AZURE_AD_CLIENT_SECRET &&
-      envVars.AZURE_AD_TENANT_ID &&
-      !envVars.AZURE_AD_CLIENT_SECRET.includes('your-') &&
-      !envVars.AZURE_AD_CLIENT_SECRET.includes('placeholder') &&
-      envVars.AZURE_AD_CLIENT_SECRET.length > 20
-    ),
   },
   
   // Computed values

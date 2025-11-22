@@ -1,7 +1,6 @@
 import { Router } from 'express';
 import { Request, Response } from 'express';
 import authRoutes from './auth';
-import azureAdRoutes from './azureAdRoutes';
 import userRoutes from './userRoutes';
 import subjectRoutes from './subjectRoutes';
 import resourceRoutes from './resourceRoutes';
@@ -44,7 +43,6 @@ router.get('/info', (req: Request, res: Response) => {
     documentation: `${req.protocol}://${req.get('host')}${config.apiPrefix}/docs`,
     endpoints: {
       auth: `${config.apiPrefix}/auth`,
-      azureAd: `${config.apiPrefix}/azure-ad`,
       users: `${config.apiPrefix}/users`,
       settings: `${config.apiPrefix}/settings`,
       workspaces: `${config.apiPrefix}/workspaces`,
@@ -61,7 +59,6 @@ router.get('/info', (req: Request, res: Response) => {
 
 // Mount route modules
 router.use('/auth', authRoutes);
-router.use('/azure-ad', azureAdRoutes);
 router.use('/users', userRoutes);
 
 // New hierarchical settings and management routes

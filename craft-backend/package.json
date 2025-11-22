@@ -37,7 +37,6 @@
     "npm": ">=9.0.0"
   },
   "dependencies": {
-    "@azure/msal-node": "^3.7.3",
     "axios": "^1.11.0",
     "bcrypt": "^6.0.0",
     "bcryptjs": "^2.4.3",
