@@ -16,7 +16,6 @@ import {
   TableRow,
   Chip,
   IconButton,
-  Fab,
   TablePagination,
   Popover,
   List,
@@ -1118,16 +1117,6 @@ export default function PoliciesPage() {
           additionalInfo="This will permanently remove all selected policies and may affect access control decisions."
         />
 
-        {/* Create Policy FAB */}
-        <Fab
-          color="primary"
-          aria-label="add"
-          onClick={() => router.push('/policies/create')}
-          disabled={!canCreateEntity}
-          sx={{ position: 'fixed', bottom: 24, right: 24 }}
-        >
-          <AddIcon />
-        </Fab>
         </DashboardLayout>
       </RoleProtection>
     </ProtectedRoute>
