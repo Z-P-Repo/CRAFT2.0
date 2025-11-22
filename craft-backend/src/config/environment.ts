@@ -115,7 +115,14 @@ export const config = {
     tenantId: envVars.AZURE_AD_TENANT_ID,
     authority: envVars.AZURE_AD_AUTHORITY || `https://login.microsoftonline.com/${envVars.AZURE_AD_TENANT_ID}`,
     redirectUri: envVars.AZURE_AD_REDIRECT_URI || `${envVars.FRONTEND_URL}/auth/callback`,
-    enabled: !!(envVars.AZURE_AD_CLIENT_ID && envVars.AZURE_AD_CLIENT_SECRET && envVars.AZURE_AD_TENANT_ID),
+    enabled: !!(
+      envVars.AZURE_AD_CLIENT_ID &&
+      envVars.AZURE_AD_CLIENT_SECRET &&
+      envVars.AZURE_AD_TENANT_ID &&
+      !envVars.AZURE_AD_CLIENT_SECRET.includes('your-') &&
+      !envVars.AZURE_AD_CLIENT_SECRET.includes('placeholder') &&
+      envVars.AZURE_AD_CLIENT_SECRET.length > 20
+    ),
   },
   
   // Computed values

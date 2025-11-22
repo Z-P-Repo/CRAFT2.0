@@ -222,6 +222,118 @@ const sampleAttributes = [
     },
     mapping: {},
     active: true
+  },
+  {
+    id: 'attr_user_roles',
+    name: 'userRoles',
+    displayName: 'User Roles',
+    description: 'Array of roles assigned to the user',
+    categories: ['subject'],
+    workspaceId: 'seed-workspace',
+    applicationId: 'seed-app',
+    environmentId: 'seed-env',
+    dataType: 'array',
+    isRequired: false,
+    isMultiValue: true,
+    defaultValue: [],
+    constraints: {
+      enumValues: ['admin', 'manager', 'developer', 'analyst', 'viewer', 'auditor', 'guest']
+    },
+    validation: {},
+    metadata: {
+      createdBy: 'system',
+      lastModifiedBy: 'system',
+      tags: ['roles', 'subject', 'array'],
+      isSystem: true,
+      isCustom: false,
+      version: '1.0.0'
+    },
+    mapping: {},
+    active: true
+  },
+  {
+    id: 'attr_allowed_regions',
+    name: 'allowedRegions',
+    displayName: 'Allowed Regions',
+    description: 'Array of regions where access is permitted',
+    categories: ['subject', 'resource'],
+    workspaceId: 'seed-workspace',
+    applicationId: 'seed-app',
+    environmentId: 'seed-env',
+    dataType: 'array',
+    isRequired: false,
+    isMultiValue: true,
+    defaultValue: [],
+    constraints: {
+      enumValues: ['us-east', 'us-west', 'eu-central', 'eu-west', 'ap-south', 'ap-east', 'global']
+    },
+    validation: {},
+    metadata: {
+      createdBy: 'system',
+      lastModifiedBy: 'system',
+      tags: ['location', 'region', 'array'],
+      isSystem: true,
+      isCustom: false,
+      version: '1.0.0'
+    },
+    mapping: {},
+    active: true
+  },
+  {
+    id: 'attr_tags',
+    name: 'tags',
+    displayName: 'Resource Tags',
+    description: 'Array of tags associated with the resource',
+    categories: ['resource', 'additional-resource'],
+    workspaceId: 'seed-workspace',
+    applicationId: 'seed-app',
+    environmentId: 'seed-env',
+    dataType: 'array',
+    isRequired: false,
+    isMultiValue: true,
+    defaultValue: [],
+    constraints: {
+      enumValues: ['production', 'staging', 'development', 'testing', 'archived', 'deprecated', 'critical', 'public', 'internal']
+    },
+    validation: {},
+    metadata: {
+      createdBy: 'system',
+      lastModifiedBy: 'system',
+      tags: ['metadata', 'resource', 'array'],
+      isSystem: true,
+      isCustom: false,
+      version: '1.0.0'
+    },
+    mapping: {},
+    active: true
+  },
+  {
+    id: 'attr_permissions',
+    name: 'permissions',
+    displayName: 'Permissions',
+    description: 'Array of permissions granted',
+    categories: ['subject'],
+    workspaceId: 'seed-workspace',
+    applicationId: 'seed-app',
+    environmentId: 'seed-env',
+    dataType: 'array',
+    isRequired: false,
+    isMultiValue: true,
+    defaultValue: [],
+    constraints: {
+      enumValues: ['read', 'write', 'delete', 'execute', 'admin', 'share', 'export', 'import']
+    },
+    validation: {},
+    metadata: {
+      createdBy: 'system',
+      lastModifiedBy: 'system',
+      tags: ['permissions', 'subject', 'array'],
+      isSystem: true,
+      isCustom: false,
+      version: '1.0.0'
+    },
+    mapping: {},
+    active: true
   }
 ];
 

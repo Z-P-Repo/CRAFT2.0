@@ -144,9 +144,53 @@ const formatOperatorText = (operator: string): string => {
       return 'is greater than or equal to';
     case 'less_than_or_equal':
       return 'is less than or equal to';
+    case 'before':
+      return 'is before';
+    case 'after':
+      return 'is after';
+    case 'between':
+      return 'is between';
+    case 'on_or_before':
+      return 'is on or before';
+    case 'on_or_after':
+      return 'is on or after';
     default:
       return 'is';
   }
+};
+
+// Format date for display
+const formatDateForDisplay = (dateValue: any, includeTime: boolean = false): string => {
+  if (!dateValue) return '';
+  
+  try {
+    const date = new Date(dateValue);
+    if (isNaN(date.getTime())) return String(dateValue);
+    
+    const options: Intl.DateTimeFormatOptions = {
+      month: '2-digit',
+      day: '2-digit',
+      year: 'numeric',
+    };
+    
+    if (includeTime) {
+      options.hour = '2-digit';
+      options.minute = '2-digit';
+      options.hour12 = true;
+    }
+    
+    return date.toLocaleString('en-US', options);
+  } catch (error) {
+    return String(dateValue);
+  }
+};
+
+// Format date range for display
+const formatDateRangeForDisplay = (value: any, includeTime: boolean = false): string => {
+  if (typeof value === 'object' && value.start && value.end) {
+    return `${formatDateForDisplay(value.start, includeTime)} and ${formatDateForDisplay(value.end, includeTime)}`;
+  }
+  return formatDateForDisplay(value, includeTime);
 };
 
 export default function PoliciesPage() {
@@ -250,6 +294,11 @@ export default function PoliciesPage() {
     return attribute ? attribute.displayName : attrName;
   }, [attributes]);
 
+  const getAttributeDataType = useCallback((attrName: string) => {
+    const attribute = attributes.find(a => a.name === attrName || a.id === attrName);
+    return attribute ? attribute.dataType : 'string';
+  }, [attributes]);
+
   // Generate policy description using lookup data
   const generatePolicyDescriptionWithLookup = useCallback((policy: Policy) => {
     if (!policy || !policy.rules || policy.rules.length === 0) return '';
@@ -268,7 +317,21 @@ export default function PoliciesPage() {
         .filter(attr => attr.value !== '' && attr.value !== null && attr.value !== undefined)
         .map((attr, index, array) => {
           const operatorText = formatOperatorText(attr.operator || 'equals');
-          const formattedValue = Array.isArray(attr.value) ? attr.value.join(' or ') : attr.value;
+          let formattedValue: any;
+          
+          // Format date values FIRST (before converting to string)
+          const attrDataType = getAttributeDataType(attr.name);
+          if (attrDataType === 'date') {
+            const includeTime = (attr as any).dateConfig?.includeTime || false;
+            if (attr.operator === 'between') {
+              formattedValue = formatDateRangeForDisplay(attr.value, includeTime);
+            } else {
+              formattedValue = formatDateForDisplay(attr.value, includeTime);
+            }
+          } else {
+            formattedValue = Array.isArray(attr.value) ? attr.value.join(' or ') : attr.value;
+          }
+          
           const condition = `${getAttributeDisplayName(attr.name).toLowerCase()} ${operatorText} ${formattedValue}`;
           if (index === array.length - 1 && array.length > 1) {
             return `and ${condition}`;
@@ -315,7 +378,21 @@ export default function PoliciesPage() {
         .filter(attr => attr.value !== '' && attr.value !== null && attr.value !== undefined)
         .map((attr, index, array) => {
           const operatorText = formatOperatorText(attr.operator || 'equals');
-          const formattedValue = Array.isArray(attr.value) ? attr.value.join(' or ') : attr.value;
+          let formattedValue: any;
+          
+          // Format date values FIRST (before converting to string)
+          const attrDataType = getAttributeDataType(attr.name);
+          if (attrDataType === 'date') {
+            const includeTime = (attr as any).dateConfig?.includeTime || false;
+            if (attr.operator === 'between') {
+              formattedValue = formatDateRangeForDisplay(attr.value, includeTime);
+            } else {
+              formattedValue = formatDateForDisplay(attr.value, includeTime);
+            }
+          } else {
+            formattedValue = Array.isArray(attr.value) ? attr.value.join(' or ') : attr.value;
+          }
+          
           const condition = `${getAttributeDisplayName(attr.name).toLowerCase()} ${operatorText} ${formattedValue}`;
           if (index === array.length - 1 && array.length > 1) {
             return `and ${condition}`;

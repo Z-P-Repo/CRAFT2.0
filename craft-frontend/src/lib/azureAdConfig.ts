@@ -3,9 +3,11 @@ import { Configuration, PublicClientApplication } from '@azure/msal-browser';
 // Azure AD configuration
 const azureAdConfig: Configuration = {
   auth: {
-    clientId: process.env.NEXT_PUBLIC_AZURE_AD_CLIENT_ID || '',
-    authority: process.env.NEXT_PUBLIC_AZURE_AD_AUTHORITY || '',
-    redirectUri: typeof window !== 'undefined' ? `${window.location.origin}/auth/callback` : '/auth/callback',
+    clientId: process.env.NEXT_PUBLIC_AZURE_CLIENT_ID || process.env.NEXT_PUBLIC_AZURE_AD_CLIENT_ID || '',
+    authority: process.env.NEXT_PUBLIC_AZURE_TENANT_ID
+      ? `https://login.microsoftonline.com/${process.env.NEXT_PUBLIC_AZURE_TENANT_ID}`
+      : process.env.NEXT_PUBLIC_AZURE_AD_AUTHORITY || '',
+    redirectUri: process.env.NEXT_PUBLIC_AZURE_REDIRECT_URI || (typeof window !== 'undefined' ? `${window.location.origin}/auth/callback` : '/auth/callback'),
     postLogoutRedirectUri: typeof window !== 'undefined' ? `${window.location.origin}/login` : '/login',
   },
   cache: {
@@ -41,10 +43,15 @@ const azureAdConfig: Configuration = {
 
 // Check if Azure AD is configured
 export const isAzureAdConfigured = (): boolean => {
-  return !!(
+  const hasNewConfig = !!(
+    process.env.NEXT_PUBLIC_AZURE_CLIENT_ID &&
+    process.env.NEXT_PUBLIC_AZURE_TENANT_ID
+  );
+  const hasOldConfig = !!(
     process.env.NEXT_PUBLIC_AZURE_AD_CLIENT_ID &&
     process.env.NEXT_PUBLIC_AZURE_AD_AUTHORITY
   );
+  return hasNewConfig || hasOldConfig;
 };
 
 // Create MSAL instance only if configured

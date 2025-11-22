@@ -296,6 +296,58 @@ export class ResourceDependencyService {
           message: `Value '${actualValue}' is not an array`
         };
 
+      case 'before':
+        // Date comparison: actualValue < expectedValue
+        const beforeActual = new Date(actualValue);
+        const beforeExpected = new Date(expectedValue);
+        return {
+          success: beforeActual < beforeExpected,
+          message: `Date '${actualValue}' is not before '${expectedValue}'`
+        };
+
+      case 'after':
+        // Date comparison: actualValue > expectedValue
+        const afterActual = new Date(actualValue);
+        const afterExpected = new Date(expectedValue);
+        return {
+          success: afterActual > afterExpected,
+          message: `Date '${actualValue}' is not after '${expectedValue}'`
+        };
+
+      case 'on_or_before':
+        // Date comparison: actualValue <= expectedValue
+        const onOrBeforeActual = new Date(actualValue);
+        const onOrBeforeExpected = new Date(expectedValue);
+        return {
+          success: onOrBeforeActual <= onOrBeforeExpected,
+          message: `Date '${actualValue}' is not on or before '${expectedValue}'`
+        };
+
+      case 'on_or_after':
+        // Date comparison: actualValue >= expectedValue
+        const onOrAfterActual = new Date(actualValue);
+        const onOrAfterExpected = new Date(expectedValue);
+        return {
+          success: onOrAfterActual >= onOrAfterExpected,
+          message: `Date '${actualValue}' is not on or after '${expectedValue}'`
+        };
+
+      case 'between':
+        // Date range comparison
+        if (typeof expectedValue === 'object' && expectedValue.start && expectedValue.end) {
+          const betweenActual = new Date(actualValue);
+          const betweenStart = new Date(expectedValue.start);
+          const betweenEnd = new Date(expectedValue.end);
+          return {
+            success: betweenActual >= betweenStart && betweenActual <= betweenEnd,
+            message: `Date '${actualValue}' is not between '${expectedValue.start}' and '${expectedValue.end}'`
+          };
+        }
+        return {
+          success: false,
+          message: `Invalid date range format for 'between' operator`
+        };
+
       default:
         return {
           success: false,

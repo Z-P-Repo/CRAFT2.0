@@ -114,8 +114,12 @@ interface PolicyRule {
 
 interface PolicyAttribute {
   name: string;
-  operator: 'equals' | 'contains' | 'in' | 'not_equals' | 'not_contains' | 'not_in' | 'includes' | 'not_includes';
-  value: string | string[];
+  operator: 'equals' | 'contains' | 'in' | 'not_equals' | 'not_contains' | 'not_in' | 'includes' | 'not_includes' | 'greater_than' | 'less_than' | 'greater_than_or_equal' | 'less_than_or_equal' | 'before' | 'after' | 'between' | 'on_or_before' | 'on_or_after';
+  value: string | string[] | number | { start: string; end: string };
+  dateConfig?: {
+    includeTime: boolean;
+    isRange: boolean;
+  };
 }
 
 interface PolicyCondition {
@@ -264,6 +268,17 @@ const getOperatorsForDataType = (dataType: string): Array<{ value: string; label
     ];
   }
 
+  if (dataType === 'date') {
+    return [
+      { value: 'equals', label: 'Equals' },
+      { value: 'before', label: 'Before' },
+      { value: 'after', label: 'After' },
+      { value: 'between', label: 'Between' },
+      { value: 'on_or_before', label: 'On or Before' },
+      { value: 'on_or_after', label: 'On or After' },
+    ];
+  }
+
   // For other types, return default operators
   return [
     { value: 'equals', label: 'Equals' },
@@ -296,9 +311,53 @@ const formatOperatorText = (operator: string): string => {
       return 'is greater than or equal to';
     case 'less_than_or_equal':
       return 'is less than or equal to';
+    case 'before':
+      return 'is before';
+    case 'after':
+      return 'is after';
+    case 'between':
+      return 'is between';
+    case 'on_or_before':
+      return 'is on or before';
+    case 'on_or_after':
+      return 'is on or after';
     default:
       return 'is';
   }
+};
+
+// Format date for display
+const formatDateForDisplay = (dateValue: any, includeTime: boolean = false): string => {
+  if (!dateValue) return '';
+
+  try {
+    const date = new Date(dateValue);
+    if (isNaN(date.getTime())) return String(dateValue);
+
+    const options: Intl.DateTimeFormatOptions = {
+      month: '2-digit',
+      day: '2-digit',
+      year: 'numeric',
+    };
+
+    if (includeTime) {
+      options.hour = '2-digit';
+      options.minute = '2-digit';
+      options.hour12 = true;
+    }
+
+    return date.toLocaleString('en-US', options);
+  } catch (error) {
+    return String(dateValue);
+  }
+};
+
+// Format date range for display
+const formatDateRangeForDisplay = (value: any, includeTime: boolean = false): string => {
+  if (typeof value === 'object' && value.start && value.end) {
+    return `${formatDateForDisplay(value.start, includeTime)} and ${formatDateForDisplay(value.end, includeTime)}`;
+  }
+  return formatDateForDisplay(value, includeTime);
 };
 
 export default function EditPolicyPage() {
@@ -385,6 +444,11 @@ export default function EditPolicyPage() {
   const [selectedResourceAttributeOperators, setSelectedResourceAttributeOperators] = useState<{ [key: string]: string }>({});
   const [globalAdditionalResourceAttributeOperators, setGlobalAdditionalResourceAttributeOperators] = useState<{ [attributeId: string]: string }>({});
 
+  // Date configuration states
+  const [subjectDateConfigs, setSubjectDateConfigs] = useState<{ [key: string]: { includeTime: boolean; isRange: boolean } }>({});
+  const [resourceDateConfigs, setResourceDateConfigs] = useState<{ [key: string]: { includeTime: boolean; isRange: boolean } }>({});
+  const [additionalResourceDateConfigs, setAdditionalResourceDateConfigs] = useState<{ [key: string]: { includeTime: boolean; isRange: boolean } }>({});
+
   // Dropdown data
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [actions, setActions] = useState<ActionObject[]>([]);
@@ -456,6 +520,7 @@ export default function EditPolicyPage() {
       const firstRule = originalPolicy.rules[0];
       const subjectAttrs: { [key: string]: any } = {};
       const subjectOps: { [key: string]: string } = {};
+      const subjectDateCfgs: { [key: string]: { includeTime: boolean; isRange: boolean } } = {};
 
       firstRule?.subject?.attributes?.forEach((attr: any) => {
         // Try to find the attribute in the loaded attributes list to get the correct ID
@@ -466,21 +531,30 @@ export default function EditPolicyPage() {
           if (attr.operator) {
             subjectOps[attributeObj.id] = attr.operator;
           }
+          // Store the dateConfig if present
+          if (attr.dateConfig) {
+            subjectDateCfgs[attributeObj.id] = attr.dateConfig;
+          }
         } else {
           // Fallback to using the name if no matching attribute found
           subjectAttrs[attr.name] = attr.value;
           if (attr.operator) {
             subjectOps[attr.name] = attr.operator;
           }
+          if (attr.dateConfig) {
+            subjectDateCfgs[attr.name] = attr.dateConfig;
+          }
         }
       });
 
       setSelectedSubjectAttributes(subjectAttrs);
       setSelectedSubjectAttributeOperators(subjectOps);
+      setSubjectDateConfigs(subjectDateCfgs);
 
       // Also initialize resource attributes from the first rule
       const resourceAttrs: { [key: string]: any } = {};
       const resourceOps: { [key: string]: string } = {};
+      const resourceDateCfgs: { [key: string]: { includeTime: boolean; isRange: boolean } } = {};
 
       firstRule?.object?.attributes?.forEach((attr: any) => {
         // Try to find the attribute in the loaded attributes list to get the correct ID
@@ -492,17 +566,25 @@ export default function EditPolicyPage() {
           if (attr.operator) {
             resourceOps[attributeObj.id] = attr.operator;
           }
+          // Store the dateConfig if present
+          if (attr.dateConfig) {
+            resourceDateCfgs[attributeObj.id] = attr.dateConfig;
+          }
         } else {
           // Fallback to using the name if no matching attribute found
           resourceAttrs[attr.name] = attr.value;
           if (attr.operator) {
             resourceOps[attr.name] = attr.operator;
           }
+          if (attr.dateConfig) {
+            resourceDateCfgs[attr.name] = attr.dateConfig;
+          }
         }
       });
 
       setSelectedResourceAttributeValues(resourceAttrs);
       setSelectedResourceAttributeOperators(resourceOps);
+      setResourceDateConfigs(resourceDateCfgs);
     }
   }, [originalPolicy, attributes, resourceAttributes]);
 
@@ -594,6 +676,7 @@ export default function EditPolicyPage() {
         const globalAttrs: Attribute[] = [];
         const globalValues: { [attributeId: string]: any } = {};
         const globalOps: { [attributeId: string]: string } = {};
+        const globalDateCfgs: { [key: string]: { includeTime: boolean; isRange: boolean } } = {};
 
         firstAdditionalResource.attributes.forEach((attr: any) => {
           const attributeObj = additionalResourceAttributes.find(a =>
@@ -607,17 +690,23 @@ export default function EditPolicyPage() {
             if (attr.operator) {
               globalOps[attributeObj.id] = attr.operator;
             }
+            // Store the dateConfig if present
+            if (attr.dateConfig) {
+              globalDateCfgs[attributeObj.id] = attr.dateConfig;
+            }
           }
         });
 
         console.log('Initialized global additional resource attributes:', globalAttrs);
         console.log('Initialized global additional resource values:', globalValues);
         console.log('Initialized global additional resource operators:', globalOps);
+        console.log('Initialized global additional resource date configs:', globalDateCfgs);
 
         if (globalAttrs.length > 0) {
           setGlobalAdditionalResourceAttributesList(globalAttrs);
           setGlobalAdditionalResourceAttributeValues(globalValues);
           setGlobalAdditionalResourceAttributeOperators(globalOps);
+          setAdditionalResourceDateConfigs(globalDateCfgs);
         }
       }
     }
@@ -1610,15 +1699,25 @@ export default function EditPolicyPage() {
               } else if (attribute.dataType === 'string') {
                 // Use the selected operator for string types (equals, contains, etc.)
                 operator = selectedSubjectAttributeOperators[attrId] || 'equals';
+              } else if (attribute.dataType === 'date') {
+                // Use the selected operator for date types
+                operator = selectedSubjectAttributeOperators[attrId] || 'equals';
               } else if (Array.isArray(value)) {
                 operator = 'in';
               }
 
-              return {
+              const attrData: any = {
                 name: attribute.name,
                 operator: operator,
                 value: value
               };
+
+              // Add date configuration if it's a date attribute
+              if (attribute.dataType === 'date' && subjectDateConfigs[attrId]) {
+                attrData.dateConfig = subjectDateConfigs[attrId];
+              }
+
+              return attrData;
             })
             .filter(Boolean);
 
@@ -1640,15 +1739,25 @@ export default function EditPolicyPage() {
               } else if (attribute.dataType === 'string') {
                 // Use the selected operator for string types (equals, contains, etc.)
                 operator = selectedResourceAttributeOperators[attrId] || 'equals';
+              } else if (attribute.dataType === 'date') {
+                // Use the selected operator for date types
+                operator = selectedResourceAttributeOperators[attrId] || 'equals';
               } else if (Array.isArray(value)) {
                 operator = 'in';
               }
 
-              return {
+              const attrData: any = {
                 name: attribute.name,
                 operator: operator,
                 value: value
               };
+
+              // Add date configuration if it's a date attribute
+              if (attribute.dataType === 'date' && resourceDateConfigs[attrId]) {
+                attrData.dateConfig = resourceDateConfigs[attrId];
+              }
+
+              return attrData;
             })
             .filter(Boolean);
 
@@ -1706,15 +1815,25 @@ export default function EditPolicyPage() {
                 } else if (attribute.dataType === 'string') {
                   // Use the selected operator for string types (equals, contains, etc.)
                   operator = globalAdditionalResourceAttributeOperators[attribute.id] || 'equals';
+                } else if (attribute.dataType === 'date') {
+                  // Use the selected operator for date types
+                  operator = globalAdditionalResourceAttributeOperators[attribute.id] || 'equals';
                 } else if (Array.isArray(value)) {
                   operator = 'in';
                 }
 
-                return {
+                const attrData: any = {
                   name: attribute.name,
                   operator: operator,
                   value: value
                 };
+
+                // Add date configuration if it's a date attribute
+                if (attribute.dataType === 'date' && additionalResourceDateConfigs[attribute.id]) {
+                  attrData.dateConfig = additionalResourceDateConfigs[attribute.id];
+                }
+
+                return attrData;
               })
               .filter(attr => attr !== null);
 
@@ -2048,7 +2167,7 @@ export default function EditPolicyPage() {
                                           }
                                         }}
                                       >
-                                        <DeleteIcon sx={{ fontSize: 16 }} />
+                                        <CloseIcon sx={{ fontSize: 16 }} />
                                       </IconButton>
                                     </Box>
 
@@ -2239,6 +2358,189 @@ export default function EditPolicyPage() {
                                         }}
                                         sx={{ bgcolor: 'white' }}
                                       />
+                                    ) : attribute.dataType === 'date' ? (
+                                      <Box>
+                                        {/* Date Type Selection - Compact UI */}
+                                        <Box sx={{ mb: 1 }}>
+                                          <Typography variant="caption" color="text.secondary" sx={{ mb: 0.5, display: 'block', fontSize: '0.7rem' }}>
+                                            Choose input type:
+                                          </Typography>
+                                          <Box sx={{ display: 'flex', gap: 0.5 }}>
+                                            {[
+                                              { key: 'single', label: 'Single Date/Time', desc: 'Specific date and time' },
+                                              { key: 'range', label: 'Date Range', desc: 'From date to date' },
+                                              { key: 'period', label: 'Time Period', desc: 'Daily time period' }
+                                            ].map((option) => {
+                                              // Determine the current date config, with fallback detection
+                                              const currentConfig = subjectDateConfigs[attribute.id] || { includeTime: false, isRange: false };
+                                              const currentOperator = selectedSubjectAttributeOperators[attribute.id];
+                                              const currentValue = selectedSubjectAttributes[attribute.id];
+
+                                              // Debug logging
+                                              if (attribute.dataType === 'date') {
+                                                console.log('Step 2 Date Button Debug:', {
+                                                  attributeId: attribute.id,
+                                                  attributeName: attribute.name,
+                                                  currentConfig,
+                                                  currentOperator,
+                                                  currentValue,
+                                                  optionKey: option.key
+                                                });
+                                              }
+
+                                              // Detect config from operator and value if not explicitly set
+                                              let isRange = currentConfig.isRange;
+                                              let includeTime = currentConfig.includeTime;
+
+                                              // If operator is 'between', it's definitely a range
+                                              if (currentOperator === 'between') {
+                                                isRange = true;
+                                              }
+
+                                              // If value is an object with start/end, it's a range
+                                              if (currentValue && typeof currentValue === 'object' && 'start' in currentValue && 'end' in currentValue) {
+                                                isRange = true;
+                                              }
+
+                                              // If value contains time component (T), it includes time
+                                              if (typeof currentValue === 'string' && currentValue.includes('T') && currentValue.split('T')[1] !== '00:00:00') {
+                                                includeTime = true;
+                                              }
+
+                                              const isSelected =
+                                                (option.key === 'single' && !isRange && !includeTime) ||
+                                                (option.key === 'range' && isRange) ||
+                                                (option.key === 'period' && includeTime && !isRange);
+
+                                              return (
+                                                <Button
+                                                  key={option.key}
+                                                  variant={isSelected ? 'contained' : 'outlined'}
+                                                  size="small"
+                                                  onClick={() => {
+                                                    if (option.key === 'single') {
+                                                      setSubjectDateConfigs(prev => ({
+                                                        ...prev,
+                                                        [attribute.id]: { includeTime: false, isRange: false }
+                                                      }));
+                                                      if (selectedSubjectAttributeOperators[attribute.id] === 'between') {
+                                                        setSelectedSubjectAttributeOperators(prev => ({
+                                                          ...prev,
+                                                          [attribute.id]: 'equals'
+                                                        }));
+                                                      }
+                                                    } else if (option.key === 'range') {
+                                                      setSubjectDateConfigs(prev => ({
+                                                        ...prev,
+                                                        [attribute.id]: { includeTime: false, isRange: true }
+                                                      }));
+                                                      setSelectedSubjectAttributeOperators(prev => ({
+                                                        ...prev,
+                                                        [attribute.id]: 'between'
+                                                      }));
+                                                    } else if (option.key === 'period') {
+                                                      setSubjectDateConfigs(prev => ({
+                                                        ...prev,
+                                                        [attribute.id]: { includeTime: true, isRange: false }
+                                                      }));
+                                                      if (selectedSubjectAttributeOperators[attribute.id] === 'between') {
+                                                        setSelectedSubjectAttributeOperators(prev => ({
+                                                          ...prev,
+                                                          [attribute.id]: 'equals'
+                                                        }));
+                                                      }
+                                                    }
+                                                  }}
+                                                  sx={{
+                                                    textTransform: 'none',
+                                                    display: 'flex',
+                                                    flexDirection: 'column',
+                                                    alignItems: 'center',
+                                                    py: 0.5,
+                                                    px: 0.75,
+                                                    minWidth: '80px',
+                                                    flex: 1
+                                                  }}
+                                                >
+                                                  <Typography variant="caption" sx={{ fontWeight: 600, fontSize: '0.7rem', lineHeight: 1.2 }}>
+                                                    {option.label}
+                                                  </Typography>
+                                                  <Typography variant="caption" sx={{ fontSize: '0.6rem', opacity: 0.7, lineHeight: 1.1 }}>
+                                                    {option.desc}
+                                                  </Typography>
+                                                </Button>
+                                              );
+                                            })}
+                                          </Box>
+                                        </Box>
+
+                                        {/* Date Input - Compact Styling */}
+                                        <Box sx={{
+                                          border: '1px solid',
+                                          borderColor: 'grey.300',
+                                          borderRadius: 1.5,
+                                          p: 1.5,
+                                          bgcolor: 'grey.50'
+                                        }}>
+                                          {(subjectDateConfigs[attribute.id]?.isRange || selectedSubjectAttributeOperators[attribute.id] === 'between') ? (
+                                            <Box>
+                                              <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                                                <TextField
+                                                  fullWidth
+                                                  type="date"
+                                                  label="From Date"
+                                                  value={selectedSubjectAttributes[attribute.id]?.start || ''}
+                                                  onChange={(e) => {
+                                                    handleSubjectAttributeSelection(attribute.id, {
+                                                      ...selectedSubjectAttributes[attribute.id],
+                                                      start: e.target.value
+                                                    });
+                                                  }}
+                                                  size="small"
+                                                  InputLabelProps={{ shrink: true }}
+                                                  sx={{ '& .MuiInputBase-input': { fontSize: '0.75rem' } }}
+                                                />
+                                                <TextField
+                                                  fullWidth
+                                                  type="date"
+                                                  label="To Date"
+                                                  value={selectedSubjectAttributes[attribute.id]?.end || ''}
+                                                  onChange={(e) => {
+                                                    handleSubjectAttributeSelection(attribute.id, {
+                                                      ...selectedSubjectAttributes[attribute.id],
+                                                      end: e.target.value
+                                                    });
+                                                  }}
+                                                  size="small"
+                                                  InputLabelProps={{ shrink: true }}
+                                                  sx={{ '& .MuiInputBase-input': { fontSize: '0.75rem' } }}
+                                                />
+                                              </Box>
+                                              <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block', fontSize: '0.65rem' }}>
+                                                Select a date range for this condition
+                                              </Typography>
+                                            </Box>
+                                          ) : (
+                                            <Box>
+                                              <TextField
+                                                fullWidth
+                                                type={subjectDateConfigs[attribute.id]?.includeTime ? 'datetime-local' : 'date'}
+                                                label={subjectDateConfigs[attribute.id]?.includeTime ? 'Date & Time' : 'Date'}
+                                                value={selectedSubjectAttributes[attribute.id] || ''}
+                                                onChange={(e) => handleSubjectAttributeSelection(attribute.id, e.target.value)}
+                                                size="small"
+                                                InputLabelProps={{ shrink: true }}
+                                                sx={{ '& .MuiInputBase-input': { fontSize: '0.8rem' } }}
+                                              />
+                                              <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block', fontSize: '0.65rem' }}>
+                                                {subjectDateConfigs[attribute.id]?.includeTime
+                                                  ? 'Select specific date and time for this condition'
+                                                  : 'Select a specific date for this condition'}
+                                              </Typography>
+                                            </Box>
+                                          )}
+                                        </Box>
+                                      </Box>
                                     ) : (
                                       <TextField
                                         fullWidth
@@ -2590,10 +2892,10 @@ export default function EditPolicyPage() {
                       {/* Selected Resource Attributes Configuration */}
                       {selectedResourceAttributes.length > 0 && (
                         <Box>
-                          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                          <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
                             Configure conditions for selected attributes ({selectedResourceAttributes.length}):
                           </Typography>
-                          <Grid container spacing={2}>
+                          <Grid container spacing={1.5}>
                             {selectedResourceAttributes.map((attribute) => {
                               const isArrayOrObject = (attribute.dataType as string) === 'object' ||
                                 (attribute.dataType as string) === 'array' ||
@@ -2601,11 +2903,11 @@ export default function EditPolicyPage() {
                                   Array.isArray(attribute.constraints.enumValues) && attribute.isMultiValue);
 
                               return (
-                                <Grid key={attribute.id} size={{ xs: 12, md: 6 }}>
+                                <Grid key={attribute.id} size={{ xs: 12, sm: 6, md: 4 }}>
                                   <Card
                                     variant="outlined"
                                     sx={{
-                                      p: 2,
+                                      p: 1.5,
                                       bgcolor: 'white',
                                       border: '1px solid',
                                       borderColor: 'grey.200',
@@ -2818,6 +3120,152 @@ export default function EditPolicyPage() {
                                         }}
                                         sx={{ bgcolor: 'grey.50' }}
                                       />
+                                    ) : attribute.dataType === 'date' ? (
+                                      <Box>
+                                        {/* Date Type Selection - Compact UI */}
+                                        <Box sx={{ mb: 1 }}>
+                                          <Typography variant="caption" color="text.secondary" sx={{ mb: 0.5, display: 'block', fontSize: '0.7rem' }}>
+                                            Choose input type:
+                                          </Typography>
+                                          <Box sx={{ display: 'flex', gap: 0.5 }}>
+                                            {[
+                                              { key: 'single', label: 'Single Date/Time', desc: 'Specific date and time' },
+                                              { key: 'range', label: 'Date Range', desc: 'From date to date' },
+                                              { key: 'period', label: 'Time Period', desc: 'Daily time period' }
+                                            ].map((option) => (
+                                              <Button
+                                                key={option.key}
+                                                variant={
+                                                  (option.key === 'single' && !resourceDateConfigs[attribute.id]?.isRange && !resourceDateConfigs[attribute.id]?.includeTime) ||
+                                                    (option.key === 'range' && resourceDateConfigs[attribute.id]?.isRange) ||
+                                                    (option.key === 'period' && resourceDateConfigs[attribute.id]?.includeTime && !resourceDateConfigs[attribute.id]?.isRange)
+                                                    ? 'contained'
+                                                    : 'outlined'
+                                                }
+                                                size="small"
+                                                onClick={() => {
+                                                  if (option.key === 'single') {
+                                                    setResourceDateConfigs(prev => ({
+                                                      ...prev,
+                                                      [attribute.id]: { includeTime: false, isRange: false }
+                                                    }));
+                                                    if (selectedResourceAttributeOperators[attribute.id] === 'between') {
+                                                      setSelectedResourceAttributeOperators(prev => ({
+                                                        ...prev,
+                                                        [attribute.id]: 'equals'
+                                                      }));
+                                                    }
+                                                  } else if (option.key === 'range') {
+                                                    setResourceDateConfigs(prev => ({
+                                                      ...prev,
+                                                      [attribute.id]: { includeTime: false, isRange: true }
+                                                    }));
+                                                    setSelectedResourceAttributeOperators(prev => ({
+                                                      ...prev,
+                                                      [attribute.id]: 'between'
+                                                    }));
+                                                  } else if (option.key === 'period') {
+                                                    setResourceDateConfigs(prev => ({
+                                                      ...prev,
+                                                      [attribute.id]: { includeTime: true, isRange: false }
+                                                    }));
+                                                    if (selectedResourceAttributeOperators[attribute.id] === 'between') {
+                                                      setSelectedResourceAttributeOperators(prev => ({
+                                                        ...prev,
+                                                        [attribute.id]: 'equals'
+                                                      }));
+                                                    }
+                                                  }
+                                                }}
+                                                sx={{
+                                                  textTransform: 'none',
+                                                  display: 'flex',
+                                                  flexDirection: 'column',
+                                                  alignItems: 'center',
+                                                  py: 0.5,
+                                                  px: 0.75,
+                                                  minWidth: '80px',
+                                                  flex: 1
+                                                }}
+                                              >
+                                                <Typography variant="caption" sx={{ fontWeight: 600, fontSize: '0.7rem', lineHeight: 1.2 }}>
+                                                  {option.label}
+                                                </Typography>
+                                                <Typography variant="caption" sx={{ fontSize: '0.6rem', opacity: 0.7, lineHeight: 1.1 }}>
+                                                  {option.desc}
+                                                </Typography>
+                                              </Button>
+                                            ))}
+                                          </Box>
+                                        </Box>
+
+                                        {/* Date Input - Compact Styling */}
+                                        <Box sx={{
+                                          border: '1px solid',
+                                          borderColor: 'grey.300',
+                                          borderRadius: 1.5,
+                                          p: 1.5,
+                                          bgcolor: 'grey.50'
+                                        }}>
+                                          {(resourceDateConfigs[attribute.id]?.isRange || selectedResourceAttributeOperators[attribute.id] === 'between') ? (
+                                            <Box>
+                                              <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                                                <TextField
+                                                  fullWidth
+                                                  type="date"
+                                                  label="From Date"
+                                                  value={selectedResourceAttributeValues[attribute.id]?.start || ''}
+                                                  onChange={(e) => {
+                                                    handleResourceAttributeValueSelection(attribute.id, {
+                                                      ...selectedResourceAttributeValues[attribute.id],
+                                                      start: e.target.value
+                                                    });
+                                                  }}
+                                                  size="small"
+                                                  InputLabelProps={{ shrink: true }}
+                                                  sx={{ '& .MuiInputBase-input': { fontSize: '0.75rem' } }}
+                                                />
+                                                <TextField
+                                                  fullWidth
+                                                  type="date"
+                                                  label="To Date"
+                                                  value={selectedResourceAttributeValues[attribute.id]?.end || ''}
+                                                  onChange={(e) => {
+                                                    handleResourceAttributeValueSelection(attribute.id, {
+                                                      ...selectedResourceAttributeValues[attribute.id],
+                                                      end: e.target.value
+                                                    });
+                                                  }}
+                                                  size="small"
+                                                  InputLabelProps={{ shrink: true }}
+                                                  sx={{ '& .MuiInputBase-input': { fontSize: '0.75rem' } }}
+                                                />
+                                              </Box>
+                                              <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block', fontSize: '0.65rem' }}>
+                                                Select a date range for this condition
+                                              </Typography>
+                                            </Box>
+                                          ) : (
+                                            <Box>
+                                              <TextField
+                                                fullWidth
+                                                type={resourceDateConfigs[attribute.id]?.includeTime ? 'datetime-local' : 'date'}
+                                                label={resourceDateConfigs[attribute.id]?.includeTime ? 'Date & Time' : 'Date'}
+                                                value={selectedResourceAttributeValues[attribute.id] || ''}
+                                                onChange={(e) => handleResourceAttributeValueSelection(attribute.id, e.target.value)}
+                                                size="small"
+                                                InputLabelProps={{ shrink: true }}
+                                                sx={{ '& .MuiInputBase-input': { fontSize: '0.8rem' } }}
+                                              />
+                                              <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block', fontSize: '0.65rem' }}>
+                                                {resourceDateConfigs[attribute.id]?.includeTime
+                                                  ? 'Select specific date and time for this condition'
+                                                  : 'Select a specific date for this condition'}
+                                              </Typography>
+                                            </Box>
+                                          )}
+                                        </Box>
+                                      </Box>
                                     ) : (
                                       <TextField
                                         fullWidth
@@ -3340,6 +3788,152 @@ export default function EditPolicyPage() {
                                         }}
                                         sx={{ bgcolor: 'grey.50', '& .MuiInputBase-input': { fontSize: '0.8rem' } }}
                                       />
+                                    ) : attribute.dataType === 'date' ? (
+                                      <Box>
+                                        {/* Date Type Selection - Compact UI */}
+                                        <Box sx={{ mb: 1 }}>
+                                          <Typography variant="caption" color="text.secondary" sx={{ mb: 0.5, display: 'block', fontSize: '0.7rem' }}>
+                                            Choose input type:
+                                          </Typography>
+                                          <Box sx={{ display: 'flex', gap: 0.5 }}>
+                                            {[
+                                              { key: 'single', label: 'Single Date/Time', desc: 'Specific date and time' },
+                                              { key: 'range', label: 'Date Range', desc: 'From date to date' },
+                                              { key: 'period', label: 'Time Period', desc: 'Daily time period' }
+                                            ].map((option) => (
+                                              <Button
+                                                key={option.key}
+                                                variant={
+                                                  (option.key === 'single' && !additionalResourceDateConfigs[attribute.id]?.isRange && !additionalResourceDateConfigs[attribute.id]?.includeTime) ||
+                                                    (option.key === 'range' && additionalResourceDateConfigs[attribute.id]?.isRange) ||
+                                                    (option.key === 'period' && additionalResourceDateConfigs[attribute.id]?.includeTime && !additionalResourceDateConfigs[attribute.id]?.isRange)
+                                                    ? 'contained'
+                                                    : 'outlined'
+                                                }
+                                                size="small"
+                                                onClick={() => {
+                                                  if (option.key === 'single') {
+                                                    setAdditionalResourceDateConfigs(prev => ({
+                                                      ...prev,
+                                                      [attribute.id]: { includeTime: false, isRange: false }
+                                                    }));
+                                                    if (globalAdditionalResourceAttributeOperators[attribute.id] === 'between') {
+                                                      setGlobalAdditionalResourceAttributeOperators(prev => ({
+                                                        ...prev,
+                                                        [attribute.id]: 'equals'
+                                                      }));
+                                                    }
+                                                  } else if (option.key === 'range') {
+                                                    setAdditionalResourceDateConfigs(prev => ({
+                                                      ...prev,
+                                                      [attribute.id]: { includeTime: false, isRange: true }
+                                                    }));
+                                                    setGlobalAdditionalResourceAttributeOperators(prev => ({
+                                                      ...prev,
+                                                      [attribute.id]: 'between'
+                                                    }));
+                                                  } else if (option.key === 'period') {
+                                                    setAdditionalResourceDateConfigs(prev => ({
+                                                      ...prev,
+                                                      [attribute.id]: { includeTime: true, isRange: false }
+                                                    }));
+                                                    if (globalAdditionalResourceAttributeOperators[attribute.id] === 'between') {
+                                                      setGlobalAdditionalResourceAttributeOperators(prev => ({
+                                                        ...prev,
+                                                        [attribute.id]: 'equals'
+                                                      }));
+                                                    }
+                                                  }
+                                                }}
+                                                sx={{
+                                                  textTransform: 'none',
+                                                  display: 'flex',
+                                                  flexDirection: 'column',
+                                                  alignItems: 'center',
+                                                  py: 0.5,
+                                                  px: 0.75,
+                                                  minWidth: '80px',
+                                                  flex: 1
+                                                }}
+                                              >
+                                                <Typography variant="caption" sx={{ fontWeight: 600, fontSize: '0.7rem', lineHeight: 1.2 }}>
+                                                  {option.label}
+                                                </Typography>
+                                                <Typography variant="caption" sx={{ fontSize: '0.6rem', opacity: 0.7, lineHeight: 1.1 }}>
+                                                  {option.desc}
+                                                </Typography>
+                                              </Button>
+                                            ))}
+                                          </Box>
+                                        </Box>
+
+                                        {/* Date Input - Compact Styling */}
+                                        <Box sx={{
+                                          border: '1px solid',
+                                          borderColor: 'grey.300',
+                                          borderRadius: 1.5,
+                                          p: 1.5,
+                                          bgcolor: 'grey.50'
+                                        }}>
+                                          {(additionalResourceDateConfigs[attribute.id]?.isRange || globalAdditionalResourceAttributeOperators[attribute.id] === 'between') ? (
+                                            <Box>
+                                              <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                                                <TextField
+                                                  fullWidth
+                                                  type="date"
+                                                  label="From Date"
+                                                  value={globalAdditionalResourceAttributeValues[attribute.id]?.start || ''}
+                                                  onChange={(e) => {
+                                                    handleGlobalAdditionalResourceAttributeValueSelection(attribute.id, {
+                                                      ...globalAdditionalResourceAttributeValues[attribute.id],
+                                                      start: e.target.value
+                                                    });
+                                                  }}
+                                                  size="small"
+                                                  InputLabelProps={{ shrink: true }}
+                                                  sx={{ '& .MuiInputBase-input': { fontSize: '0.75rem' } }}
+                                                />
+                                                <TextField
+                                                  fullWidth
+                                                  type="date"
+                                                  label="To Date"
+                                                  value={globalAdditionalResourceAttributeValues[attribute.id]?.end || ''}
+                                                  onChange={(e) => {
+                                                    handleGlobalAdditionalResourceAttributeValueSelection(attribute.id, {
+                                                      ...globalAdditionalResourceAttributeValues[attribute.id],
+                                                      end: e.target.value
+                                                    });
+                                                  }}
+                                                  size="small"
+                                                  InputLabelProps={{ shrink: true }}
+                                                  sx={{ '& .MuiInputBase-input': { fontSize: '0.75rem' } }}
+                                                />
+                                              </Box>
+                                              <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block', fontSize: '0.65rem' }}>
+                                                Select a date range for this condition
+                                              </Typography>
+                                            </Box>
+                                          ) : (
+                                            <Box>
+                                              <TextField
+                                                fullWidth
+                                                type={additionalResourceDateConfigs[attribute.id]?.includeTime ? 'datetime-local' : 'date'}
+                                                label={additionalResourceDateConfigs[attribute.id]?.includeTime ? 'Date & Time' : 'Date'}
+                                                value={globalAdditionalResourceAttributeValues[attribute.id] || ''}
+                                                onChange={(e) => handleGlobalAdditionalResourceAttributeValueSelection(attribute.id, e.target.value)}
+                                                size="small"
+                                                InputLabelProps={{ shrink: true }}
+                                                sx={{ '& .MuiInputBase-input': { fontSize: '0.8rem' } }}
+                                              />
+                                              <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block', fontSize: '0.65rem' }}>
+                                                {additionalResourceDateConfigs[attribute.id]?.includeTime
+                                                  ? 'Select specific date and time for this condition'
+                                                  : 'Select a specific date for this condition'}
+                                              </Typography>
+                                            </Box>
+                                          )}
+                                        </Box>
+                                      </Box>
                                     ) : (
                                       <TextField
                                         fullWidth
@@ -3446,12 +4040,27 @@ export default function EditPolicyPage() {
                                 operator = selectedSubjectAttributeOperators[attrId] || 'equals';
                               } else if (attr.dataType === 'string') {
                                 operator = selectedSubjectAttributeOperators[attrId] || 'equals';
+                              } else if (attr.dataType === 'date') {
+                                operator = selectedSubjectAttributeOperators[attrId] || 'equals';
                               } else if (Array.isArray(value)) {
                                 operator = 'in';
                               }
 
                               const operatorText = formatOperatorText(operator);
-                              const formattedValue = Array.isArray(value) ? value.join(' or ') : value;
+                              let formattedValue: any;
+
+                              // Format date values for display FIRST (before converting to string)
+                              if (attr.dataType === 'date') {
+                                const includeTime = subjectDateConfigs[attrId]?.includeTime || false;
+                                if (operator === 'between') {
+                                  formattedValue = formatDateRangeForDisplay(value, includeTime);
+                                } else {
+                                  formattedValue = formatDateForDisplay(value, includeTime);
+                                }
+                              } else {
+                                formattedValue = Array.isArray(value) ? value.join(' or ') : value;
+                              }
+
                               const condition = `${attr.displayName.toLowerCase()} ${operatorText} ${formattedValue}`;
 
                               if (index === array.length - 1 && array.length > 1) {
@@ -3499,12 +4108,27 @@ export default function EditPolicyPage() {
                                 operator = selectedResourceAttributeOperators[attrId] || 'equals';
                               } else if (attr.dataType === 'string') {
                                 operator = selectedResourceAttributeOperators[attrId] || 'equals';
+                              } else if (attr.dataType === 'date') {
+                                operator = selectedResourceAttributeOperators[attrId] || 'equals';
                               } else if (Array.isArray(value)) {
                                 operator = 'in';
                               }
 
                               const operatorText = formatOperatorText(operator);
-                              const formattedValue = Array.isArray(value) ? value.join(' or ') : value;
+                              let formattedValue: any;
+
+                              // Format date values for display FIRST (before converting to string)
+                              if (attr.dataType === 'date') {
+                                const includeTime = resourceDateConfigs[attrId]?.includeTime || false;
+                                if (operator === 'between') {
+                                  formattedValue = formatDateRangeForDisplay(value, includeTime);
+                                } else {
+                                  formattedValue = formatDateForDisplay(value, includeTime);
+                                }
+                              } else {
+                                formattedValue = Array.isArray(value) ? value.join(' or ') : value;
+                              }
+
                               const condition = `${attr.displayName.toLowerCase()} ${operatorText} ${formattedValue}`;
 
                               if (index === array.length - 1 && array.length > 1) {
@@ -3538,12 +4162,27 @@ export default function EditPolicyPage() {
                                   operator = globalAdditionalResourceAttributeOperators[attribute.id] || 'equals';
                                 } else if (attribute.dataType === 'string') {
                                   operator = globalAdditionalResourceAttributeOperators[attribute.id] || 'equals';
+                                } else if (attribute.dataType === 'date') {
+                                  operator = globalAdditionalResourceAttributeOperators[attribute.id] || 'equals';
                                 } else if (Array.isArray(value)) {
                                   operator = 'in';
                                 }
 
                                 const operatorText = formatOperatorText(operator);
-                                const formattedValue = Array.isArray(value) ? value.join(' or ') : value;
+                                let formattedValue: any;
+
+                                // Format date values for display FIRST (before converting to string)
+                                if (attribute.dataType === 'date') {
+                                  const includeTime = additionalResourceDateConfigs[attribute.id]?.includeTime || false;
+                                  if (operator === 'between') {
+                                    formattedValue = formatDateRangeForDisplay(value, includeTime);
+                                  } else {
+                                    formattedValue = formatDateForDisplay(value, includeTime);
+                                  }
+                                } else {
+                                  formattedValue = Array.isArray(value) ? value.join(' or ') : value;
+                                }
+
                                 const condition = `${attribute.displayName.toLowerCase()} ${operatorText} ${formattedValue}`;
 
                                 if (index === array.length - 1 && array.length > 1) {
@@ -3871,27 +4510,18 @@ export default function EditPolicyPage() {
                       variant="outlined"
                       onClick={() => handleSubmit('Draft')}
                       disabled={isSubmitting || !isCurrentStepValid}
-                      startIcon={isSubmitting ? <CircularProgress size={20} /> : <SaveIcon />}
+                      startIcon={isSubmitting ? <CircularProgress size={20} /> : null}
+                      sx={{ mr: 2 }}
                     >
-                      {isSubmitting ? 'Saving...' : 'Save as Draft'}
+                      {isSubmitting ? 'Saving Draft...' : 'Save as Draft'}
                     </Button>
                     <Button
                       variant="contained"
                       onClick={() => handleSubmit('Active')}
                       disabled={isSubmitting || !isCurrentStepValid}
-                      startIcon={isSubmitting ? <CircularProgress size={20} /> : <CheckCircleIcon />}
-                      sx={{
-                        background: 'linear-gradient(45deg, #2e7d32 30%, #4caf50 90%)',
-                        color: 'white',
-                        '&:hover': {
-                          background: 'linear-gradient(45deg, #1b5e20 30%, #388e3c 90%)',
-                        },
-                        '&:disabled': {
-                          background: 'rgba(0, 0, 0, 0.12)',
-                        }
-                      }}
+                      startIcon={isSubmitting ? <CircularProgress size={20} /> : <CheckIcon />}
                     >
-                      {isSubmitting ? 'Publishing...' : 'Publish'}
+                      {isSubmitting ? 'Publishing...' : 'Publish Policy'}
                     </Button>
                   </>
                 ) : (
@@ -4299,11 +4929,11 @@ export default function EditPolicyPage() {
                           Add Permitted Date/Time Values
                         </Typography>
 
-                        <Box sx={{ mb: 2 }}>
-                          <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: 'block' }}>
+                        <Box sx={{ mb: 1 }}>
+                          <Typography variant="caption" color="text.secondary" sx={{ mb: 0.5, display: 'block', fontSize: '0.7rem' }}>
                             Choose input type:
                           </Typography>
-                          <Box sx={{ display: 'flex', gap: 1 }}>
+                          <Box sx={{ display: 'flex', gap: 0.5 }}>
                             {[
                               { key: 'single', label: 'Single Date/Time', desc: 'Specific date and time' },
                               { key: 'range', label: 'Date Range', desc: 'From date to date' },
@@ -4319,14 +4949,16 @@ export default function EditPolicyPage() {
                                   display: 'flex',
                                   flexDirection: 'column',
                                   alignItems: 'center',
-                                  py: 1,
-                                  minWidth: '100px'
+                                  py: 0.5,
+                                  px: 0.75,
+                                  minWidth: '80px',
+                                  flex: 1
                                 }}
                               >
-                                <Typography variant="caption" sx={{ fontWeight: 600 }}>
+                                <Typography variant="caption" sx={{ fontWeight: 600, fontSize: '0.7rem', lineHeight: 1.2 }}>
                                   {option.label}
                                 </Typography>
-                                <Typography variant="caption" sx={{ fontSize: '0.65rem', opacity: 0.8 }}>
+                                <Typography variant="caption" sx={{ fontSize: '0.6rem', opacity: 0.7, lineHeight: 1.1 }}>
                                   {option.desc}
                                 </Typography>
                               </Button>

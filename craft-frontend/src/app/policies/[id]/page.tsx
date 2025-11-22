@@ -102,8 +102,9 @@ interface PolicyRule {
 
 interface PolicyAttribute {
   name: string;
-  operator: 'equals' | 'contains' | 'in' | 'not_equals' | 'not_contains' | 'not_in' | 'includes' | 'not_includes' | 'greater_than' | 'less_than' | 'greater_than_or_equal' | 'less_than_or_equal';
-  value: string | string[] | number;
+  operator: 'equals' | 'contains' | 'in' | 'not_equals' | 'not_contains' | 'not_in' | 'includes' | 'not_includes' | 'greater_than' | 'less_than' | 'greater_than_or_equal' | 'less_than_or_equal' | 'before' | 'after' | 'between' | 'on_or_before' | 'on_or_after';
+  value: string | string[] | number | { start: string; end: string };
+  dateConfig?: { includeTime: boolean; isRange: boolean };
 }
 
 interface PolicyCondition {
@@ -169,9 +170,53 @@ const formatOperatorText = (operator: string): string => {
       return 'is greater than or equal to';
     case 'less_than_or_equal':
       return 'is less than or equal to';
+    case 'before':
+      return 'is before';
+    case 'after':
+      return 'is after';
+    case 'between':
+      return 'is between';
+    case 'on_or_before':
+      return 'is on or before';
+    case 'on_or_after':
+      return 'is on or after';
     default:
       return 'is';
   }
+};
+
+// Format date for display
+const formatDateForDisplay = (dateValue: any, includeTime: boolean = false): string => {
+  if (!dateValue) return '';
+  
+  try {
+    const date = new Date(dateValue);
+    if (isNaN(date.getTime())) return String(dateValue);
+    
+    const options: Intl.DateTimeFormatOptions = {
+      month: '2-digit',
+      day: '2-digit',
+      year: 'numeric',
+    };
+    
+    if (includeTime) {
+      options.hour = '2-digit';
+      options.minute = '2-digit';
+      options.hour12 = true;
+    }
+    
+    return date.toLocaleString('en-US', options);
+  } catch (error) {
+    return String(dateValue);
+  }
+};
+
+// Format date range for display
+const formatDateRangeForDisplay = (value: any, includeTime: boolean = false): string => {
+  if (typeof value === 'object' && value.start && value.end) {
+    return `${formatDateForDisplay(value.start, includeTime)} and ${formatDateForDisplay(value.end, includeTime)}`;
+  }
+  return formatDateForDisplay(value, includeTime);
 };
 
 export default function PolicyViewPage() {
@@ -299,6 +344,11 @@ export default function PolicyViewPage() {
     return attribute ? attribute.displayName : attrName;
   };
 
+  const getAttributeDataType = (attrName: string) => {
+    const attribute = attributes.find(a => a.name === attrName || a.id === attrName);
+    return attribute ? attribute.dataType : 'string';
+  };
+
   // Function to generate text-based policy description matching stepper 6 format
   const generatePolicyDescription = () => {
     if (!policy) return '';
@@ -316,7 +366,19 @@ export default function PolicyViewPage() {
         .filter(attr => attr.value !== '' && attr.value !== null && attr.value !== undefined)
         .map((attr, index, array) => {
           const operatorText = formatOperatorText(attr.operator || 'equals');
-          const formattedValue = Array.isArray(attr.value) ? attr.value.join(' or ') : attr.value;
+          let formattedValue = Array.isArray(attr.value) ? attr.value.join(' or ') : attr.value;
+          
+          // Format date values for display
+          const attrDataType = getAttributeDataType(attr.name);
+          if (attrDataType === 'date') {
+            const includeTime = attr.dateConfig?.includeTime || false;
+            if (attr.operator === 'between') {
+              formattedValue = formatDateRangeForDisplay(attr.value, includeTime);
+            } else {
+              formattedValue = formatDateForDisplay(attr.value, includeTime);
+            }
+          }
+          
           const condition = `${getAttributeDisplayName(attr.name).toLowerCase()} ${operatorText} ${formattedValue}`;
           if (index === array.length - 1 && array.length > 1) {
             return `and ${condition}`;
@@ -360,7 +422,19 @@ export default function PolicyViewPage() {
         .filter(attr => attr.value !== '' && attr.value !== null && attr.value !== undefined)
         .map((attr, index, array) => {
           const operatorText = formatOperatorText(attr.operator || 'equals');
-          const formattedValue = Array.isArray(attr.value) ? attr.value.join(' or ') : attr.value;
+          let formattedValue = Array.isArray(attr.value) ? attr.value.join(' or ') : attr.value;
+          
+          // Format date values for display
+          const attrDataType = getAttributeDataType(attr.name);
+          if (attrDataType === 'date') {
+            const includeTime = attr.dateConfig?.includeTime || false;
+            if (attr.operator === 'between') {
+              formattedValue = formatDateRangeForDisplay(attr.value, includeTime);
+            } else {
+              formattedValue = formatDateForDisplay(attr.value, includeTime);
+            }
+          }
+          
           const condition = `${getAttributeDisplayName(attr.name).toLowerCase()} ${operatorText} ${formattedValue}`;
           if (index === array.length - 1 && array.length > 1) {
             return `and ${condition}`;
@@ -387,7 +461,19 @@ export default function PolicyViewPage() {
             .filter(attr => attr.value !== '' && attr.value !== null && attr.value !== undefined)
             .map((attr, index, array) => {
               const operatorText = formatOperatorText(attr.operator || 'equals');
-              const formattedValue = Array.isArray(attr.value) ? attr.value.join(' or ') : attr.value;
+              let formattedValue = Array.isArray(attr.value) ? attr.value.join(' or ') : attr.value;
+              
+              // Format date values for display
+              const attrDataType = getAttributeDataType(attr.name);
+              if (attrDataType === 'date') {
+                const includeTime = attr.dateConfig?.includeTime || false;
+                if (attr.operator === 'between') {
+                  formattedValue = formatDateRangeForDisplay(attr.value, includeTime);
+                } else {
+                  formattedValue = formatDateForDisplay(attr.value, includeTime);
+                }
+              }
+              
               const condition = `${getAttributeDisplayName(attr.name).toLowerCase()} ${operatorText} ${formattedValue}`;
               if (index === array.length - 1 && array.length > 1) {
                 return `and ${condition}`;
@@ -925,7 +1011,21 @@ export default function PolicyViewPage() {
                                 </Typography>
                                 {rule.subject.attributes.map((attr, i) => {
                                   const operatorText = formatOperatorText(attr.operator || 'equals');
-                                  const formattedValue = Array.isArray(attr.value) ? attr.value.join(', ') : attr.value;
+                                  let formattedValue: any;
+                                  
+                                  // Format date values FIRST (before converting to string)
+                                  const attrDataType = getAttributeDataType(attr.name);
+                                  if (attrDataType === 'date') {
+                                    const includeTime = (attr as any).dateConfig?.includeTime || false;
+                                    if (attr.operator === 'between' || (typeof attr.value === 'object' && attr.value && 'start' in attr.value)) {
+                                      formattedValue = formatDateRangeForDisplay(attr.value, includeTime);
+                                    } else {
+                                      formattedValue = formatDateForDisplay(attr.value, includeTime);
+                                    }
+                                  } else {
+                                    formattedValue = Array.isArray(attr.value) ? attr.value.join(', ') : attr.value;
+                                  }
+                                  
                                   return (
                                     <Box key={i} sx={{ mt: 0.3 }}>
                                       <Chip
@@ -982,7 +1082,21 @@ export default function PolicyViewPage() {
                                 </Typography>
                                 {rule.object.attributes.map((attr, i) => {
                                   const operatorText = formatOperatorText(attr.operator || 'equals');
-                                  const formattedValue = Array.isArray(attr.value) ? attr.value.join(', ') : attr.value;
+                                  let formattedValue: any;
+                                  
+                                  // Format date values FIRST (before converting to string)
+                                  const attrDataType = getAttributeDataType(attr.name);
+                                  if (attrDataType === 'date') {
+                                    const includeTime = (attr as any).dateConfig?.includeTime || false;
+                                    if (attr.operator === 'between' || (typeof attr.value === 'object' && attr.value && 'start' in attr.value)) {
+                                      formattedValue = formatDateRangeForDisplay(attr.value, includeTime);
+                                    } else {
+                                      formattedValue = formatDateForDisplay(attr.value, includeTime);
+                                    }
+                                  } else {
+                                    formattedValue = Array.isArray(attr.value) ? attr.value.join(', ') : attr.value;
+                                  }
+                                  
                                   return (
                                     <Box key={i} sx={{ mt: 0.3 }}>
                                       <Chip

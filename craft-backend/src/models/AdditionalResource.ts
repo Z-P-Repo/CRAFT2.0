@@ -13,7 +13,7 @@ export interface IAdditionalResourceDependency {
 // Evaluation rule for complex conditions
 export interface IEvaluationRule {
   field: string; // Field to evaluate
-  operator: 'equals' | 'not_equals' | 'in' | 'not_in' | 'contains' | 'greater_than' | 'less_than' | 'greater_than_or_equal' | 'less_than_or_equal' | 'between' | 'includes' | 'not_includes';
+  operator: 'equals' | 'not_equals' | 'in' | 'not_in' | 'contains' | 'greater_than' | 'less_than' | 'greater_than_or_equal' | 'less_than_or_equal' | 'between' | 'includes' | 'not_includes' | 'before' | 'after' | 'on_or_before' | 'on_or_after';
   value: any; // Expected value(s)
   caseInsensitive?: boolean; // For string comparisons
 }
@@ -76,8 +76,8 @@ const EvaluationRuleSchema = new Schema<IEvaluationRule>({
   operator: {
     type: String,
     enum: {
-      values: ['equals', 'not_equals', 'in', 'not_in', 'contains', 'greater_than', 'less_than', 'greater_than_or_equal', 'less_than_or_equal', 'between', 'includes', 'not_includes'],
-      message: 'Operator must be one of: equals, not_equals, in, not_in, contains, greater_than, less_than, greater_than_or_equal, less_than_or_equal, between, includes, not_includes',
+      values: ['equals', 'not_equals', 'in', 'not_in', 'contains', 'greater_than', 'less_than', 'greater_than_or_equal', 'less_than_or_equal', 'between', 'includes', 'not_includes', 'before', 'after', 'on_or_before', 'on_or_after'],
+      message: 'Operator must be one of: equals, not_equals, in, not_in, contains, greater_than, less_than, greater_than_or_equal, less_than_or_equal, between, includes, not_includes, before, after, on_or_before, on_or_after',
     },
     required: true,
   },
@@ -391,6 +391,22 @@ AdditionalResourceSchema.methods.evaluate = function(this: IAdditionalResource, 
       case 'between':
         return Array.isArray(rule.value) && rule.value.length === 2 &&
                fieldValue >= rule.value[0] && fieldValue <= rule.value[1];
+
+      case 'before':
+        // Date comparison: fieldValue < rule.value
+        return new Date(fieldValue) < new Date(rule.value);
+
+      case 'after':
+        // Date comparison: fieldValue > rule.value
+        return new Date(fieldValue) > new Date(rule.value);
+
+      case 'on_or_before':
+        // Date comparison: fieldValue <= rule.value
+        return new Date(fieldValue) <= new Date(rule.value);
+
+      case 'on_or_after':
+        // Date comparison: fieldValue >= rule.value
+        return new Date(fieldValue) >= new Date(rule.value);
 
       default:
         return false;

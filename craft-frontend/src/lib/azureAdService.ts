@@ -132,10 +132,36 @@ class AzureAdService {
 
   public async getBackendConfig(): Promise<{ enabled: boolean }> {
     try {
+      console.log('📡 Calling /azure-ad/config endpoint...');
       const response = await apiClient.get('/azure-ad/config');
-      return response.data.data;
-    } catch (error) {
-      console.error('Failed to get Azure AD config from backend:', error);
+      console.log('📡 Full response:', response);
+
+      // API client already unwraps to response.data, which contains { success, data }
+      // So response.data = { success: true, data: { enabled: true, provider: "azuread" } }
+      const backendData = response.data || response;
+      console.log('📡 Backend data:', backendData);
+
+      // Check if it has the nested data property (standard API format)
+      if (backendData?.data?.enabled !== undefined) {
+        console.log('✅ Using backendData.data:', backendData.data);
+        return backendData.data;
+      }
+
+      // Check if enabled is at top level (already unwrapped)
+      if (backendData?.enabled !== undefined) {
+        console.log('✅ Using backendData directly:', backendData);
+        return backendData;
+      }
+
+      console.warn('⚠️ Backend config data is missing, returning default');
+      return { enabled: false };
+    } catch (error: any) {
+      console.error('❌ Failed to get Azure AD config from backend:', error);
+      console.error('❌ Error details:', {
+        message: error?.message,
+        response: error?.response?.data,
+        status: error?.response?.status
+      });
       return { enabled: false };
     }
   }

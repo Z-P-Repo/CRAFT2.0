@@ -36,13 +36,26 @@ export default function LoginPage() {
     // Initialize Azure AD and check if it's enabled
     const initializeAzureAd = async () => {
       try {
-        if (azureAdService.isConfigured()) {
+        console.log('🔍 Checking Azure AD configuration...');
+        const isConfigured = azureAdService.isConfigured();
+        console.log('✓ Azure AD isConfigured:', isConfigured);
+
+        if (isConfigured) {
           await azureAdService.initialize();
+          console.log('✓ Azure AD initialized');
+
           const config = await azureAdService.getBackendConfig();
-          setAzureAdEnabled(config.enabled);
+          console.log('✓ Backend config:', config);
+
+          const enabled = config?.enabled || false;
+          console.log('✓ Setting azureAdEnabled to:', enabled);
+          setAzureAdEnabled(enabled);
+        } else {
+          console.log('✗ Azure AD not configured');
+          setAzureAdEnabled(false);
         }
       } catch (error) {
-        console.error('Failed to initialize Azure AD:', error);
+        console.error('❌ Failed to initialize Azure AD:', error);
         setAzureAdEnabled(false);
       }
     };
@@ -195,6 +208,7 @@ export default function LoginPage() {
               {isSubmitting ? 'Signing In...' : 'Sign In'}
             </Button>
 
+            {/* Azure AD SSO Button - Debug: azureAdEnabled = {String(azureAdEnabled)} */}
             {azureAdEnabled && (
               <>
                 <Divider sx={{ my: 3 }}>

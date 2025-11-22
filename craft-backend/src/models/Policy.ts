@@ -4,14 +4,22 @@ import { IResourceState, IResourceDependency } from './Resource';
 // Policy Rule interfaces
 export interface IPolicyAttribute {
   name: string;
-  operator: 'equals' | 'contains' | 'in' | 'not_equals' | 'not_contains' | 'not_in' | 'includes' | 'not_includes' | 'greater_than' | 'less_than' | 'greater_than_or_equal' | 'less_than_or_equal';
-  value: string | string[] | number;
+  operator: 'equals' | 'contains' | 'in' | 'not_equals' | 'not_contains' | 'not_in' | 'includes' | 'not_includes' | 'greater_than' | 'less_than' | 'greater_than_or_equal' | 'less_than_or_equal' | 'before' | 'after' | 'between' | 'on_or_before' | 'on_or_after';
+  value: string | string[] | number | { start: string; end: string };
+  dateConfig?: {
+    includeTime: boolean;
+    isRange: boolean;
+  };
 }
 
 export interface IPolicyCondition {
   field: string;
-  operator: 'equals' | 'contains' | 'greater_than' | 'less_than' | 'greater_than_or_equal' | 'less_than_or_equal' | 'in' | 'not_in' | 'includes' | 'not_includes';
-  value: string | number | string[];
+  operator: 'equals' | 'contains' | 'greater_than' | 'less_than' | 'greater_than_or_equal' | 'less_than_or_equal' | 'in' | 'not_in' | 'includes' | 'not_includes' | 'before' | 'after' | 'between' | 'on_or_before' | 'on_or_after';
+  value: string | number | string[] | { start: string; end: string };
+  dateConfig?: {
+    includeTime: boolean;
+    isRange: boolean;
+  };
 }
 
 export interface IAdditionalResource {
@@ -148,14 +156,24 @@ const PolicyAttributeSchema = new Schema<IPolicyAttribute>({
   operator: {
     type: String,
     enum: {
-      values: ['equals', 'contains', 'in', 'not_equals', 'not_contains', 'not_in', 'includes', 'not_includes', 'greater_than', 'less_than', 'greater_than_or_equal', 'less_than_or_equal'],
-      message: 'Operator must be one of: equals, contains, in, not_equals, not_contains, not_in, includes, not_includes, greater_than, less_than, greater_than_or_equal, less_than_or_equal',
+      values: ['equals', 'contains', 'in', 'not_equals', 'not_contains', 'not_in', 'includes', 'not_includes', 'greater_than', 'less_than', 'greater_than_or_equal', 'less_than_or_equal', 'before', 'after', 'between', 'on_or_before', 'on_or_after'],
+      message: 'Operator must be one of: equals, contains, in, not_equals, not_contains, not_in, includes, not_includes, greater_than, less_than, greater_than_or_equal, less_than_or_equal, before, after, between, on_or_before, on_or_after',
     },
     required: true,
   },
   value: {
-    type: Schema.Types.Mixed, // Can be string or array of strings
+    type: Schema.Types.Mixed, // Can be string, array, number, or date range object
     required: true,
+  },
+  dateConfig: {
+    includeTime: {
+      type: Boolean,
+      default: false,
+    },
+    isRange: {
+      type: Boolean,
+      default: false,
+    },
   },
 }, { _id: false });
 
@@ -168,14 +186,24 @@ const PolicyConditionSchema = new Schema<IPolicyCondition>({
   operator: {
     type: String,
     enum: {
-      values: ['equals', 'contains', 'greater_than', 'less_than', 'greater_than_or_equal', 'less_than_or_equal', 'in', 'not_in', 'includes', 'not_includes'],
-      message: 'Operator must be one of: equals, contains, greater_than, less_than, greater_than_or_equal, less_than_or_equal, in, not_in, includes, not_includes',
+      values: ['equals', 'contains', 'greater_than', 'less_than', 'greater_than_or_equal', 'less_than_or_equal', 'in', 'not_in', 'includes', 'not_includes', 'before', 'after', 'between', 'on_or_before', 'on_or_after'],
+      message: 'Operator must be one of: equals, contains, greater_than, less_than, greater_than_or_equal, less_than_or_equal, in, not_in, includes, not_includes, before, after, between, on_or_before, on_or_after',
     },
     required: true,
   },
   value: {
-    type: Schema.Types.Mixed, // Can be string, number, or array
+    type: Schema.Types.Mixed, // Can be string, number, array, or date range object
     required: true,
+  },
+  dateConfig: {
+    includeTime: {
+      type: Boolean,
+      default: false,
+    },
+    isRange: {
+      type: Boolean,
+      default: false,
+    },
   },
 }, { _id: false });
 
