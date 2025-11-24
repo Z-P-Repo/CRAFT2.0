@@ -395,7 +395,7 @@ export default function PolicyViewPage() {
     sentence += ' to perform ';
 
     // Actions
-    const actionNames = policy.actions.map(id => getActionDisplayName(id).toLowerCase());
+    const actionNames = policy.actions.map(id => getActionDisplayName(id));
     if (actionNames.length === 1) {
       sentence += actionNames[0];
     } else if (actionNames.length === 2) {

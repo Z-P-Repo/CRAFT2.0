@@ -349,7 +349,7 @@ export default function PoliciesPage() {
     // Actions
     const actionNames = policy.actions.map(id => {
       const action = actions.find(a => a.id === id);
-      return action ? action.displayName.toLowerCase() : id.toLowerCase();
+      return action ? action.displayName : id;
     });
     if (actionNames.length === 1) {
       sentence += actionNames[0];

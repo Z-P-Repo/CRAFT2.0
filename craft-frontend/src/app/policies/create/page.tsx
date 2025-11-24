@@ -3776,10 +3776,10 @@ export default function CreatePolicyPage() {
                       {' '}to perform{' '}
                       <strong style={{ color: '#f57c00' }}>
                         {selectedActions.length === 1
-                          ? actions.find(a => a.id === selectedActions[0])?.displayName?.toLowerCase()
+                          ? actions.find(a => a.id === selectedActions[0])?.displayName
                           : selectedActions.length === 2
-                            ? `${actions.find(a => a.id === selectedActions[0])?.displayName?.toLowerCase()} and ${actions.find(a => a.id === selectedActions[1])?.displayName?.toLowerCase()}`
-                            : `${selectedActions.slice(0, -1).map(id => actions.find(a => a.id === id)?.displayName?.toLowerCase()).join(', ')}, and ${actions.find(a => a.id === selectedActions[selectedActions.length - 1])?.displayName?.toLowerCase()}`
+                            ? `${actions.find(a => a.id === selectedActions[0])?.displayName} and ${actions.find(a => a.id === selectedActions[1])?.displayName}`
+                            : `${selectedActions.slice(0, -1).map(id => actions.find(a => a.id === id)?.displayName).join(', ')}, and ${actions.find(a => a.id === selectedActions[selectedActions.length - 1])?.displayName}`
                         }
                       </strong>
                       {' '}actions on{' '}

@@ -1286,7 +1286,7 @@ export default function AttributesPage() {
                                 {attribute.constraints.enumValues.slice(0, 2).map((value, index) => (
                                   <Chip
                                     key={index}
-                                    label={value}
+                                    label={typeof value === 'object' ? JSON.stringify(value) : String(value)}
                                     size="small"
                                     variant="outlined"
                                     sx={{ fontSize: '0.75rem' }}
