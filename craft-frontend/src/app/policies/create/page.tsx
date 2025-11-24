@@ -2591,7 +2591,7 @@ export default function CreatePolicyPage() {
                                   Array.isArray(attribute.constraints.enumValues) && attribute.isMultiValue);
 
                               return (
-                                <Grid key={attribute.id} size={{ xs: 12, sm: 4, md: 3 }}>
+                                <Grid key={attribute.id} size={{ xs: 12, sm: 6, md: 4 }}>
                                   <Card
                                     variant="outlined"
                                     sx={{
@@ -3258,7 +3258,7 @@ export default function CreatePolicyPage() {
                                   Array.isArray(attribute.constraints.enumValues) && attribute.isMultiValue);
 
                               return (
-                                <Grid key={attribute.id} size={{ xs: 12, sm: 4, md: 3 }}>
+                                <Grid key={attribute.id} size={{ xs: 12, sm: 6, md: 4 }}>
                                   <Card
                                     variant="outlined"
                                     sx={{
