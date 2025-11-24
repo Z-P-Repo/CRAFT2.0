@@ -45,8 +45,12 @@ import {
   Close as CloseIcon,
   PlayArrow as StartIcon,
   AutoAwesome as MagicIcon,
+  Business as WorkspaceIcon,
+  Apps as ApplicationIcon,
+  Cloud as EnvironmentIcon,
 } from '@mui/icons-material';
 import { useRouter } from 'next/navigation';
+import { useWorkspace } from '@/contexts/WorkspaceContext';
 
 interface GuideStep {
   title: string;
@@ -60,12 +64,85 @@ interface GuideStep {
 
 const PolicyCreationGuide: React.FC = () => {
   const router = useRouter();
+  const { currentWorkspace, currentApplication, currentEnvironment } = useWorkspace();
   const [activeStep, setActiveStep] = useState(0);
   const [openDialog, setOpenDialog] = useState(false);
 
   const steps: GuideStep[] = [
     {
-      title: 'Step 1: Policy Details',
+      title: 'Step 1: Create Workspace',
+      subtitle: 'Set up your organization workspace',
+      icon: <WorkspaceIcon sx={{ fontSize: 40, color: '#d32f2f' }} />,
+      description: 'A workspace is your organization\'s top-level container. It represents your company, department, or team. All your applications and policies will live inside this workspace.',
+      tips: [
+        'Think of a workspace as your organization\'s home in the system',
+        'Use your company or department name for easy identification',
+        'You only need to create a workspace once - it will contain everything else',
+        'Multiple teams can share one workspace or have separate ones',
+        'Workspace admins can manage all applications and policies within it',
+      ],
+      examples: [
+        'Workspace Name: "Acme Corporation"',
+        'Workspace Name: "Marketing Department"',
+        'Workspace Name: "IT Operations Team"',
+        'Description: "Main workspace for all company access policies"',
+      ],
+      commonMistakes: [
+        'Creating multiple workspaces when one would suffice',
+        'Using generic names that don\'t identify your organization',
+        'Not adding a clear description',
+      ],
+    },
+    {
+      title: 'Step 2: Create Application',
+      subtitle: 'Define your application or system',
+      icon: <ApplicationIcon sx={{ fontSize: 40, color: '#1976d2' }} />,
+      description: 'Applications represent the systems, tools, or platforms you want to control access to. Examples include your CRM, document management system, or internal tools.',
+      tips: [
+        'Each application should represent a distinct system or tool',
+        'You can create multiple applications within one workspace',
+        'Name applications after the actual systems they represent',
+        'Applications help organize policies by system or service',
+        'Each application can have its own environments (dev, staging, production)',
+      ],
+      examples: [
+        'Application Name: "Customer CRM System"',
+        'Application Name: "Document Management Portal"',
+        'Application Name: "HR Management System"',
+        'Description: "Main customer relationship management application"',
+      ],
+      commonMistakes: [
+        'Creating one application for everything instead of separating by system',
+        'Using technical IDs instead of user-friendly names',
+        'Not planning for multiple environments',
+      ],
+    },
+    {
+      title: 'Step 3: Create Environment',
+      subtitle: 'Set up deployment environment',
+      icon: <EnvironmentIcon sx={{ fontSize: 40, color: '#2e7d32' }} />,
+      description: 'Environments represent different stages of your application lifecycle. Common environments include Development (for testing), Staging (for pre-production), and Production (for live use).',
+      tips: [
+        'Most applications need at least Development and Production environments',
+        'Test policies in Development before deploying to Production',
+        'Each environment can have different policies and access rules',
+        'Production environment should have stricter access controls',
+        'You can create custom environments for your specific needs',
+      ],
+      examples: [
+        'Environment Name: "Development" - for testing new policies',
+        'Environment Name: "Staging" - for pre-production validation',
+        'Environment Name: "Production" - for live, active policies',
+        'Environment Name: "QA" - for quality assurance testing',
+      ],
+      commonMistakes: [
+        'Testing policies directly in Production environment',
+        'Not separating environments by purpose',
+        'Using the same access rules across all environments',
+      ],
+    },
+    {
+      title: 'Step 4: Policy Details',
       subtitle: 'Define the basic information',
       icon: <InfoIcon sx={{ fontSize: 40, color: '#1976d2' }} />,
       description: 'Start by giving your policy a clear name and description. Think of the policy name as a title that describes what access you\'re controlling.',
@@ -89,7 +166,7 @@ const PolicyCreationGuide: React.FC = () => {
       ],
     },
     {
-      title: 'Step 2: Select Subjects',
+      title: 'Step 5: Select Subjects',
       subtitle: 'Choose WHO gets access',
       icon: <SubjectIcon sx={{ fontSize: 40, color: '#2e7d32' }} />,
       description: 'Subjects are the "WHO" in your policy - the people, groups, or roles that will be affected. You can select existing users/groups or create new ones.',
@@ -113,7 +190,7 @@ const PolicyCreationGuide: React.FC = () => {
       ],
     },
     {
-      title: 'Step 3: Select Actions',
+      title: 'Step 6: Select Actions',
       subtitle: 'Define WHAT they can do',
       icon: <ActionIcon sx={{ fontSize: 40, color: '#ed6c02' }} />,
       description: 'Actions define what operations subjects can perform. Common actions include Read, Write, Delete, and Execute. Choose all actions that should be allowed or denied.',
@@ -137,7 +214,7 @@ const PolicyCreationGuide: React.FC = () => {
       ],
     },
     {
-      title: 'Step 4: Select Resources',
+      title: 'Step 7: Select Resources',
       subtitle: 'Specify WHERE access applies',
       icon: <ResourceIcon sx={{ fontSize: 40, color: '#0288d1' }} />,
       description: 'Resources are the "WHERE" - the files, folders, databases, or applications that the policy controls access to. Be specific about what subjects can access.',
@@ -162,7 +239,7 @@ const PolicyCreationGuide: React.FC = () => {
       ],
     },
     {
-      title: 'Step 5: Additional Resources & Conditions',
+      title: 'Step 8: Additional Resources & Conditions',
       subtitle: 'Add advanced rules (Optional)',
       icon: <AdditionalIcon sx={{ fontSize: 40, color: '#9c27b0' }} />,
       description: 'Additional resources let you create complex conditions like "only during business hours" or "only if manager approved". This step is optional but powerful for advanced policies.',
@@ -186,7 +263,7 @@ const PolicyCreationGuide: React.FC = () => {
       ],
     },
     {
-      title: 'Step 6: Review & Create',
+      title: 'Step 9: Review & Create',
       subtitle: 'Verify everything looks correct',
       icon: <PreviewIcon sx={{ fontSize: 40, color: '#7b1fa2' }} />,
       description: 'This is your final check. Review the complete policy in plain English to make sure it does exactly what you want. Once you\'re happy, create the policy!',
@@ -307,12 +384,41 @@ const PolicyCreationGuide: React.FC = () => {
         <DialogContent sx={{ mt: 3 }}>
           <Alert severity="info" icon={<MagicIcon />} sx={{ mb: 3 }}>
             <Typography variant="body2" fontWeight="600" gutterBottom>
-              What is an Access Policy?
+              Complete Setup Guide
             </Typography>
             <Typography variant="body2">
-              An access policy is like a set of rules that says <strong>WHO</strong> can do <strong>WHAT</strong> with{' '}
+              This guide covers the complete setup from creating your workspace to defining access policies. An access policy is like a set of rules that says <strong>WHO</strong> can do <strong>WHAT</strong> with{' '}
               <strong>WHICH</strong> resources. For example: "Marketing team members can view and edit marketing documents."
             </Typography>
+            <Box sx={{ mt: 1, display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+              {currentWorkspace && (
+                <Chip
+                  icon={<CheckIcon />}
+                  label="Workspace Created"
+                  size="small"
+                  color="success"
+                  variant="outlined"
+                />
+              )}
+              {currentApplication && (
+                <Chip
+                  icon={<CheckIcon />}
+                  label="Application Created"
+                  size="small"
+                  color="success"
+                  variant="outlined"
+                />
+              )}
+              {currentEnvironment && (
+                <Chip
+                  icon={<CheckIcon />}
+                  label="Environment Created"
+                  size="small"
+                  color="success"
+                  variant="outlined"
+                />
+              )}
+            </Box>
           </Alert>
 
           <Stepper activeStep={activeStep} orientation="vertical">
@@ -456,7 +562,7 @@ const PolicyCreationGuide: React.FC = () => {
                 🎉 You\'re Ready to Create Your First Policy!
               </Typography>
               <Typography paragraph>
-                You've completed the guide. Now you understand all 6 steps of policy creation. Remember to start with
+                You've completed the guide. Now you understand all 9 steps from workspace setup to policy creation. Remember to start with
                 Draft status and test before making policies Active.
               </Typography>
               <Box sx={{ display: 'flex', gap: 2 }}>
