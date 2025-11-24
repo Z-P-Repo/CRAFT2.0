@@ -28,6 +28,7 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
+  LinearProgress,
 } from '@mui/material';
 import {
   MenuBook as GuideIcon,
@@ -48,6 +49,10 @@ import {
   Business as WorkspaceIcon,
   Apps as ApplicationIcon,
   Cloud as EnvironmentIcon,
+  AccessTime as TimeIcon,
+  ArrowForward as ArrowForwardIcon,
+  CheckCircleOutline,
+  RadioButtonUnchecked,
 } from '@mui/icons-material';
 import { useRouter } from 'next/navigation';
 import { useWorkspace } from '@/contexts/WorkspaceContext';
@@ -60,6 +65,9 @@ interface GuideStep {
   tips: string[];
   examples: string[];
   commonMistakes?: string[];
+  estimatedTime: string;
+  actionRoute?: string;
+  actionLabel?: string;
 }
 
 const PolicyCreationGuide: React.FC = () => {
@@ -74,6 +82,9 @@ const PolicyCreationGuide: React.FC = () => {
       subtitle: 'Set up your organization workspace',
       icon: <WorkspaceIcon sx={{ fontSize: 40, color: '#d32f2f' }} />,
       description: 'A workspace is your organization\'s top-level container. It represents your company, department, or team. All your applications and policies will live inside this workspace.',
+      estimatedTime: '2-3 minutes',
+      actionRoute: '/workspaces/create',
+      actionLabel: 'Create Workspace',
       tips: [
         'Think of a workspace as your organization\'s home in the system',
         'Use your company or department name for easy identification',
@@ -98,6 +109,9 @@ const PolicyCreationGuide: React.FC = () => {
       subtitle: 'Define your application or system',
       icon: <ApplicationIcon sx={{ fontSize: 40, color: '#1976d2' }} />,
       description: 'Applications represent the systems, tools, or platforms you want to control access to. Examples include your CRM, document management system, or internal tools.',
+      estimatedTime: '2-3 minutes',
+      actionRoute: '/settings',
+      actionLabel: 'Create Application',
       tips: [
         'Each application should represent a distinct system or tool',
         'You can create multiple applications within one workspace',
@@ -122,6 +136,9 @@ const PolicyCreationGuide: React.FC = () => {
       subtitle: 'Set up deployment environment',
       icon: <EnvironmentIcon sx={{ fontSize: 40, color: '#2e7d32' }} />,
       description: 'Environments represent different stages of your application lifecycle. Common environments include Development (for testing), Staging (for pre-production), and Production (for live use).',
+      estimatedTime: '1-2 minutes',
+      actionRoute: '/settings',
+      actionLabel: 'Create Environment',
       tips: [
         'Most applications need at least Development and Production environments',
         'Test policies in Development before deploying to Production',
@@ -146,6 +163,9 @@ const PolicyCreationGuide: React.FC = () => {
       subtitle: 'Define the basic information',
       icon: <InfoIcon sx={{ fontSize: 40, color: '#1976d2' }} />,
       description: 'Start by giving your policy a clear name and description. Think of the policy name as a title that describes what access you\'re controlling.',
+      estimatedTime: '3-5 minutes',
+      actionRoute: '/policies/create',
+      actionLabel: 'Start Creating Policy',
       tips: [
         'Use descriptive names like "Sales Team Document Access" instead of just "Policy 1"',
         'Choose ALLOW to grant permissions or DENY to restrict access',
@@ -170,6 +190,9 @@ const PolicyCreationGuide: React.FC = () => {
       subtitle: 'Choose WHO gets access',
       icon: <SubjectIcon sx={{ fontSize: 40, color: '#2e7d32' }} />,
       description: 'Subjects are the "WHO" in your policy - the people, groups, or roles that will be affected. You can select existing users/groups or create new ones.',
+      estimatedTime: '2-4 minutes',
+      actionRoute: '/subjects',
+      actionLabel: 'Manage Subjects',
       tips: [
         'Think of subjects as the people or teams you want to give (or deny) access to',
         'You can select multiple subjects - perfect for entire teams or departments',
@@ -194,6 +217,9 @@ const PolicyCreationGuide: React.FC = () => {
       subtitle: 'Define WHAT they can do',
       icon: <ActionIcon sx={{ fontSize: 40, color: '#ed6c02' }} />,
       description: 'Actions define what operations subjects can perform. Common actions include Read, Write, Delete, and Execute. Choose all actions that should be allowed or denied.',
+      estimatedTime: '2-3 minutes',
+      actionRoute: '/actions',
+      actionLabel: 'Manage Actions',
       tips: [
         'Actions are the operations or activities people can perform',
         'Read = viewing or downloading, Write = creating or editing, Delete = removing',
@@ -218,6 +244,9 @@ const PolicyCreationGuide: React.FC = () => {
       subtitle: 'Specify WHERE access applies',
       icon: <ResourceIcon sx={{ fontSize: 40, color: '#0288d1' }} />,
       description: 'Resources are the "WHERE" - the files, folders, databases, or applications that the policy controls access to. Be specific about what subjects can access.',
+      estimatedTime: '2-4 minutes',
+      actionRoute: '/resources',
+      actionLabel: 'Manage Resources',
       tips: [
         'Resources are the things people access - files, folders, systems, databases',
         'You can select multiple resources in one policy',
@@ -243,6 +272,9 @@ const PolicyCreationGuide: React.FC = () => {
       subtitle: 'Add advanced rules (Optional)',
       icon: <AdditionalIcon sx={{ fontSize: 40, color: '#9c27b0' }} />,
       description: 'Additional resources let you create complex conditions like "only during business hours" or "only if manager approved". This step is optional but powerful for advanced policies.',
+      estimatedTime: '3-5 minutes',
+      actionRoute: '/resources',
+      actionLabel: 'Manage Additional Resources',
       tips: [
         'Skip this step if you don\'t need special conditions - it\'s completely optional',
         'Use additional resources for time-based access, approval workflows, or status checks',
@@ -267,6 +299,9 @@ const PolicyCreationGuide: React.FC = () => {
       subtitle: 'Verify everything looks correct',
       icon: <PreviewIcon sx={{ fontSize: 40, color: '#7b1fa2' }} />,
       description: 'This is your final check. Review the complete policy in plain English to make sure it does exactly what you want. Once you\'re happy, create the policy!',
+      estimatedTime: '2-3 minutes',
+      actionRoute: '/policies/create',
+      actionLabel: 'Create Policy',
       tips: [
         'Read the policy summary carefully - it shows exactly what will happen',
         'Make sure the subjects, actions, and resources are all correct',
@@ -304,6 +339,26 @@ const PolicyCreationGuide: React.FC = () => {
     router.push('/policies/create');
   };
 
+  const handleActionClick = (route: string) => {
+    router.push(route);
+    setOpenDialog(false);
+  };
+
+  const getStepStatus = (index: number) => {
+    if (index === 0) return currentWorkspace ? 'completed' : 'pending';
+    if (index === 1) return currentApplication ? 'completed' : 'pending';
+    if (index === 2) return currentEnvironment ? 'completed' : 'pending';
+    return 'pending';
+  };
+
+  const completedSteps = [
+    currentWorkspace ? 1 : 0,
+    currentApplication ? 1 : 0,
+    currentEnvironment ? 1 : 0,
+  ].reduce((a, b) => a + b, 0);
+
+  const progressPercentage = (completedSteps / 3) * 100;
+
   return (
     <>
       <Card
@@ -311,35 +366,116 @@ const PolicyCreationGuide: React.FC = () => {
           background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
           color: 'white',
           cursor: 'pointer',
-          transition: 'transform 0.2s, box-shadow 0.2s',
+          transition: 'all 0.3s ease',
+          position: 'relative',
+          overflow: 'hidden',
           '&:hover': {
             transform: 'translateY(-4px)',
-            boxShadow: 6,
+            boxShadow: '0 12px 40px rgba(102, 126, 234, 0.4)',
+          },
+          '&::before': {
+            content: '""',
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'radial-gradient(circle at top right, rgba(255,255,255,0.1), transparent)',
+            pointerEvents: 'none',
           },
         }}
         onClick={() => setOpenDialog(true)}
       >
-        <CardContent>
+        <CardContent sx={{ position: 'relative', zIndex: 1 }}>
           <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-              <GuideIcon sx={{ fontSize: 48 }} />
+              <Box
+                sx={{
+                  bgcolor: 'rgba(255,255,255,0.2)',
+                  borderRadius: 3,
+                  p: 1.5,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  backdropFilter: 'blur(10px)',
+                }}
+              >
+                <GuideIcon sx={{ fontSize: 48 }} />
+              </Box>
               <Box>
-                <Typography variant="h5" fontWeight="600" gutterBottom>
-                  Policy Creation Guide
+                <Typography variant="h5" fontWeight="700" gutterBottom sx={{ mb: 0.5 }}>
+                  Complete Setup & Policy Guide
                 </Typography>
-                <Typography variant="body2" sx={{ opacity: 0.9 }}>
-                  Step-by-step instructions for creating access control policies
+                <Typography variant="body2" sx={{ opacity: 0.95, mb: 1 }}>
+                  Step-by-step instructions from workspace setup to policy deployment
                 </Typography>
+                <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', flexWrap: 'wrap' }}>
+                  <Chip
+                    icon={<TimeIcon sx={{ fontSize: 16, color: 'white !important' }} />}
+                    label="~20-30 min"
+                    size="small"
+                    sx={{
+                      bgcolor: 'rgba(255,255,255,0.2)',
+                      color: 'white',
+                      fontWeight: 600,
+                      backdropFilter: 'blur(10px)',
+                    }}
+                  />
+                  <Chip
+                    label="9 Steps"
+                    size="small"
+                    sx={{
+                      bgcolor: 'rgba(255,255,255,0.2)',
+                      color: 'white',
+                      fontWeight: 600,
+                      backdropFilter: 'blur(10px)',
+                    }}
+                  />
+                  {completedSteps > 0 && (
+                    <Chip
+                      icon={<CheckIcon sx={{ fontSize: 16, color: 'white !important' }} />}
+                      label={`${completedSteps}/3 Setup Complete`}
+                      size="small"
+                      sx={{
+                        bgcolor: 'rgba(76, 175, 80, 0.3)',
+                        color: 'white',
+                        fontWeight: 600,
+                        backdropFilter: 'blur(10px)',
+                      }}
+                    />
+                  )}
+                </Box>
               </Box>
             </Box>
-            <Chip
-              label="Click to Open"
-              sx={{
-                bgcolor: 'rgba(255,255,255,0.2)',
-                color: 'white',
-                fontWeight: 600,
-              }}
-            />
+            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1 }}>
+              <Button
+                variant="contained"
+                endIcon={<ArrowForwardIcon />}
+                sx={{
+                  bgcolor: 'white',
+                  color: '#667eea',
+                  fontWeight: 700,
+                  px: 3,
+                  py: 1,
+                  borderRadius: 2,
+                  textTransform: 'none',
+                  boxShadow: '0 4px 14px rgba(0,0,0,0.15)',
+                  '&:hover': {
+                    bgcolor: 'rgba(255,255,255,0.95)',
+                    boxShadow: '0 6px 20px rgba(0,0,0,0.2)',
+                  },
+                }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setOpenDialog(true);
+                }}
+              >
+                Open Guide
+              </Button>
+              <Typography variant="caption" sx={{ opacity: 0.8 }}>
+                Click anywhere to start
+              </Typography>
+            </Box>
           </Box>
         </CardContent>
       </Card>
@@ -360,25 +496,77 @@ const PolicyCreationGuide: React.FC = () => {
           sx={{
             background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
             color: 'white',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
+            pb: 3,
           }}
         >
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-            <GuideIcon sx={{ fontSize: 32 }} />
-            <Box>
-              <Typography variant="h5" fontWeight="600">
-                How to Create an Access Policy
-              </Typography>
-              <Typography variant="body2" sx={{ opacity: 0.9, mt: 0.5 }}>
-                A complete guide for non-technical users
-              </Typography>
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+              <Box
+                sx={{
+                  bgcolor: 'rgba(255,255,255,0.2)',
+                  borderRadius: 2,
+                  p: 1,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <GuideIcon sx={{ fontSize: 32 }} />
+              </Box>
+              <Box>
+                <Typography variant="h5" fontWeight="600">
+                  Complete Setup & Policy Creation Guide
+                </Typography>
+                <Typography variant="body2" sx={{ opacity: 0.9, mt: 0.5 }}>
+                  9 steps from workspace setup to policy deployment • Total time: ~20-30 minutes
+                </Typography>
+              </Box>
             </Box>
+            <IconButton 
+              onClick={() => setOpenDialog(false)} 
+              sx={{ 
+                color: 'white',
+                bgcolor: 'rgba(255,255,255,0.1)',
+                '&:hover': {
+                  bgcolor: 'rgba(255,255,255,0.2)',
+                },
+              }}
+            >
+              <CloseIcon />
+            </IconButton>
           </Box>
-          <IconButton onClick={() => setOpenDialog(false)} sx={{ color: 'white' }}>
-            <CloseIcon />
-          </IconButton>
+          {/* Setup Progress Bar */}
+          {progressPercentage > 0 && (
+            <Box>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                <Typography variant="caption" sx={{ opacity: 0.9 }}>
+                  Setup Progress
+                </Typography>
+                <Typography variant="caption" fontWeight="600">
+                  {completedSteps} of 3 completed
+                </Typography>
+              </Box>
+              <Box
+                sx={{
+                  width: '100%',
+                  height: 8,
+                  bgcolor: 'rgba(255,255,255,0.2)',
+                  borderRadius: 1,
+                  overflow: 'hidden',
+                }}
+              >
+                <Box
+                  sx={{
+                    width: `${progressPercentage}%`,
+                    height: '100%',
+                    bgcolor: 'white',
+                    borderRadius: 1,
+                    transition: 'width 0.3s ease',
+                  }}
+                />
+              </Box>
+            </Box>
+          )}
         </DialogTitle>
 
         <DialogContent sx={{ mt: 3 }}>
@@ -425,6 +613,13 @@ const PolicyCreationGuide: React.FC = () => {
             {steps.map((step, index) => (
               <Step key={index}>
                 <StepLabel
+                  icon={
+                    getStepStatus(index) === 'completed' ? (
+                      <CheckCircleOutline sx={{ color: '#4caf50' }} />
+                    ) : (
+                      <RadioButtonUnchecked sx={{ color: '#9e9e9e' }} />
+                    )
+                  }
                   sx={{
                     '& .MuiStepLabel-label': {
                       fontSize: '1.1rem',
@@ -432,20 +627,83 @@ const PolicyCreationGuide: React.FC = () => {
                     },
                   }}
                 >
-                  {step.title}
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+                    <span>{step.title}</span>
+                    {getStepStatus(index) === 'completed' && (
+                      <Chip
+                        label="Completed"
+                        size="small"
+                        color="success"
+                        sx={{ height: 20, fontSize: '0.7rem' }}
+                      />
+                    )}
+                  </Box>
                 </StepLabel>
                 <StepContent>
-                  <Card variant="outlined" sx={{ mb: 2 }}>
+                  <Card 
+                    variant="outlined" 
+                    sx={{ 
+                      mb: 2,
+                      border: '2px solid',
+                      borderColor: getStepStatus(index) === 'completed' ? 'success.main' : 'divider',
+                      bgcolor: getStepStatus(index) === 'completed' ? 'success.50' : 'background.paper',
+                      transition: 'all 0.3s ease',
+                    }}
+                  >
                     <CardContent>
                       <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
-                        {step.icon}
+                        <Box
+                          sx={{
+                            bgcolor: getStepStatus(index) === 'completed' ? 'success.light' : 'primary.light',
+                            borderRadius: 2,
+                            p: 1.5,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            height: 'fit-content',
+                          }}
+                        >
+                          {step.icon}
+                        </Box>
                         <Box sx={{ flex: 1 }}>
-                          <Typography variant="h6" color="primary" gutterBottom>
-                            {step.subtitle}
-                          </Typography>
-                          <Typography variant="body1" paragraph>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1, flexWrap: 'wrap' }}>
+                            <Typography variant="h6" color="primary" sx={{ fontWeight: 600 }}>
+                              {step.subtitle}
+                            </Typography>
+                            <Chip
+                              icon={<TimeIcon sx={{ fontSize: 16 }} />}
+                              label={step.estimatedTime}
+                              size="small"
+                              variant="outlined"
+                              sx={{ height: 24 }}
+                            />
+                          </Box>
+                          <Typography variant="body1" paragraph sx={{ mb: 2 }}>
                             {step.description}
                           </Typography>
+                          {step.actionRoute && (
+                            <Button
+                              variant="contained"
+                              color={getStepStatus(index) === 'completed' ? 'success' : 'primary'}
+                              startIcon={getStepStatus(index) === 'completed' ? <CheckIcon /> : <ArrowForwardIcon />}
+                              onClick={() => handleActionClick(step.actionRoute!)}
+                              sx={{
+                                borderRadius: 2,
+                                textTransform: 'none',
+                                fontWeight: 600,
+                                px: 3,
+                                py: 1,
+                                boxShadow: 2,
+                                '&:hover': {
+                                  boxShadow: 4,
+                                  transform: 'translateY(-2px)',
+                                },
+                                transition: 'all 0.2s ease',
+                              }}
+                            >
+                              {getStepStatus(index) === 'completed' ? 'View/Edit' : step.actionLabel}
+                            </Button>
+                          )}
                         </Box>
                       </Box>
 
@@ -534,21 +792,43 @@ const PolicyCreationGuide: React.FC = () => {
                     </CardContent>
                   </Card>
 
-                  <Box sx={{ mb: 2, display: 'flex', gap: 1 }}>
+                  <Box sx={{ mb: 2, display: 'flex', gap: 2, mt: 3 }}>
                     <Button
                       disabled={index === 0}
                       onClick={handleBack}
                       variant="outlined"
-                      sx={{ mt: 1, mr: 1 }}
+                      size="large"
+                      sx={{ 
+                        borderRadius: 2,
+                        textTransform: 'none',
+                        fontWeight: 600,
+                        px: 3,
+                        borderWidth: 2,
+                        '&:hover': {
+                          borderWidth: 2,
+                        },
+                      }}
                     >
-                      Back
+                      ← Previous Step
                     </Button>
                     <Button
                       variant="contained"
                       onClick={index === steps.length - 1 ? handleReset : handleNext}
-                      sx={{ mt: 1, mr: 1 }}
+                      size="large"
+                      sx={{ 
+                        borderRadius: 2,
+                        textTransform: 'none',
+                        fontWeight: 600,
+                        px: 4,
+                        boxShadow: 3,
+                        '&:hover': {
+                          boxShadow: 5,
+                          transform: 'translateY(-2px)',
+                        },
+                        transition: 'all 0.2s ease',
+                      }}
                     >
-                      {index === steps.length - 1 ? 'Start Over' : 'Next Step'}
+                      {index === steps.length - 1 ? '↻ Start Over' : 'Next Step →'}
                     </Button>
                   </Box>
                 </StepContent>
@@ -557,31 +837,124 @@ const PolicyCreationGuide: React.FC = () => {
           </Stepper>
 
           {activeStep === steps.length && (
-            <Paper square elevation={0} sx={{ p: 3, bgcolor: 'success.light' }}>
-              <Typography variant="h6" gutterBottom>
-                🎉 You\'re Ready to Create Your First Policy!
-              </Typography>
-              <Typography paragraph>
-                You've completed the guide. Now you understand all 9 steps from workspace setup to policy creation. Remember to start with
-                Draft status and test before making policies Active.
-              </Typography>
-              <Box sx={{ display: 'flex', gap: 2 }}>
-                <Button onClick={handleReset} variant="outlined">
-                  Review Guide Again
+            <Paper 
+              elevation={0} 
+              sx={{ 
+                p: 4, 
+                background: 'linear-gradient(135deg, #4caf50 0%, #81c784 100%)',
+                color: 'white',
+                borderRadius: 3,
+                textAlign: 'center',
+              }}
+            >
+              <Box sx={{ mb: 3 }}>
+                <Typography variant="h4" fontWeight="700" gutterBottom>
+                  🎉 Congratulations!
+                </Typography>
+                <Typography variant="h6" sx={{ opacity: 0.95, mb: 2 }}>
+                  You're Ready to Create Your First Policy!
+                </Typography>
+                <Typography variant="body1" sx={{ opacity: 0.9, maxWidth: 600, mx: 'auto' }}>
+                  You've completed the complete guide covering all 9 steps from workspace setup to policy creation. 
+                  Remember to start with Draft status and test before making policies Active.
+                </Typography>
+              </Box>
+              <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center', flexWrap: 'wrap' }}>
+                <Button 
+                  onClick={handleReset} 
+                  variant="outlined"
+                  size="large"
+                  sx={{
+                    borderColor: 'white',
+                    color: 'white',
+                    borderWidth: 2,
+                    borderRadius: 2,
+                    textTransform: 'none',
+                    fontWeight: 600,
+                    px: 4,
+                    '&:hover': {
+                      borderWidth: 2,
+                      borderColor: 'white',
+                      bgcolor: 'rgba(255,255,255,0.1)',
+                    },
+                  }}
+                >
+                  ↻ Review Guide Again
                 </Button>
-                <Button onClick={handleStartCreating} variant="contained" startIcon={<StartIcon />}>
-                  Start Creating Policy
+                <Button 
+                  onClick={handleStartCreating} 
+                  variant="contained"
+                  size="large"
+                  startIcon={<StartIcon />}
+                  sx={{
+                    bgcolor: 'white',
+                    color: '#4caf50',
+                    borderRadius: 2,
+                    textTransform: 'none',
+                    fontWeight: 700,
+                    px: 4,
+                    boxShadow: '0 4px 14px rgba(0,0,0,0.2)',
+                    '&:hover': {
+                      bgcolor: 'rgba(255,255,255,0.95)',
+                      boxShadow: '0 6px 20px rgba(0,0,0,0.3)',
+                      transform: 'translateY(-2px)',
+                    },
+                    transition: 'all 0.2s ease',
+                  }}
+                >
+                  Start Creating Policy Now
                 </Button>
               </Box>
             </Paper>
           )}
         </DialogContent>
 
-        <DialogActions sx={{ px: 3, pb: 2 }}>
-          <Button onClick={() => setOpenDialog(false)} variant="outlined">
+        <DialogActions 
+          sx={{ 
+            px: 3, 
+            py: 2.5, 
+            borderTop: '1px solid',
+            borderColor: 'divider',
+            bgcolor: 'grey.50',
+            gap: 2,
+          }}
+        >
+          <Button 
+            onClick={() => setOpenDialog(false)} 
+            variant="outlined"
+            size="large"
+            sx={{
+              borderRadius: 2,
+              textTransform: 'none',
+              fontWeight: 600,
+              px: 3,
+              borderWidth: 2,
+              '&:hover': {
+                borderWidth: 2,
+              },
+            }}
+          >
             Close Guide
           </Button>
-          <Button onClick={handleStartCreating} variant="contained" startIcon={<StartIcon />}>
+          <Button 
+            onClick={handleStartCreating} 
+            variant="contained"
+            size="large"
+            startIcon={<StartIcon />}
+            sx={{
+              borderRadius: 2,
+              textTransform: 'none',
+              fontWeight: 700,
+              px: 4,
+              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+              boxShadow: '0 4px 14px rgba(102, 126, 234, 0.4)',
+              '&:hover': {
+                boxShadow: '0 6px 20px rgba(102, 126, 234, 0.5)',
+                transform: 'translateY(-2px)',
+              },
+              transition: 'all 0.2s ease',
+            }}
+          >
             Create Policy Now
           </Button>
         </DialogActions>
